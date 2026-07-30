@@ -39,7 +39,6 @@ export async function updateSession(request: NextRequest) {
   // 1. OBSCURE ADMIN ROUTE PROTECTION (/hq-core-updateptn/*)
   // ========================================================
   if (pathname.startsWith("/hq-core-updateptn")) {
-    // If unauthenticated, redirect to login with return URL
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -47,14 +46,12 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Query user profile role from Supabase DB
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    // Forcibly redirect non-admin users to Student Dashboard
     if (!profile || profile.role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard/student";
@@ -62,16 +59,17 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // NOTE: We intentionally DO NOT intercept /admin here so attempts
-  // to visit /admin naturally trigger Next.js 404 Not Found!
-
   // ========================================================
-  // 2. STUDENT DASHBOARD ROUTE PROTECTION - /dashboard/*
+  // 2. STRICT STUDENT DASHBOARD & TRYOUT ROUTE PROTECTION
   // ========================================================
-  if (pathname.startsWith("/dashboard")) {
+  if (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/tryout")
+  ) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
   }
