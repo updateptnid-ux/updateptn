@@ -188,34 +188,8 @@ export default function CekPeluangPage() {
   const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-40">
-        <Link href="/dashboard/student" className="flex items-center gap-2.5">
-          <Image
-            src="/logo.svg"
-            alt="UpdatePTN Logo"
-            width={36}
-            height={36}
-            className="h-9 w-auto object-contain"
-            priority
-          />
-          <span className="font-extrabold text-xl tracking-tight text-slate-900">
-            Update<span className="text-blue-600">PTN</span>
-          </span>
-        </Link>
-
-        <Link href="/dashboard/student">
-          <Button variant="outline" size="sm" className="rounded-xl gap-2 font-semibold border-slate-200 text-xs">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Kembali ke Dashboard</span>
-          </Button>
-        </Link>
-      </header>
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-8 my-6">
-        {/* Header Title */}
+    <div className="max-w-4xl w-full mx-auto space-y-8 py-4">
+      {/* Header Title */}
         <div className="text-center space-y-3">
           <Badge variant="outline" className="px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 inline-block">
             Rasionalisasi Algoritma PTN
@@ -485,7 +459,6 @@ export default function CekPeluangPage() {
             </div>
           </Card>
         )}
-      </main>
     </div>
   );
 }

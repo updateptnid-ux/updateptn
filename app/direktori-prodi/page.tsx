@@ -294,35 +294,7 @@ export default function DirektoriProdiPage() {
   };
 
   return (
-    <div className="min-h-screen md:h-screen flex flex-col justify-start items-center bg-white font-sans overflow-x-hidden">
-      {/* Top Navigation Bar */}
-      <header className="w-full bg-white border-b border-slate-200 shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 md:h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <Image
-              src="/logo.svg"
-              alt="UpdatePTN Logo"
-              width={32}
-              height={32}
-              className="h-8 w-auto object-contain transition-transform group-hover:scale-105"
-              priority
-            />
-            <span className="font-extrabold text-lg tracking-tight text-slate-950">
-              Update<span className="text-blue-600">PTN</span>
-            </span>
-          </Link>
-
-          <Link href="/dashboard/student">
-            <Button variant="outline" className="border-slate-200 font-semibold rounded-xl text-xs h-8 md:h-9 px-3 md:px-4 gap-1.5">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Dashboard</span>
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* 1. Mobile-First Centered Container (Strict Max-Width W-FULL MAX-W-XL MD:MAX-W-2XL) */}
-      <main className="w-full max-w-xl md:max-w-2xl px-4 py-4 md:py-6 space-y-3.5 md:space-y-4 flex flex-col justify-start">
+    <div className="w-full max-w-xl md:max-w-2xl mx-auto py-2 space-y-3.5 md:space-y-4 flex flex-col justify-start">
         {/* 2. Ultra-Compact Header */}
         <div className="text-center">
           <h1 className="text-xl md:text-2xl font-bold text-center tracking-tight text-slate-950">
@@ -580,7 +552,6 @@ export default function DirektoriProdiPage() {
             </p>
           </div>
         )}
-      </main>
     </div>
   );
 }
