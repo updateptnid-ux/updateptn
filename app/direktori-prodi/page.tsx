@@ -19,6 +19,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ProdiRecord {
   id: string | number;
@@ -114,6 +115,21 @@ export default function DirektoriProdiPage() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  // Strict Zero-Trust Client Auth Guard
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login?redirect=/direktori-prodi");
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   // Close dropdown on outside click
   useEffect(() => {

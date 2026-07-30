@@ -60,9 +60,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   // ========================================================
-  // 2. STRICT STUDENT DASHBOARD & TRYOUT ROUTE PROTECTION
+  // 2. STRICT ZERO-TRUST PROTECTION FOR INTERNAL ROUTES
+  // Protect: /direktori-prodi, /dashboard, /tryout
   // ========================================================
   if (
+    pathname.startsWith("/direktori-prodi") ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/tryout")
   ) {
