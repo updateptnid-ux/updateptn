@@ -50,7 +50,7 @@ export default function CekPeluangPage() {
   const [majors, setMajors] = useState<ProdiReferenceItem[]>([]);
   const [selectedProdiId, setSelectedProdiId] = useState<string>("");
 
-  const [score, setScore] = useState<number>(720);
+  const [score, setScore] = useState<string | number>(720);
   const [result, setResult] = useState<PredictionResult | null>(null);
   
   const [loadingUnivs, setLoadingUnivs] = useState(true);
@@ -143,10 +143,11 @@ export default function CekPeluangPage() {
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUniv || !selectedProdiId) return;
+    const numScore = Number(score) || 720;
 
     startTransition(async () => {
       const res = await calculateProbabilityAction({
-        score,
+        score: numScore,
         universityName: selectedUniv,
         prodiId: selectedProdiId,
       });
@@ -220,7 +221,14 @@ export default function CekPeluangPage() {
                     min={300}
                     max={1000}
                     value={score}
-                    onChange={(e) => setScore(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "") {
+                        setScore("");
+                      } else {
+                        setScore(Number(val));
+                      }
+                    }}
                     required
                     className="h-11 rounded-xl text-base font-bold text-blue-600 border-slate-200"
                   />

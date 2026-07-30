@@ -38,7 +38,6 @@ export default function DashboardLayout({
       name: "Cek Peluang PTN",
       href: "/dashboard/student/cek-peluang",
       icon: Target,
-      badge: "AI Engine",
     },
     {
       name: "Direktori PTN & Prodi",
@@ -111,11 +110,6 @@ export default function DashboardLayout({
                         <Icon className={`h-4 w-4 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
                         <span>{item.name}</span>
                       </div>
-                      {item.badge && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
@@ -172,11 +166,6 @@ export default function DashboardLayout({
                       <Icon className={`h-4 w-4 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
                       <span>{item.name}</span>
                     </div>
-                    {item.badge && (
-                      <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
