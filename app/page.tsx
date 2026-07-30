@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { FadeIn, MotionCard } from "@/components/ui/fade-in";
 import {
   GraduationCap,
   BarChart3,
@@ -17,7 +18,6 @@ import {
   ArrowRight,
   Menu,
   ChevronRight,
-  User,
   BookOpen,
 } from "lucide-react";
 
@@ -136,9 +136,9 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ---------------- HERO SECTION (Clean, Minimalist, Enterprise Typography) ---------------- */}
+      {/* ---------------- HERO SECTION (With Smooth FadeIn Animation) ---------------- */}
       <section className="py-20 md:py-28 bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+        <FadeIn className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <Badge variant="outline" className="px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border-slate-200 inline-block">
             Ekosistem Persiapan UTBK & SNBT
           </Badge>
@@ -166,140 +166,152 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
-        </div>
+        </FadeIn>
       </section>
 
-      {/* ---------------- FEATURES SECTION (Clean Structural Cards) ---------------- */}
+      {/* ---------------- FEATURES SECTION ---------------- */}
       <section id="fitur" className="py-20 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-3">
+          <FadeIn className="text-center max-w-3xl mx-auto space-y-3">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight">
               Fitur Layanan Pembelajaran
             </h2>
             <p className="text-slate-600 text-base">
               Dirancang untuk mendukung kesiapan akademik siswa secara sistematis dan terstruktur.
             </p>
-          </div>
+          </FadeIn>
 
           {/* 3 Feature Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-900">Try Out UTBK (IRT Scoring)</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Simulasi ujian sesuai standar penilaian Item Response Theory (IRT) untuk mengukur tingkat kemampuan siswa.
-                  </p>
-                </div>
+            <FadeIn delay={0.1}>
+              <MotionCard>
+                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+                  <div className="space-y-4">
+                    <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <BarChart3 className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-slate-900">Try Out UTBK (IRT Scoring)</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Simulasi ujian sesuai standar penilaian Item Response Theory (IRT) untuk mengukur tingkat kemampuan siswa.
+                      </p>
+                    </div>
 
-                <ul className="space-y-2 text-sm text-slate-600 pt-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Timer dan navigasi subtes akurat.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Analisis skor per subtes (TPS & Literasi).</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Pembahasan soal terstruktur.</span>
-                  </li>
-                </ul>
-              </div>
+                    <ul className="space-y-2 text-sm text-slate-600 pt-2">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Timer dan navigasi subtes akurat.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Analisis skor per subtes (TPS & Literasi).</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Pembahasan soal terstruktur.</span>
+                      </li>
+                    </ul>
+                  </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <Link href="/register">
-                  <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                    <span>Akses Try Out</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </Card>
+                  <div className="pt-4 border-t border-slate-100">
+                    <Link href="/register">
+                      <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                        <span>Akses Try Out</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </MotionCard>
+            </FadeIn>
 
             {/* Feature 2 */}
-            <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Target className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-900">Cek Peluang PTN</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Fitur rasionalisasi berbasis data histori keketatan dan estimasi passing grade jurusan perguruan tinggi.
-                  </p>
-                </div>
+            <FadeIn delay={0.2}>
+              <MotionCard>
+                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+                  <div className="space-y-4">
+                    <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Target className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-slate-900">Cek Peluang PTN</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Fitur rasionalisasi berbasis data histori keketatan dan estimasi passing grade jurusan perguruan tinggi.
+                      </p>
+                    </div>
 
-                <ul className="space-y-2 text-sm text-slate-600 pt-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Rasionalisasi pilihan 1 dan pilihan 2.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Analisis komparatif kuota dan peminat.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Informasi rentang biaya UKT prodi.</span>
-                  </li>
-                </ul>
-              </div>
+                    <ul className="space-y-2 text-sm text-slate-600 pt-2">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Rasionalisasi pilihan 1 dan pilihan 2.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Analisis komparatif kuota dan peminat.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Informasi rentang biaya UKT prodi.</span>
+                      </li>
+                    </ul>
+                  </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <Link href="/direktori-prodi">
-                  <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                    <span>Cek Rasionalisasi</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </Card>
+                  <div className="pt-4 border-t border-slate-100">
+                    <Link href="/direktori-prodi">
+                      <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                        <span>Cek Rasionalisasi</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </MotionCard>
+            </FadeIn>
 
             {/* Feature 3 */}
-            <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Video className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-900">Live Class Interaktif</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    Pembahasan materi dan strategi penyelesaian soal bersama pengajar.
-                  </p>
-                </div>
+            <FadeIn delay={0.3}>
+              <MotionCard>
+                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+                  <div className="space-y-4">
+                    <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                      <Video className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-slate-900">Live Class Interaktif</h3>
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        Pembahasan materi dan strategi penyelesaian soal bersama pengajar.
+                      </p>
+                    </div>
 
-                <ul className="space-y-2 text-sm text-slate-600 pt-2">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Sesi pembelajaran terjadwal.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Diskusi tanya jawab interaktif.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span>Akses materi pendukung.</span>
-                  </li>
-                </ul>
-              </div>
+                    <ul className="space-y-2 text-sm text-slate-600 pt-2">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Sesi pembelajaran terjadwal.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Diskusi tanya jawab interaktif.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <span>Akses materi pendukung.</span>
+                      </li>
+                    </ul>
+                  </div>
 
-              <div className="pt-4 border-t border-slate-100">
-                <Link href="/register">
-                  <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
-                    <span>Lihat Jadwal</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </Card>
+                  <div className="pt-4 border-t border-slate-100">
+                    <Link href="/register">
+                      <Button variant="ghost" className="p-0 h-auto font-semibold text-sm text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                        <span>Lihat Jadwal</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </MotionCard>
+            </FadeIn>
           </div>
         </div>
       </section>
@@ -308,48 +320,50 @@ export default function LandingPage() {
       <section id="faq" className="py-20 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           {/* Header */}
-          <div className="text-center space-y-3">
+          <FadeIn className="text-center space-y-3">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-950 tracking-tight">
               Pertanyaan Umum
             </h2>
             <p className="text-slate-600 text-base">
               Informasi seputar penggunaan platform UpdatePTN.
             </p>
-          </div>
+          </FadeIn>
 
           {/* Accordion */}
-          <Accordion className="w-full space-y-3">
-            <AccordionItem value="item-1" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
-              <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
-                Apakah sistem penilaian Try Out menggunakan IRT?
-              </AccordionTrigger>
-              <AccordionContent className="text-slate-600 text-sm leading-relaxed">
-                Ya, sistem penilaian Try Out mengadopsi prinsip Item Response Theory (IRT) untuk mengukur tingkat kesulitan soal dan bobot skor siswa.
-              </AccordionContent>
-            </AccordionItem>
+          <FadeIn delay={0.1}>
+            <Accordion className="w-full space-y-3">
+              <AccordionItem value="item-1" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
+                <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
+                  Apakah sistem penilaian Try Out menggunakan IRT?
+                </AccordionTrigger>
+                <AccordionContent className="text-slate-600 text-sm leading-relaxed">
+                  Ya, sistem penilaian Try Out mengadopsi prinsip Item Response Theory (IRT) untuk mengukur tingkat kesulitan soal dan bobot skor siswa.
+                </AccordionContent>
+              </AccordionItem>
 
-            <AccordionItem value="item-2" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
-              <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
-                Bagaimana cara kerja Cek Peluang PTN?
-              </AccordionTrigger>
-              <AccordionContent className="text-slate-600 text-sm leading-relaxed">
-                Cek Peluang PTN membandingkan nilai hasil Try Out dengan acuan passing grade dan keketatan histori jurusan yang dipilih.
-              </AccordionContent>
-            </AccordionItem>
+              <AccordionItem value="item-2" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
+                <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
+                  Bagaimana cara kerja Cek Peluang PTN?
+                </AccordionTrigger>
+                <AccordionContent className="text-slate-600 text-sm leading-relaxed">
+                  Cek Peluang PTN membandingkan nilai hasil Try Out dengan acuan passing grade dan keketatan histori jurusan yang dipilih.
+                </AccordionContent>
+              </AccordionItem>
 
-            <AccordionItem value="item-3" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
-              <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
-                Bagaimana cara memulai pendaftaran?
-              </AccordionTrigger>
-              <AccordionContent className="text-slate-600 text-sm leading-relaxed">
-                Siswa dapat membuat akun gratis melalui halaman pendaftaran untuk mengakses direktori prodi dan fitur pembelajaran yang tersedia.
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              <AccordionItem value="item-3" className="border border-slate-200 rounded-xl bg-white px-6 py-1">
+                <AccordionTrigger className="text-base font-bold text-slate-900 text-left hover:no-underline hover:text-blue-600">
+                  Bagaimana cara memulai pendaftaran?
+                </AccordionTrigger>
+                <AccordionContent className="text-slate-600 text-sm leading-relaxed">
+                  Siswa dapat membuat akun gratis melalui halaman pendaftaran untuk mengakses direktori prodi dan fitur pembelajaran yang tersedia.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </FadeIn>
         </div>
       </section>
 
-      {/* ---------------- FOOTER (Strictly Clean & Minimalist Copyright) ---------------- */}
+      {/* ---------------- FOOTER ---------------- */}
       <footer className="mt-auto bg-white py-8 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <div className="flex items-center gap-2">
