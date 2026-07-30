@@ -8,8 +8,11 @@ export const metadata: Metadata = {
   title: "UpdatePTN - Platform Persiapan SNBT #1",
   description: "Lulus PTN Impianmu dengan Persiapan UTBK Terarah & Terukur",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
 };
