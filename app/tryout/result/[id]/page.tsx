@@ -42,7 +42,7 @@ export default async function TryoutResultPage({
   } = await supabase.auth.getUser();
 
   const targetPtn = user?.user_metadata?.target_ptn || "Universitas Indonesia";
-  const tryoutTitle = resultRecord?.tryouts?.title || "Try Out SNBT 2026 - Episode 1";
+  const tryoutTitle = resultRecord?.tryouts?.title || "Try Out SNBT - Episode 1";
 
   // Score details
   const score = resultRecord?.score || 745;

@@ -189,7 +189,7 @@ export default function CekPeluangPage() {
         <div className="text-center space-y-3">
           <Badge variant="outline" className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            <span>Rasionalisasi Algoritma PTN 2026</span>
+            <span>Rasionalisasi Algoritma PTN</span>
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
             Cek Peluang Kelulusan PTN

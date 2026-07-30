@@ -45,7 +45,7 @@ export default async function LiveClassPage() {
           },
           {
             id: "2",
-            title: "Bedah Pola Soal Penalaran Umum 2026",
+            title: "Bedah Pola Soal Penalaran Umum",
             mentor_name: "Kak Fikri, S.Kom (Alumni UI)",
             scheduled_at: new Date(Date.now() + 86400000).toISOString(),
             meeting_url: "https://zoom.us/j/123456789",

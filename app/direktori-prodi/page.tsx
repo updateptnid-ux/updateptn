@@ -559,7 +559,7 @@ export default function DirektoriProdiPage() {
             <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
               <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Verified Data SNBT 2026</span>
+                <span>Verified Data SNBT</span>
               </span>
 
               <Link href="/dashboard/student/cek-peluang" className="w-full sm:w-auto">

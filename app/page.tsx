@@ -140,7 +140,7 @@ export default function LandingPage() {
       <section className="py-20 md:py-28 bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <Badge variant="outline" className="px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-700 border-slate-200 inline-block">
-            Ekosistem Persiapan UTBK & SNBT 2026
+            Ekosistem Persiapan UTBK & SNBT
           </Badge>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.15]">
@@ -362,7 +362,7 @@ export default function LandingPage() {
             />
             <span className="font-bold text-slate-900">UpdatePTN</span>
           </div>
-          <p>© 2026 UpdatePTN. Seluruh hak cipta dilindungi.</p>
+          <p>© {new Date().getFullYear()} UpdatePTN. Seluruh hak cipta dilindungi.</p>
         </div>
       </footer>
     </div>

@@ -56,7 +56,7 @@ export default async function StudentDashboardPage() {
       : [
           {
             id: "11111111-1111-1111-1111-111111111111",
-            title: "Try Out Nasional UTBK SNBT 2026 - Seri 01",
+            title: "Try Out Nasional UTBK SNBT - Seri 01",
             duration_minutes: 120,
             total_questions: 155,
             created_at: new Date().toISOString(),
@@ -146,7 +146,7 @@ export default async function StudentDashboardPage() {
             <p className="text-xs text-slate-500">Pilih paket Try Out untuk mulai simulasi ujian bertimer</p>
           </div>
           <Badge variant="outline" className="text-xs border-slate-200 text-slate-600">
-            Standar BPPP 2026
+            <span>Standar Resmi BPPP</span>
           </Badge>
         </div>
 

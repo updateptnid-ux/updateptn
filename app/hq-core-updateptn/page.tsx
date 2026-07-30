@@ -58,7 +58,7 @@ export default function AdminDashboardPage() {
     {
       title: "Total Try Out",
       value: "18",
-      change: "Seri SNBT 2026",
+      change: "Seri SNBT",
       isPositive: true,
       icon: FileSpreadsheet,
       color: "text-amber-600 bg-amber-50 border-amber-100",
