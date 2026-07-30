@@ -252,22 +252,31 @@ export default function CekPeluangPage() {
                     <span>Pilihan Jurusan Target</span>
                     {loadingMajors && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
                   </Label>
-                  <Select
-                    disabled={loadingMajors || majors.length === 0}
-                    value={selectedProdiId}
-                    onValueChange={(val) => val && setSelectedProdiId(val)}
-                  >
-                    <SelectTrigger className="h-11 rounded-xl border-slate-200 text-xs font-semibold">
-                      <SelectValue placeholder={loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan"} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 rounded-xl max-h-64">
-                      {majors.map((m) => (
-                        <SelectItem key={m.id} value={String(m.id)} className="text-xs font-medium">
-                          {m.prodi} {m.jenjang ? `(${m.jenjang})` : ""} {m.kelompok ? `- ${m.kelompok}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
+                    return (
+                      <Select
+                        disabled={loadingMajors || majors.length === 0}
+                        value={selectedProdiId}
+                        onValueChange={(val) => val && setSelectedProdiId(val)}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-slate-200 text-xs font-semibold">
+                          <SelectValue placeholder={loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan"}>
+                            {selectedProdiObj
+                              ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
+                              : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-slate-200 rounded-xl max-h-64 z-50">
+                          {majors.map((m) => (
+                            <SelectItem key={m.id} value={String(m.id)} className="text-xs font-medium">
+                              {m.prodi} {m.jenjang ? `(${m.jenjang})` : ""} {m.kelompok ? `- ${m.kelompok}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
               </div>
 
