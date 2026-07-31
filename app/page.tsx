@@ -159,7 +159,7 @@ export default function LandingPage() {
       </header>
 
       {/* ---------------- 2. HERO SECTION (Single CTA & Trust Metrics) ---------------- */}
-      <section className="py-20 md:py-28 bg-gradient-to-b from-blue-50/50 via-white to-white border-b border-slate-200/80 relative overflow-hidden">
+      <section className="py-20 md:py-28 bg-linear-to-b from-blue-50/50 via-white to-white border-b border-slate-200/80 relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
           <FadeIn className="space-y-6">
             <Badge variant="outline" className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200/80 inline-flex items-center gap-2">
