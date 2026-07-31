@@ -13,7 +13,6 @@ import {
   PlayCircle,
   BarChart3,
   Target,
-  Sparkles,
   Zap,
   TrendingUp,
   Award,

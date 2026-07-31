@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, ArrowRight, Lock, Mail, User, Target, AlertCircle, Loader2 } from "lucide-react";
+import { MotionCard, MotionButton } from "@/components/ui/fade-in";
+import { ArrowLeft, ArrowRight, Lock, Mail, User, Target, AlertCircle, Loader2 } from "lucide-react";
 import { registerAction } from "@/actions/auth";
 
 export default function RegisterPage() {
@@ -29,11 +30,24 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-slate-50 font-sans">
+    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-slate-50/70 font-sans">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <Link href="/" className="flex items-center gap-2.5 group mb-1">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="w-full flex items-center justify-between">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1 text-slate-400 group-hover:text-blue-600" />
+              <span>Kembali ke Beranda</span>
+            </Link>
+            <Badge variant="outline" className="text-[11px] bg-blue-50/80 text-blue-700 border-blue-200/80 font-bold px-2.5 py-0.5">
+              Pendaftaran Siswa Baru
+            </Badge>
+          </div>
+
+          <Link href="/" className="flex items-center gap-2.5 group pt-2">
             <Image
               src="/logo.svg"
               alt="UpdatePTN Logo"
@@ -46,9 +60,6 @@ export default function RegisterPage() {
               Update<span className="text-blue-600">PTN</span>
             </span>
           </Link>
-          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-semibold">
-            Pendaftaran Akun Siswa Baru
-          </Badge>
         </div>
 
         {/* Register Card */}

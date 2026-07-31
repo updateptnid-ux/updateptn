@@ -18,7 +18,6 @@ import {
   LogOut,
   Menu,
   ChevronRight,
-  Sparkles,
   BookOpen,
 } from "lucide-react";
 

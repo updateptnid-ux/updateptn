@@ -16,7 +16,6 @@ import {
   ExternalLink,
   User,
   ArrowLeft,
-  Sparkles,
   CheckCircle2,
   Radio,
 } from "lucide-react";

@@ -18,7 +18,6 @@ import {
   PieChart,
   BarChart3,
   Calendar,
-  Sparkles,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -227,7 +226,7 @@ export default function AdminDashboardPage() {
 
           <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 space-y-1">
             <p className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+              <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
               <span>Insight Sistem</span>
             </p>
             <p className="text-[11px] text-slate-600 leading-relaxed">

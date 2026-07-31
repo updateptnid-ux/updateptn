@@ -14,7 +14,6 @@ import {
   ArrowRight,
   TrendingUp,
   Target,
-  Sparkles,
   BarChart3,
   Award,
 } from "lucide-react";
@@ -97,7 +96,7 @@ export default async function TryoutResultPage({
         {/* Banner Victory Header */}
         <div className="text-center space-y-3">
           <Badge variant="outline" className={`px-4 py-1.5 rounded-full text-xs font-semibold ${performanceBadge.color}`}>
-            <Sparkles className="h-3.5 w-3.5 mr-1.5 animate-pulse" />
+            <Award className="h-3.5 w-3.5 mr-1.5" />
             {performanceBadge.label}
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
