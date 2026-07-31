@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import {
   GraduationCap,
   Video,
@@ -83,20 +84,20 @@ export default async function LiveClassPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans hero-glow">
-      {/* Header Bar */}
-      <header className="bg-card border-b border-border px-4 sm:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col font-sans">
+      {/* Header Bar (Glassmorphic) */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-40 shadow-xs">
         <Link href="/dashboard/student" className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
+          <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <span className="font-extrabold text-lg tracking-tight">
-            Update<span className="text-primary">PTN</span>
+          <span className="font-extrabold text-lg tracking-tight text-slate-900">
+            Update<span className="text-blue-600">PTN</span>
           </span>
         </Link>
 
         <Link href="/dashboard/student">
-          <Button variant="outline" size="sm" className="rounded-xl gap-2 font-semibold">
+          <Button variant="outline" size="sm" className="rounded-xl gap-2 font-semibold border-slate-200/80 bg-white/50 backdrop-blur-xs hover:bg-slate-100">
             <ArrowLeft className="h-4 w-4" />
             <span>Kembali ke Dashboard</span>
           </Button>
@@ -104,17 +105,17 @@ export default async function LiveClassPage() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8 space-y-8 my-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8 space-y-8 my-2">
         {/* Banner Header */}
         <div className="text-center space-y-3">
-          <Badge variant="outline" className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-primary/5 text-primary border-primary/20">
-            <Video className="h-3.5 w-3.5 mr-1.5 text-primary animate-pulse" />
+          <Badge variant="outline" className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+            <Video className="h-3.5 w-3.5 mr-1.5 text-blue-600 animate-pulse" />
             Bimbel Online & Master Tutor
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
             Live Class & Rekaman Sesi
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
+          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto">
             Ikuti siaran langsung bedah soal bersama Master Tutor lulusan PTN favorit atau tonton ulang rekaman videonya 24/7.
           </p>
         </div>
@@ -122,11 +123,11 @@ export default async function LiveClassPage() {
         {/* Tabs Interface */}
         <Tabs defaultValue="upcoming" className="w-full">
           <div className="flex justify-center mb-8">
-            <TabsList className="grid grid-cols-2 p-1.5 bg-muted/80 backdrop-blur rounded-xl h-auto border border-border w-full max-w-md">
-              <TabsTrigger value="upcoming" className="py-2.5 font-semibold text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsList className="grid grid-cols-2 p-1.5 bg-white/80 backdrop-blur-md rounded-xl h-auto border border-slate-200/80 shadow-xs w-full max-w-md">
+              <TabsTrigger value="upcoming" className="py-2.5 font-semibold text-sm rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-xs text-slate-600 data-[state=active]:text-blue-600">
                 Jadwal Mendatang ({upcomingClasses.length})
               </TabsTrigger>
-              <TabsTrigger value="replays" className="py-2.5 font-semibold text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="replays" className="py-2.5 font-semibold text-sm rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-xs text-slate-600 data-[state=active]:text-blue-600">
                 Rekaman Kelas ({completedClasses.length})
               </TabsTrigger>
             </TabsList>
@@ -135,150 +136,158 @@ export default async function LiveClassPage() {
           {/* TAB 1: UPCOMING / ONGOING CLASSES */}
           <TabsContent value="upcoming" className="space-y-6">
             {upcomingClasses.length === 0 ? (
-              <Card className="p-8 text-center border-dashed border-border rounded-2xl">
-                <p className="text-sm text-muted-foreground">Belum ada jadwal Live Class mendatang.</p>
+              <Card className="p-8 text-center border-dashed border-slate-200 rounded-2xl bg-white/80 backdrop-blur-xs">
+                <p className="text-sm text-slate-500">Belum ada jadwal Live Class mendatang.</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.08}>
                 {upcomingClasses.map((item) => (
-                  <Card key={item.id} className="border-primary/30 shadow-lg rounded-2xl flex flex-col justify-between overflow-hidden bg-card">
-                    <CardHeader className="space-y-3 p-6">
-                      <div className="flex items-center justify-between">
-                        {item.status === "ongoing" ? (
-                          <Badge className="bg-rose-600 text-white font-bold text-xs gap-1.5 animate-pulse">
-                            <Radio className="h-3.5 w-3.5" />
-                            <span>SEDANG BERLANGSUNG</span>
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
-                            JADWAL MENDATANG
-                          </Badge>
-                        )}
+                  <StaggerItem key={item.id}>
+                    <MotionCard className="h-full rounded-2xl">
+                      <Card className="border border-slate-200/80 shadow-xs rounded-2xl flex flex-col justify-between overflow-hidden bg-white/90 backdrop-blur-md h-full">
+                        <CardHeader className="space-y-3 p-6">
+                          <div className="flex items-center justify-between">
+                            {item.status === "ongoing" ? (
+                              <Badge className="bg-rose-600 text-white font-bold text-xs gap-1.5 animate-pulse">
+                                <Radio className="h-3.5 w-3.5" />
+                                <span>SEDANG BERLANGSUNG</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
+                                JADWAL MENDATANG
+                              </Badge>
+                            )}
 
-                        <Badge variant="outline" className="text-[11px] font-medium">
-                          Zoom Meeting
-                        </Badge>
-                      </div>
+                            <Badge variant="outline" className="text-[11px] font-medium text-slate-500 border-slate-200">
+                              Zoom Meeting
+                            </Badge>
+                          </div>
 
-                      <CardTitle className="text-xl font-bold leading-snug">
-                        {item.title}
-                      </CardTitle>
+                          <CardTitle className="text-xl font-bold leading-snug text-slate-900">
+                            {item.title}
+                          </CardTitle>
 
-                      <div className="space-y-1.5 pt-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-primary" />
-                          <span className="font-semibold text-foreground">{item.mentor_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                          <span>{formatDate(item.scheduled_at)} WIB</span>
-                        </div>
-                      </div>
-                    </CardHeader>
+                          <div className="space-y-1.5 pt-1 text-xs text-slate-500">
+                            <div className="flex items-center gap-2">
+                              <User className="h-3.5 w-3.5 text-blue-600" />
+                              <span className="font-semibold text-slate-900">{item.mentor_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5 text-indigo-500" />
+                              <span>{formatDate(item.scheduled_at)} WIB</span>
+                            </div>
+                          </div>
+                        </CardHeader>
 
-                    <CardFooter className="p-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row gap-2">
-                      {item.meeting_url && (
-                        <a
-                          href={item.meeting_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full sm:flex-1"
-                        >
-                          <Button className="w-full font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-2 text-xs h-10">
-                            <ExternalLink className="h-4 w-4" />
-                            <span>Join Sesi Live</span>
-                          </Button>
-                        </a>
-                      )}
+                        <CardFooter className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                          {item.meeting_url && (
+                            <a
+                              href={item.meeting_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full sm:flex-1"
+                            >
+                              <Button className="w-full font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 text-xs h-10 shadow-xs transition-all hover:scale-[1.01]">
+                                <ExternalLink className="h-4 w-4" />
+                                <span>Join Sesi Live</span>
+                              </Button>
+                            </a>
+                          )}
 
-                      {item.material_url && (
-                        <a
-                          href={item.material_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full sm:flex-1"
-                        >
-                          <Button variant="outline" className="w-full font-semibold rounded-xl gap-2 text-xs h-10">
-                            <Download className="h-4 w-4" />
-                            <span>Download Modul PDF</span>
-                          </Button>
-                        </a>
-                      )}
-                    </CardFooter>
-                  </Card>
+                          {item.material_url && (
+                            <a
+                              href={item.material_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full sm:flex-1"
+                            >
+                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-xl gap-2 text-xs h-10 text-slate-700 hover:bg-slate-100">
+                                <Download className="h-4 w-4" />
+                                <span>Download Modul PDF</span>
+                              </Button>
+                            </a>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    </MotionCard>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </TabsContent>
 
           {/* TAB 2: COMPLETED REPLAYS */}
           <TabsContent value="replays" className="space-y-6">
             {completedClasses.length === 0 ? (
-              <Card className="p-8 text-center border-dashed border-border rounded-2xl">
-                <p className="text-sm text-muted-foreground">Belum ada rekaman kelas yang tersedia.</p>
+              <Card className="p-8 text-center border-dashed border-slate-200 rounded-2xl bg-white/80 backdrop-blur-xs">
+                <p className="text-sm text-slate-500">Belum ada rekaman kelas yang tersedia.</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.08}>
                 {completedClasses.map((item) => (
-                  <Card key={item.id} className="border-border rounded-2xl flex flex-col justify-between overflow-hidden bg-card">
-                    <CardHeader className="space-y-3 p-6">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-xs font-semibold">
-                          REKAMAN HD SELESAI
-                        </Badge>
-                        <Badge variant="outline" className="text-[11px]">
-                          24/7 Access
-                        </Badge>
-                      </div>
+                  <StaggerItem key={item.id}>
+                    <MotionCard className="h-full rounded-2xl">
+                      <Card className="border border-slate-200/80 rounded-2xl flex flex-col justify-between overflow-hidden bg-white/90 backdrop-blur-md h-full shadow-xs">
+                        <CardHeader className="space-y-3 p-6">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">
+                              REKAMAN HD SELESAI
+                            </Badge>
+                            <Badge variant="outline" className="text-[11px] text-slate-500 border-slate-200">
+                              24/7 Access
+                            </Badge>
+                          </div>
 
-                      <CardTitle className="text-xl font-bold leading-snug">
-                        {item.title}
-                      </CardTitle>
+                          <CardTitle className="text-xl font-bold leading-snug text-slate-900">
+                            {item.title}
+                          </CardTitle>
 
-                      <div className="space-y-1.5 pt-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-primary" />
-                          <span className="font-semibold text-foreground">{item.mentor_name}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>Selesai pada: {formatDate(item.scheduled_at)}</span>
-                        </div>
-                      </div>
-                    </CardHeader>
+                          <div className="space-y-1.5 pt-1 text-xs text-slate-500">
+                            <div className="flex items-center gap-2">
+                              <User className="h-3.5 w-3.5 text-blue-600" />
+                              <span className="font-semibold text-slate-900">{item.mentor_name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                              <span>Selesai pada: {formatDate(item.scheduled_at)}</span>
+                            </div>
+                          </div>
+                        </CardHeader>
 
-                    <CardFooter className="p-4 bg-muted/40 border-t border-border flex flex-col sm:flex-row gap-2">
-                      {item.replay_url && (
-                        <a
-                          href={item.replay_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full sm:flex-1"
-                        >
-                          <Button className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 text-xs h-10">
-                            <PlayCircle className="h-4 w-4" />
-                            <span>Tonton Replay</span>
-                          </Button>
-                        </a>
-                      )}
+                        <CardFooter className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                          {item.replay_url && (
+                            <a
+                              href={item.replay_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full sm:flex-1"
+                            >
+                              <Button className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 text-xs h-10 shadow-xs transition-all hover:scale-[1.01]">
+                                <PlayCircle className="h-4 w-4" />
+                                <span>Tonton Replay</span>
+                              </Button>
+                            </a>
+                          )}
 
-                      {item.material_url && (
-                        <a
-                          href={item.material_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full sm:flex-1"
-                        >
-                          <Button variant="outline" className="w-full font-semibold rounded-xl gap-2 text-xs h-10">
-                            <Download className="h-4 w-4" />
-                            <span>Modul PDF</span>
-                          </Button>
-                        </a>
-                      )}
-                    </CardFooter>
-                  </Card>
+                          {item.material_url && (
+                            <a
+                              href={item.material_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full sm:flex-1"
+                            >
+                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-xl gap-2 text-xs h-10 text-slate-700 hover:bg-slate-100">
+                                <Download className="h-4 w-4" />
+                                <span>Modul PDF</span>
+                              </Button>
+                            </a>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    </MotionCard>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </TabsContent>
         </Tabs>
@@ -286,3 +295,4 @@ export default async function LiveClassPage() {
     </div>
   );
 }
+

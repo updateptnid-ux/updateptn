@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { FadeIn, MotionCard } from "@/components/ui/fade-in";
+import { FadeIn, MotionCard, MotionButton, StaggerContainer, StaggerItem } from "@/components/ui/fade-in";
 import {
   GraduationCap,
   BarChart3,
@@ -26,8 +26,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans">
-      {/* ---------------- NAVIGATION NAVBAR ---------------- */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+      {/* ---------------- NAVIGATION NAVBAR (Glassmorphic Layer) ---------------- */}
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
@@ -69,15 +69,17 @@ export default function LandingPage() {
           {/* Action CTAs */}
           <div className="hidden md:flex items-center gap-3">
             <Link href="/login">
-              <Button variant="ghost" className="font-semibold text-sm text-slate-700 hover:text-blue-600 hover:bg-slate-100 rounded-xl">
+              <Button variant="ghost" className="font-semibold text-sm text-slate-700 hover:text-blue-600 hover:bg-slate-100/80 rounded-xl">
                 Masuk
               </Button>
             </Link>
             <Link href="/register">
-              <Button className="font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-2 px-5">
-                <span>Daftar Akun</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              <MotionButton>
+                <Button className="font-semibold text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-2 px-5">
+                  <span>Daftar Akun</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </MotionButton>
             </Link>
           </div>
 
@@ -85,11 +87,11 @@ export default function LandingPage() {
           <div className="md:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger render={
-                <Button variant="outline" size="icon" className="rounded-xl border-slate-200">
+                <Button variant="outline" size="icon" className="rounded-xl border-slate-200/80 bg-white/50 backdrop-blur-xs">
                   <Menu className="h-5 w-5 text-slate-700" />
                 </Button>
               } />
-              <SheetContent side="right" className="w-75 sm:w-87.5 p-6 bg-white">
+              <SheetContent side="right" className="w-75 sm:w-87.5 p-6 bg-white/95 backdrop-blur-xl border-l border-slate-200/80">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2 text-left text-slate-900">
                     <GraduationCap className="h-6 w-6 text-blue-600" />
@@ -154,16 +156,20 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
             <Link href="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-2">
-                <span>Mulai Sekarang</span>
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+              <MotionButton className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-500/20 gap-2">
+                  <span>Mulai Sekarang</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </MotionButton>
             </Link>
             <Link href="/direktori-prodi" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-base font-semibold text-slate-700 rounded-xl border-slate-200 hover:bg-slate-50 gap-2">
-                <BookOpen className="h-4 w-4 text-slate-500" />
-                <span>Eksplorasi Kampus</span>
-              </Button>
+              <MotionButton className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-base font-semibold text-slate-700 rounded-xl border-slate-200 hover:bg-slate-50 gap-2">
+                  <BookOpen className="h-4 w-4 text-slate-500" />
+                  <span>Eksplorasi Kampus</span>
+                </Button>
+              </MotionButton>
             </Link>
           </div>
         </FadeIn>
@@ -182,12 +188,12 @@ export default function LandingPage() {
             </p>
           </FadeIn>
 
-          {/* 3 Feature Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* 3 Feature Cards Grid (Staggered Waterfall) */}
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8" staggerDelay={0.1}>
             {/* Feature 1 */}
-            <FadeIn delay={0.1}>
-              <MotionCard>
-                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+            <StaggerItem>
+              <MotionCard className="h-full rounded-2xl">
+                <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
                   <div className="space-y-4">
                     <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                       <BarChart3 className="h-6 w-6" />
@@ -225,12 +231,12 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </MotionCard>
-            </FadeIn>
+            </StaggerItem>
 
             {/* Feature 2 */}
-            <FadeIn delay={0.2}>
-              <MotionCard>
-                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+            <StaggerItem>
+              <MotionCard className="h-full rounded-2xl">
+                <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
                   <div className="space-y-4">
                     <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                       <Target className="h-6 w-6" />
@@ -268,12 +274,12 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </MotionCard>
-            </FadeIn>
+            </StaggerItem>
 
             {/* Feature 3 */}
-            <FadeIn delay={0.3}>
-              <MotionCard>
-                <Card className="bg-white border border-slate-200 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
+            <StaggerItem>
+              <MotionCard className="h-full rounded-2xl">
+                <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xs p-8 rounded-2xl flex flex-col justify-between space-y-6 h-full">
                   <div className="space-y-4">
                     <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                       <Video className="h-6 w-6" />
@@ -311,8 +317,8 @@ export default function LandingPage() {
                   </div>
                 </Card>
               </MotionCard>
-            </FadeIn>
-          </div>
+            </StaggerItem>
+          </StaggerContainer>
         </div>
       </section>
 

@@ -20,6 +20,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { MotionCard, StaggerContainer, StaggerItem } from "@/components/ui/fade-in";
 
 interface ProdiRecord {
   id: string | number;
@@ -381,9 +382,9 @@ export default function DirektoriProdiPage() {
             ))}
           </div>
 
-          {/* 4. Internal Scrollable Combobox Suggestions Dropdown (Max-H-[40vh]) */}
+          {/* 4. Internal Scrollable Combobox Suggestions Dropdown (Glassmorphism & Clean Layers) */}
           {showDropdown && !selectedProdi && (
-            <Card className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
+            <Card className="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
               {loading ? (
                 <div className="flex items-center justify-center p-5 space-x-2 text-slate-500 text-xs font-medium">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
