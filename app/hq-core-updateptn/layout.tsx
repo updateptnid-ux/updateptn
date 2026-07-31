@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import AdminSidebarLayout from "@/components/admin/AdminSidebarLayout";
 
 export default async function AdminLayout({
@@ -8,6 +9,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
+  // Bypass admin sidebar layout for dedicated HQ Admin Login page
+  if (pathname === "/hq-core-updateptn/login") {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
 
   // 1. Verify user session via Supabase Server Client
@@ -16,7 +25,7 @@ export default async function AdminLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/hq-core-updateptn");
+    redirect("/hq-core-updateptn/login");
   }
 
   let isAdmin = false;
@@ -67,9 +76,9 @@ export default async function AdminLayout({
     }
   }
 
-  // If unauthorized, redirect to /dashboard/student
+  // If unauthorized, redirect to /hq-core-updateptn/login
   if (!isAdmin) {
-    redirect("/dashboard/student");
+    redirect("/hq-core-updateptn/login");
   }
 
   const adminUser = {
