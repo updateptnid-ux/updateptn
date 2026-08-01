@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   Users,
   UserCheck,
-  DollarSign,
+  CreditCard,
   TrendingUp,
   FileSpreadsheet,
   FileQuestion,
@@ -97,7 +97,7 @@ export default async function AdminDashboardPage() {
 
   const summaryWidgets = [
     {
-      title: "Total User Terdaftar",
+      title: "Total Pengguna",
       value: totalUsers.toLocaleString("id-ID"),
       change: `${totalStudents} Siswa & ${totalAdmins} Admin`,
       isPositive: true,
@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
     {
       title: "Siswa Aktif",
       value: totalStudents.toLocaleString("id-ID"),
-      change: "User Pejuang PTN",
+      change: "Pejuang PTN",
       isPositive: true,
       icon: UserCheck,
       color: "text-indigo-600 bg-indigo-50 border-indigo-100",
@@ -115,39 +115,39 @@ export default async function AdminDashboardPage() {
     {
       title: "Pendapatan Transaksi",
       value: monthlyRevenue > 0 ? formatRupiah(monthlyRevenue) : "Rp 0",
-      change: "Midtrans Payment Gateway",
+      change: "Transaksi Berhasil",
       isPositive: true,
-      icon: DollarSign,
+      icon: CreditCard,
       color: "text-emerald-600 bg-emerald-50 border-emerald-100",
     },
     {
       title: "Total Try Out",
-      value: tryoutsCount > 0 ? tryoutsCount.toString() : "0 (Belum Ada Data)",
-      change: "Paket IRT Active",
+      value: tryoutsCount > 0 ? tryoutsCount.toString() : "0",
+      change: "Paket Aktif",
       isPositive: true,
       icon: FileSpreadsheet,
       color: "text-amber-600 bg-amber-50 border-amber-100",
     },
     {
       title: "Jumlah Soal IRT",
-      value: questionsCount > 0 ? questionsCount.toString() : "0 (Belum Ada Data)",
-      change: "Bank Soal TPS & Literasi",
+      value: questionsCount > 0 ? questionsCount.toString() : "0",
+      change: "Bank Soal",
       isPositive: true,
       icon: FileQuestion,
       color: "text-violet-600 bg-violet-50 border-violet-100",
     },
     {
       title: "PTN Terdaftar",
-      value: ptnCount > 0 ? ptnCount.toString() : "85 (Master Data)",
+      value: ptnCount > 0 ? ptnCount.toString() : "85",
       change: "Universitas & Prodi",
       isPositive: true,
       icon: Building2,
       color: "text-sky-600 bg-sky-50 border-sky-100",
     },
     {
-      title: "Administrator HQ",
+      title: "Administrator",
       value: totalAdmins.toString(),
-      change: "Super Admin Privileges",
+      change: "Tim Pengelola",
       isPositive: true,
       icon: ShieldCheck,
       color: "text-teal-600 bg-teal-50 border-teal-100",
@@ -155,7 +155,7 @@ export default async function AdminDashboardPage() {
     {
       title: "Live Class Sesi",
       value: "3 Sesi",
-      change: "Jadwal Siaran Langsung",
+      change: "Jadwal Hari Ini",
       isPositive: true,
       icon: Video,
       color: "text-rose-600 bg-rose-50 border-rose-100",
@@ -167,14 +167,11 @@ export default async function AdminDashboardPage() {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs">
         <div className="space-y-1">
-          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-semibold mb-1">
-            Real-time Supabase Database Sync
-          </Badge>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Dashboard Overview Admin HQ
+            Dashboard Admin
           </h1>
           <p className="text-sm text-slate-500">
-            Pantau statistik pengguna terdaftar dari database Supabase, omzet transaksi, Try Out IRT, dan master data PTN.
+            Pantau perkembangan pengguna, pendapatan transaksi, paket Try Out, dan master data PTN.
           </p>
         </div>
 
@@ -217,26 +214,23 @@ export default async function AdminDashboardPage() {
         })}
       </div>
 
-      {/* Analytics Visualization Placeholders */}
+      {/* Analytics Visualization Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Revenue & Growth Chart Placeholder */}
+        {/* Growth Chart */}
         <Card className="lg:col-span-8 bg-white border border-slate-200 shadow-xs rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-lg font-extrabold text-slate-900">Perkembangan Pendapatan & User</h3>
-              <p className="text-xs text-slate-500">Analisis pendaftaran pengguna Supabase real-time</p>
+              <h3 className="text-lg font-extrabold text-slate-900">Pertumbuhan Pengguna</h3>
+              <p className="text-xs text-slate-500">Ringkasan pendaftaran siswa dan aktivitas platform</p>
             </div>
-            <Badge variant="outline" className="text-xs bg-slate-50 border-slate-200 text-slate-600 font-semibold">
-              Live Database Connected
-            </Badge>
           </div>
 
           <div className="h-64 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center p-6 space-y-3 text-center">
-            <BarChart3 className="h-10 w-10 text-blue-600 opacity-60 animate-pulse" />
+            <BarChart3 className="h-10 w-10 text-blue-600 opacity-60" />
             <div className="space-y-1">
-              <p className="text-sm font-bold text-slate-900">Grafik Pertumbuhan User Real-Time</p>
+              <p className="text-sm font-bold text-slate-900">Grafik Pertumbuhan Pengguna</p>
               <p className="text-xs text-slate-500 max-w-sm">
-                Terhubung dengan {totalUsers} akun terdaftar di Supabase (`profiles` table).
+                Visualisasi data {totalUsers} total akun terdaftar di platform.
               </p>
             </div>
             <div className="flex items-center gap-6 pt-2 text-xs font-semibold">
@@ -252,12 +246,12 @@ export default async function AdminDashboardPage() {
           </div>
         </Card>
 
-        {/* Distribution Card */}
+        {/* Role Distribution Card */}
         <Card className="lg:col-span-4 bg-white border border-slate-200 shadow-xs rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-lg font-extrabold text-slate-900">Distribusi Role User</h3>
-              <p className="text-xs text-slate-500">Breakdown akun terdaftar</p>
+              <h3 className="text-lg font-extrabold text-slate-900">Distribusi Pengguna</h3>
+              <p className="text-xs text-slate-500">Komposisi role akun terdaftar</p>
             </div>
             <PieChart className="h-5 w-5 text-slate-400" />
           </div>
@@ -265,9 +259,9 @@ export default async function AdminDashboardPage() {
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-700">Akun Student</span>
+                <span className="text-slate-700">Akun Siswa</span>
                 <span className="text-slate-900 font-bold">
-                  {totalUsers > 0 ? Math.round((totalStudents / totalUsers) * 100) : 0}% ({totalStudents} User)
+                  {totalUsers > 0 ? Math.round((totalStudents / totalUsers) * 100) : 0}% ({totalStudents})
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -280,9 +274,9 @@ export default async function AdminDashboardPage() {
 
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-700">Akun Admin HQ</span>
+                <span className="text-slate-700">Akun Admin</span>
                 <span className="text-slate-900 font-bold">
-                  {totalUsers > 0 ? Math.round((totalAdmins / totalUsers) * 100) : 0}% ({totalAdmins} User)
+                  {totalUsers > 0 ? Math.round((totalAdmins / totalUsers) * 100) : 0}% ({totalAdmins})
                 </span>
               </div>
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -297,10 +291,10 @@ export default async function AdminDashboardPage() {
           <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 space-y-1">
             <p className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
               <TrendingUp className="h-3.5 w-3.5 text-blue-600" />
-              <span>Insight Database</span>
+              <span>Ringkasan Akun</span>
             </p>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              Database Supabase secara aktif mengelola {totalUsers} total profil pengguna dengan role tersinkronisasi.
+              Total {totalUsers} pengguna terverifikasi telah aktif dalam sistem UpdatePTN.
             </p>
           </div>
         </Card>
@@ -308,7 +302,7 @@ export default async function AdminDashboardPage() {
 
       {/* Quick Action Shortcuts Grid */}
       <div className="space-y-4">
-        <h3 className="text-base font-bold text-slate-900">Akses Cepat Modul HQ</h3>
+        <h3 className="text-base font-bold text-slate-900">Akses Cepat Modul Admin</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Link href="/hq-core-updateptn/questions">
             <Card className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all p-4 rounded-2xl flex items-center gap-3 group cursor-pointer">
@@ -317,7 +311,7 @@ export default async function AdminDashboardPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Bank Soal</p>
-                <p className="text-[11px] text-slate-500">{questionsCount} Soal IRT</p>
+                <p className="text-[11px] text-slate-500">{questionsCount} Soal</p>
               </div>
             </Card>
           </Link>
@@ -329,7 +323,7 @@ export default async function AdminDashboardPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Paket Try Out</p>
-                <p className="text-[11px] text-slate-500">{tryoutsCount} Paket Aktif</p>
+                <p className="text-[11px] text-slate-500">{tryoutsCount} Paket</p>
               </div>
             </Card>
           </Link>
@@ -353,7 +347,7 @@ export default async function AdminDashboardPage() {
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Master PTN</p>
-                <p className="text-[11px] text-slate-500">{ptnCount > 0 ? ptnCount : 85} Universitas</p>
+                <p className="text-[11px] text-slate-500">{ptnCount > 0 ? ptnCount : 85} PTN</p>
               </div>
             </Card>
           </Link>

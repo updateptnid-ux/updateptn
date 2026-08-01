@@ -17,29 +17,21 @@ import {
   Receipt,
   Ticket,
   Building2,
-  GitBranch,
   BookOpen,
   PieChart,
-  BookCheck,
-  Bookmark,
-  Layers,
   FileQuestion,
   FileSpreadsheet,
   BarChart3,
   Video,
   PlaySquare,
   FileText,
-  Image as ImageIcon,
-  HelpCircle,
   Bell,
-  FolderArchive,
   ShieldAlert,
   Settings,
   LogOut,
   Menu,
   ChevronDown,
   ChevronRight,
-  ShieldCheck,
   Search,
 } from "lucide-react";
 
@@ -67,12 +59,12 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    "Overview & Main": true,
-    "Manajemen User": true,
-    "Transaksi & Finance": true,
-    "Bank Soal & Akademik": true,
+    "Overview": true,
+    "Pengguna": true,
+    "Transaksi": true,
+    "Bank Soal & Ujian": true,
     "Master Data PTN": true,
-    "Content & System": false,
+    "Sistem & Konten": false,
   });
 
   const toggleGroup = (groupName: string) => {
@@ -81,50 +73,50 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
 
   const menuGroups: MenuGroup[] = [
     {
-      groupName: "Overview & Main",
+      groupName: "Overview",
       items: [
-        { name: "Dashboard Overview", href: "/hq-core-updateptn", icon: LayoutDashboard },
+        { name: "Dashboard Admin", href: "/hq-core-updateptn", icon: LayoutDashboard },
       ],
     },
     {
-      groupName: "Manajemen User",
+      groupName: "Pengguna",
       items: [
         { name: "Siswa & Pengguna", href: "/hq-core-updateptn/users", icon: Users },
-        { name: "Master Tutor & Mentor", href: "/hq-core-updateptn/mentors", icon: UserCheck },
+        { name: "Tutor & Mentor", href: "/hq-core-updateptn/mentors", icon: UserCheck },
       ],
     },
     {
-      groupName: "Transaksi & Finance",
+      groupName: "Transaksi",
       items: [
-        { name: "Langganan Active", href: "/hq-core-updateptn/subscriptions", icon: CreditCard },
-        { name: "Transaksi Payment", href: "/hq-core-updateptn/payments", icon: Receipt },
+        { name: "Paket Langganan", href: "/hq-core-updateptn/subscriptions", icon: CreditCard },
+        { name: "Riwayat Transaksi", href: "/hq-core-updateptn/payments", icon: Receipt },
         { name: "Voucher Diskon", href: "/hq-core-updateptn/vouchers", icon: Ticket },
       ],
     },
     {
-      groupName: "Bank Soal & Akademik",
+      groupName: "Bank Soal & Ujian",
       items: [
         { name: "Bank Soal UTBK", href: "/hq-core-updateptn/questions", icon: FileQuestion },
         { name: "Paket Try Out IRT", href: "/hq-core-updateptn/tryouts", icon: FileSpreadsheet },
-        { name: "Hasil & Skor IRT", href: "/hq-core-updateptn/results", icon: BarChart3 },
-        { name: "Live Class Sesi", href: "/hq-core-updateptn/live-classes", icon: Video },
-        { name: "Video Learning", href: "/hq-core-updateptn/videos", icon: PlaySquare },
+        { name: "Hasil Ujian", href: "/hq-core-updateptn/results", icon: BarChart3 },
+        { name: "Live Class", href: "/hq-core-updateptn/live-classes", icon: Video },
+        { name: "Video Pembelajaran", href: "/hq-core-updateptn/videos", icon: PlaySquare },
       ],
     },
     {
       groupName: "Master Data PTN",
       items: [
         { name: "Universitas (PTN)", href: "/hq-core-updateptn/universities", icon: Building2 },
-        { name: "Program Studi (Major)", href: "/hq-core-updateptn/majors", icon: BookOpen },
+        { name: "Program Studi", href: "/hq-core-updateptn/majors", icon: BookOpen },
         { name: "Kuota & Keketatan", href: "/hq-core-updateptn/quotas", icon: PieChart },
       ],
     },
     {
-      groupName: "Content & System",
+      groupName: "Sistem & Konten",
       items: [
         { name: "Artikel & Berita", href: "/hq-core-updateptn/articles", icon: FileText },
         { name: "Broadcast Notifikasi", href: "/hq-core-updateptn/notifications", icon: Bell },
-        { name: "Audit Logs", href: "/hq-core-updateptn/audit-logs", icon: ShieldAlert },
+        { name: "Audit Log", href: "/hq-core-updateptn/audit-logs", icon: ShieldAlert },
         { name: "Pengaturan Sistem", href: "/hq-core-updateptn/settings", icon: Settings },
       ],
     },
@@ -152,7 +144,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
             className="h-8 w-auto object-contain"
           />
           <span className="font-extrabold text-base text-slate-900">
-            UpdatePTN <span className="text-blue-600 text-xs uppercase font-bold">HQ</span>
+            Update<span className="text-blue-600">PTN</span> <span className="text-xs font-semibold text-slate-500">Admin</span>
           </span>
         </Link>
 
@@ -174,7 +166,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
                     className="h-8 w-auto object-contain"
                   />
                   <span className="font-extrabold text-lg text-slate-900">
-                    HQ Core Console
+                    Admin Panel
                   </span>
                 </SheetTitle>
               </SheetHeader>
@@ -214,32 +206,32 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
             <form action={signOutAction} className="pt-4 border-t border-slate-200 mt-6">
               <Button variant="ghost" className="w-full justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3 text-xs">
                 <LogOut className="h-4 w-4" />
-                <span>Keluar HQ</span>
+                <span>Keluar</span>
               </Button>
             </form>
           </SheetContent>
         </Sheet>
       </header>
 
-      {/* Desktop Enterprise Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 justify-between shrink-0 sticky top-0 h-screen overflow-y-auto p-4 space-y-6">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 justify-between shrink-0 sticky top-0 h-screen overflow-y-auto p-4 space-y-6">
         <div className="space-y-6">
-          {/* Admin Brand Badge */}
-          <Link href="/hq-core-updateptn" className="flex items-center gap-3 px-2 pt-2">
+          {/* Admin Brand */}
+          <Link href="/hq-core-updateptn" className="flex items-center gap-2.5 px-2 pt-2">
             <Image
               src="/logo.svg"
               alt="UpdatePTN Logo"
-              width={36}
-              height={36}
-              className="h-9 w-auto object-contain"
+              width={34}
+              height={34}
+              className="h-8 w-auto object-contain"
             />
             <div>
               <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-tight">
                 Update<span className="text-blue-600">PTN</span>
               </span>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 font-bold px-1.5 py-0">
-                ENTERPRISE HQ
-              </Badge>
+              <span className="text-[11px] font-semibold text-slate-500 block">
+                Admin Panel
+              </span>
             </div>
           </Link>
 
@@ -308,7 +300,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               className="w-full h-9 justify-center border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-xl gap-2"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span>Keluar HQ</span>
+              <span>Keluar</span>
             </Button>
           </form>
         </div>
@@ -323,7 +315,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Cari modul admin, pengguna, atau soal..."
+                placeholder="Cari modul, pengguna, atau soal..."
                 className="w-full pl-10 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-900"
               />
             </div>
@@ -334,10 +326,14 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               <Bell className="h-4 w-4" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-600"></span>
             </Button>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold gap-1.5 px-3 py-1">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Admin Verified: Supabase Session</span>
-            </Badge>
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <Avatar className="h-8 w-8 border border-slate-200">
+                <AvatarFallback className="bg-blue-600 text-white font-bold text-xs">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-xs font-bold text-slate-800">{user.name}</span>
+            </div>
           </div>
         </header>
 
