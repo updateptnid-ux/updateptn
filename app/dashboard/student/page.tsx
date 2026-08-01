@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
+import StudentTryoutList from "@/components/StudentTryoutList";
 import {
   GraduationCap,
   Clock,
@@ -38,6 +39,7 @@ export default async function StudentDashboardPage() {
   // 3. Fetch past results for user
   let userResultsCount = 0;
   let lastResult = null;
+  let activeSubscription = null;
 
   if (user) {
     const { data: resultsData } = await supabase
@@ -49,6 +51,18 @@ export default async function StudentDashboardPage() {
     if (resultsData && resultsData.length > 0) {
       userResultsCount = resultsData.length;
       lastResult = resultsData[0];
+    }
+
+    // Fetch latest user subscription
+    const { data: subData } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (subData && subData.length > 0) {
+      activeSubscription = subData[0];
     }
   }
 
@@ -179,62 +193,16 @@ export default async function StudentDashboardPage() {
         </StaggerItem>
       </StaggerContainer>
 
-      {/* Available Try Outs Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-xl font-bold text-slate-900">Daftar Try Out Aktif</h2>
-            <p className="text-xs text-slate-500">Pilih paket Try Out untuk mulai simulasi ujian bertimer</p>
-          </div>
-          <Badge variant="outline" className="text-xs border-slate-200 text-slate-600">
-            <span>Standar Resmi BPPP</span>
-          </Badge>
-        </div>
-
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.1}>
-          {activeTryouts.map((to) => (
-            <StaggerItem key={to.id}>
-              <MotionCard className="h-full rounded-2xl">
-                <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xs rounded-2xl p-6 flex flex-col justify-between h-full">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge className="bg-blue-600 text-white font-bold text-xs">TERBARU</Badge>
-                      <span className="text-xs text-slate-400 font-medium">Sistem IRT</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{to.title}</h3>
-                      <p className="text-xs text-slate-500">
-                        Mencakup Tes Potensi Skolastik (TPS) &amp; Literasi Bahasa Indonesia/Inggris.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 pt-1">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <span>{to.duration_minutes} Menit</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <span>{to.total_questions || 155} Soal</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-slate-100 mt-4">
-                    <Link href={`/tryout/${to.id}`} className="w-full">
-                      <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-xs transition-all hover:scale-[1.01]">
-                        <PlayCircle className="h-4 w-4" />
-                        <span>Mulai Ujian Sekarang</span>
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-              </MotionCard>
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      </div>
+      {/* Available Try Outs Component List */}
+      {user && (
+        <StudentTryoutList
+          tryouts={activeTryouts}
+          userId={user.id}
+          userName={user.user_metadata?.full_name || ""}
+          userEmail={user.email || ""}
+          initialSubscription={activeSubscription}
+        />
+      )}
     </div>
   );
 }
