@@ -1,10 +1,20 @@
 import Link from "next/link";
+<<<<<<< HEAD
+=======
+import Image from "next/image";
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+<<<<<<< HEAD
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
+=======
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
+import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import {
   GraduationCap,
   Clock,
@@ -49,6 +59,7 @@ export default async function StudentDashboardPage() {
     }
   }
 
+<<<<<<< HEAD
   // Fallback demo tryouts if DB empty
   const activeTryouts =
     tryoutsData && tryoutsData.length > 0
@@ -69,6 +80,19 @@ export default async function StudentDashboardPage() {
             created_at: new Date().toISOString(),
           },
         ];
+=======
+  // Use real tryouts from database only
+  const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
+
+  const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
+  const targetUniv = user?.user_metadata?.target_univ as string | undefined;
+  const targetProdi = user?.user_metadata?.target_prodi as string | undefined;
+  // Build a display label for the target
+  const targetLabel =
+    targetProdi && targetUniv
+      ? `${targetProdi} — ${targetUniv.replace("UNIVERSITAS ", "").replace("INSTITUT ", "")}`
+      : targetUniv || targetProdi || null;
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -85,6 +109,15 @@ export default async function StudentDashboardPage() {
             <p className="text-slate-500 text-sm">
               Pantau perkembangan skor IRT dan ikuti simulasi Try Out UTBK terbaru.
             </p>
+<<<<<<< HEAD
+=======
+            {asalSekolah && (
+              <p className="text-xs text-slate-400 font-medium flex items-center gap-1 pt-0.5">
+                <span>🏫</span>
+                <span>{asalSekolah}</span>
+              </p>
+            )}
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
           </div>
 
           <Link href="/dashboard/student/cek-peluang">
@@ -125,9 +158,17 @@ export default async function StudentDashboardPage() {
                 </div>
               </div>
               <p className="text-3xl font-extrabold text-slate-900">
+<<<<<<< HEAD
                 {lastResult ? Math.round(Number(lastResult.score)) : "720"}
               </p>
               <p className="text-xs text-slate-500 font-medium">Skor Pembobotan IRT</p>
+=======
+                {lastResult ? Math.round(Number(lastResult.score)) : "—"}
+              </p>
+              <p className="text-xs text-slate-500 font-medium">
+                {lastResult ? "Skor Pembobotan IRT" : "Belum ada tryout"}
+              </p>
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             </Card>
           </MotionCard>
         </StaggerItem>
@@ -138,6 +179,7 @@ export default async function StudentDashboardPage() {
             <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-2 h-full">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Target Utama</span>
+<<<<<<< HEAD
                 <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                   <GraduationCap className="h-5 w-5" />
                 </div>
@@ -147,6 +189,42 @@ export default async function StudentDashboardPage() {
                 <TrendingUp className="h-3.5 w-3.5" />
                 <span>Estimasi Peluang 88%</span>
               </p>
+=======
+                {targetUniv ? (
+                  <Avatar className="h-9 w-9 rounded-xl border border-slate-200">
+                    <AvatarImage
+                      src={getUnivLogoUrl(targetUniv) ?? undefined}
+                      alt={targetUniv}
+                      className="object-contain p-0.5"
+                    />
+                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold text-xs rounded-xl">
+                      {getUnivInitials(targetUniv)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5" />
+                  </div>
+                )}
+              </div>
+              {targetLabel ? (
+                <>
+                  <p className="text-base font-extrabold text-slate-900 leading-snug line-clamp-2">{targetLabel}</p>
+                  <p className="text-xs text-blue-600 font-semibold flex items-center gap-1">
+                    <Target className="h-3.5 w-3.5" />
+                    <span>Prodi Impian Kamu</span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-slate-400 italic">Belum diset</p>
+                  <Link href="/direktori-prodi" className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span>Cari Prodi Impian →</span>
+                  </Link>
+                </>
+              )}
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             </Card>
           </MotionCard>
         </StaggerItem>

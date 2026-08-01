@@ -1,0 +1,465 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Template Bank Soal SNBT/UTBK UpdatePTN Platform",
+    "created_date": "2026-08-01",
+    "total_subtests": 5,
+    "total_questions_per_tryout": 80
+  },
+  "tryout_example": {
+    "tryout_id": "TO-001-2026",
+    "tryout_title": "Try Out SNBT Nasional #1",
+    "tryout_description": "Simulasi UTBK-SNBT sesuai blueprint resmi BPPP dengan sistem IRT",
+    "is_premium": false,
+    "duration_minutes": 195,
+    "total_questions": 80,
+    "scheduled_date": "2026-08-15T09:00:00Z",
+    "subtests": [
+      {
+        "subtest_id": "PU",
+        "subtest_name": "Penalaran Umum",
+        "subtest_code": "TPS_PU",
+        "duration_minutes": 30,
+        "total_questions": 20,
+        "questions": [
+          {
+            "question_id": "PU-001",
+            "question_number": 1,
+            "question_text": "Semua siswa yang rajin belajar akan lulus SNBT. Budi adalah siswa yang rajin belajar. Kesimpulan yang tepat adalah...",
+            "question_type": "multiple_choice",
+            "difficulty_level": "medium",
+            "irt_discrimination": 1.2,
+            "irt_difficulty": 0.5,
+            "cognitive_level": "C4-Analisis",
+            "topic": "Silogisme",
+            "subtopic": "Logika Deduktif",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "Budi akan lulus SNBT",
+                "is_correct": true
+              },
+              {
+                "option_id": "B",
+                "option_text": "Budi mungkin tidak lulus SNBT",
+                "is_correct": false
+              },
+              {
+                "option_id": "C",
+                "option_text": "Semua siswa akan lulus SNBT",
+                "is_correct": false
+              },
+              {
+                "option_id": "D",
+                "option_text": "Tidak ada siswa yang lulus SNBT",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "A",
+              "explanation_text": "Berdasarkan silogisme: Premis Mayor (Semua siswa rajin → lulus), Premis Minor (Budi rajin), maka Kesimpulan (Budi lulus). Ini adalah penalaran deduktif valid.",
+              "solution_steps": [
+                "Identifikasi premis mayor dan minor",
+                "Terapkan aturan silogisme",
+                "Validasi kesimpulan logis"
+              ],
+              "time_estimate_seconds": 60,
+              "tips": "Perhatikan kata kunci 'semua', 'adalah', dan hubungan logis antar kalimat."
+            }
+          },
+          {
+            "question_id": "PU-002",
+            "question_number": 2,
+            "question_text": "Perhatikan pola berikut: 2, 6, 12, 20, 30, ... Bilangan berikutnya adalah?",
+            "question_type": "multiple_choice",
+            "difficulty_level": "easy",
+            "irt_discrimination": 0.8,
+            "irt_difficulty": -0.3,
+            "cognitive_level": "C3-Aplikasi",
+            "topic": "Pola Bilangan",
+            "subtopic": "Deret Kuadrat",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "38",
+                "is_correct": false
+              },
+              {
+                "option_id": "B",
+                "option_text": "40",
+                "is_correct": false
+              },
+              {
+                "option_id": "C",
+                "option_text": "42",
+                "is_correct": true
+              },
+              {
+                "option_id": "D",
+                "option_text": "44",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "C",
+              "explanation_text": "Pola: 1×2=2, 2×3=6, 3×4=12, 4×5=20, 5×6=30, maka 6×7=42",
+              "solution_steps": [
+                "Cari pola: n × (n+1)",
+                "Suku ke-6: 6 × 7 = 42"
+              ],
+              "time_estimate_seconds": 45,
+              "tips": "Perhatikan bahwa setiap suku adalah perkalian dua bilangan berurutan."
+            }
+          }
+        ]
+      },
+      {
+        "subtest_id": "PBM",
+        "subtest_name": "Penalaran Matematika",
+        "subtest_code": "TPS_PBM",
+        "duration_minutes": 30,
+        "total_questions": 15,
+        "questions": [
+          {
+            "question_id": "PBM-001",
+            "question_number": 1,
+            "question_text": "Sebuah toko memberikan diskon 20% untuk semua produk. Jika harga setelah diskon adalah Rp80.000, maka harga awal sebelum diskon adalah...",
+            "question_type": "multiple_choice",
+            "difficulty_level": "medium",
+            "irt_discrimination": 1.5,
+            "irt_difficulty": 0.3,
+            "cognitive_level": "C3-Aplikasi",
+            "topic": "Aritmatika Sosial",
+            "subtopic": "Persentase & Diskon",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "Rp96.000",
+                "is_correct": false
+              },
+              {
+                "option_id": "B",
+                "option_text": "Rp100.000",
+                "is_correct": true
+              },
+              {
+                "option_id": "C",
+                "option_text": "Rp104.000",
+                "is_correct": false
+              },
+              {
+                "option_id": "D",
+                "option_text": "Rp120.000",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "B",
+              "explanation_text": "Harga setelah diskon = 80% dari harga awal. Maka: 80.000 = 0,8 × Harga Awal → Harga Awal = 80.000 ÷ 0,8 = 100.000",
+              "solution_steps": [
+                "Diskon 20% berarti harga jadi 80% dari awal",
+                "80.000 = 80% × Harga Awal",
+                "Harga Awal = 80.000 ÷ 0,8 = 100.000"
+              ],
+              "time_estimate_seconds": 90,
+              "tips": "Ingat: Harga setelah diskon x% = (100-x)% dari harga awal"
+            }
+          }
+        ]
+      },
+      {
+        "subtest_id": "LBI",
+        "subtest_name": "Literasi Bahasa Indonesia",
+        "subtest_code": "LIT_LBI",
+        "duration_minutes": 45,
+        "total_questions": 30,
+        "questions": [
+          {
+            "question_id": "LBI-001",
+            "question_number": 1,
+            "question_text": "Bacalah teks berikut!\n\nPendidikan karakter menjadi sangat penting di era digital ini. Banyak generasi muda yang lebih fokus pada teknologi sehingga melupakan nilai-nilai luhur budaya. Oleh karena itu, sekolah harus mengintegrasikan pendidikan karakter dalam kurikulum.\n\nGagasan utama paragraf tersebut adalah...",
+            "question_type": "multiple_choice",
+            "difficulty_level": "easy",
+            "irt_discrimination": 0.9,
+            "irt_difficulty": -0.2,
+            "cognitive_level": "C2-Pemahaman",
+            "topic": "Membaca",
+            "subtopic": "Gagasan Utama",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "Generasi muda fokus pada teknologi",
+                "is_correct": false
+              },
+              {
+                "option_id": "B",
+                "option_text": "Pentingnya pendidikan karakter di era digital",
+                "is_correct": true
+              },
+              {
+                "option_id": "C",
+                "option_text": "Nilai-nilai luhur budaya dilupakan",
+                "is_correct": false
+              },
+              {
+                "option_id": "D",
+                "option_text": "Sekolah harus mengubah kurikulum",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "B",
+              "explanation_text": "Gagasan utama ada di kalimat pertama: 'Pendidikan karakter menjadi sangat penting di era digital ini.' Kalimat lainnya adalah kalimat penjelas.",
+              "solution_steps": [
+                "Identifikasi kalimat utama (biasanya di awal/akhir)",
+                "Kalimat lain berfungsi sebagai penjelas",
+                "Pilih jawaban yang merangkum inti paragraf"
+              ],
+              "time_estimate_seconds": 60,
+              "tips": "Gagasan utama biasanya ada di kalimat pertama atau terakhir paragraf."
+            }
+          }
+        ]
+      },
+      {
+        "subtest_id": "LBE",
+        "subtest_name": "Literasi Bahasa Inggris",
+        "subtest_code": "LIT_LBE",
+        "duration_minutes": 30,
+        "total_questions": 20,
+        "questions": [
+          {
+            "question_id": "LBE-001",
+            "question_number": 1,
+            "question_text": "Read the following text!\n\nClimate change is one of the most pressing issues facing humanity today. Rising temperatures, melting ice caps, and extreme weather events are clear indicators of this crisis. Scientists agree that immediate action is necessary to mitigate its effects.\n\nWhat is the main idea of the passage?",
+            "question_type": "multiple_choice",
+            "difficulty_level": "medium",
+            "irt_discrimination": 1.1,
+            "irt_difficulty": 0.2,
+            "cognitive_level": "C2-Comprehension",
+            "topic": "Reading Comprehension",
+            "subtopic": "Main Idea",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "Climate change is a critical issue requiring urgent action",
+                "is_correct": true
+              },
+              {
+                "option_id": "B",
+                "option_text": "Rising temperatures are dangerous",
+                "is_correct": false
+              },
+              {
+                "option_id": "C",
+                "option_text": "Scientists study climate change",
+                "is_correct": false
+              },
+              {
+                "option_id": "D",
+                "option_text": "Ice caps are melting rapidly",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "A",
+              "explanation_text": "The main idea combines the urgency ('most pressing issues') and the need for action ('immediate action is necessary'). Other options are supporting details.",
+              "solution_steps": [
+                "Identify topic sentence (usually first or last)",
+                "Look for thesis statement",
+                "Choose answer that summarizes entire passage"
+              ],
+              "time_estimate_seconds": 75,
+              "tips": "Main idea usually appears in the first or last sentence and is supported by details."
+            }
+          }
+        ]
+      },
+      {
+        "subtest_id": "PK",
+        "subtest_name": "Pengetahuan Kuantitatif",
+        "subtest_code": "TPS_PK",
+        "duration_minutes": 30,
+        "total_questions": 15,
+        "questions": [
+          {
+            "question_id": "PK-001",
+            "question_number": 1,
+            "question_text": "Jika x + y = 10 dan x - y = 4, maka nilai x² + y² adalah...",
+            "question_type": "multiple_choice",
+            "difficulty_level": "hard",
+            "irt_discrimination": 1.8,
+            "irt_difficulty": 1.0,
+            "cognitive_level": "C4-Analisis",
+            "topic": "Aljabar",
+            "subtopic": "Sistem Persamaan Linear",
+            "image_url": null,
+            "options": [
+              {
+                "option_id": "A",
+                "option_text": "52",
+                "is_correct": false
+              },
+              {
+                "option_id": "B",
+                "option_text": "58",
+                "is_correct": true
+              },
+              {
+                "option_id": "C",
+                "option_text": "64",
+                "is_correct": false
+              },
+              {
+                "option_id": "D",
+                "option_text": "72",
+                "is_correct": false
+              }
+            ],
+            "explanation": {
+              "correct_answer": "B",
+              "explanation_text": "Dari x+y=10 dan x-y=4, didapat x=7 dan y=3. Maka x²+y² = 7² + 3² = 49 + 9 = 58",
+              "solution_steps": [
+                "Eliminasi: (x+y) + (x-y) = 2x = 14 → x = 7",
+                "Substitusi: 7 + y = 10 → y = 3",
+                "Hitung: x² + y² = 49 + 9 = 58"
+              ],
+              "time_estimate_seconds": 120,
+              "tips": "Gunakan eliminasi untuk mencari x, lalu substitusi untuk y."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "blueprint_snbt": {
+    "total_duration_minutes": 195,
+    "total_questions": 80,
+    "subtest_distribution": {
+      "Tes Potensi Skolastik (TPS)": {
+        "subtests": [
+          {
+            "code": "TPS_PU",
+            "name": "Penalaran Umum",
+            "questions": 20,
+            "duration_minutes": 30,
+            "topics": [
+              "Silogisme",
+              "Analogi",
+              "Pola Bilangan",
+              "Hubungan Logis",
+              "Penalaran Induktif-Deduktif"
+            ]
+          },
+          {
+            "code": "TPS_PBM",
+            "name": "Penalaran Matematika",
+            "questions": 15,
+            "duration_minutes": 30,
+            "topics": [
+              "Aljabar",
+              "Geometri",
+              "Statistika",
+              "Peluang",
+              "Aritmatika Sosial"
+            ]
+          },
+          {
+            "code": "TPS_PK",
+            "name": "Pengetahuan Kuantitatif",
+            "questions": 15,
+            "duration_minutes": 30,
+            "topics": [
+              "Persamaan & Pertidaksamaan",
+              "Fungsi",
+              "Trigonometri",
+              "Eksponen & Logaritma",
+              "Matriks"
+            ]
+          }
+        ]
+      },
+      "Literasi": {
+        "subtests": [
+          {
+            "code": "LIT_LBI",
+            "name": "Literasi Bahasa Indonesia",
+            "questions": 30,
+            "duration_minutes": 45,
+            "topics": [
+              "Gagasan Utama",
+              "Gagasan Pendukung",
+              "Makna Kata/Kalimat",
+              "Inferensi",
+              "Tujuan Penulisan",
+              "Struktur Teks"
+            ]
+          },
+          {
+            "code": "LIT_LBE",
+            "name": "Literasi Bahasa Inggris",
+            "questions": 20,
+            "duration_minutes": 30,
+            "topics": [
+              "Main Idea",
+              "Supporting Details",
+              "Vocabulary in Context",
+              "Inference",
+              "Author's Purpose",
+              "Text Organization"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "irt_parameters_guide": {
+    "discrimination": {
+      "description": "Parameter a (daya pembeda soal)",
+      "range": "0.5 - 2.5",
+      "interpretation": {
+        "low": "0.5 - 0.9 (soal kurang membedakan)",
+        "moderate": "1.0 - 1.5 (soal baik)",
+        "high": "1.6 - 2.5 (soal sangat baik)"
+      }
+    },
+    "difficulty": {
+      "description": "Parameter b (tingkat kesulitan)",
+      "range": "-3.0 to +3.0",
+      "interpretation": {
+        "very_easy": "-3.0 to -1.0",
+        "easy": "-0.9 to -0.1",
+        "medium": "-0.0 to 0.5",
+        "hard": "0.6 to 1.5",
+        "very_hard": "1.6 to 3.0"
+      }
+    },
+    "guessing": {
+      "description": "Parameter c (tebakan acak)",
+      "fixed_value": 0.25,
+      "note": "Untuk soal pilihan ganda 4 opsi"
+    }
+  },
+  "difficulty_level_distribution": {
+    "recommendation": "Distribusi ideal untuk try out balanced",
+    "easy": "30% (24 soal)",
+    "medium": "50% (40 soal)",
+    "hard": "20% (16 soal)"
+  },
+  "notes": {
+    "instruction": "Template ini dapat digunakan untuk upload batch soal ke database",
+    "usage": [
+      "Copy struktur question untuk membuat soal baru",
+      "Pastikan question_id unik",
+      "Isi semua field wajib",
+      "Gunakan IRT parameters yang sesuai",
+      "Tambahkan image_url jika soal memiliki gambar"
+    ],
+    "database_integration": "Sesuaikan dengan schema tabel 'questions' di Supabase"
+  }
+}

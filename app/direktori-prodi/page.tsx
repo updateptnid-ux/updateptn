@@ -118,7 +118,11 @@ export default function DirektoriProdiPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+<<<<<<< HEAD
   // Strict Zero-Trust Client Auth Guard
+=======
+  // Auth guard - harus login
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   useEffect(() => {
     async function checkAuth() {
       const supabase = createClient();
@@ -164,6 +168,7 @@ export default function DirektoriProdiPage() {
           keyword: searchQuery.trim(),
         });
 
+<<<<<<< HEAD
         if (!error && data && data.length > 0) {
           let results = data as ProdiRecord[];
 
@@ -246,6 +251,40 @@ export default function DirektoriProdiPage() {
           setSuggestions(filtered);
           setShowDropdown(true);
         }
+=======
+        let results: ProdiRecord[] = [];
+
+        if (!error && data && data.length > 0) {
+          results = data as ProdiRecord[];
+        } else {
+          // Fallback to local /data_snbt.json search
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData: ProdiRecord[] = await res.json();
+            const q = searchQuery.toLowerCase().trim();
+            results = localData.filter((item) =>
+              `${item.univ} ${item.prodi} ${item.jenjang || ""} ${item.kelompok || ""}`
+                .toLowerCase()
+                .includes(q)
+            );
+          }
+        }
+
+        // Apply pre-filter constraints
+        if (selectedKelompok !== "ALL") {
+          results = results.filter((item) =>
+            item.kelompok?.toUpperCase().includes(selectedKelompok)
+          );
+        }
+        if (selectedJenjang !== "ALL") {
+          results = results.filter(
+            (item) => item.jenjang?.toUpperCase() === selectedJenjang
+          );
+        }
+
+        setSuggestions(results.slice(0, 15));
+        setShowDropdown(results.length > 0);
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       } catch (err) {
         console.error("Error fetching suggestions:", err);
       } finally {
@@ -295,7 +334,11 @@ export default function DirektoriProdiPage() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="w-full max-w-xl md:max-w-2xl mx-auto py-2 space-y-3.5 md:space-y-4 flex flex-col justify-start">
+=======
+    <div className="w-full max-w-xl md:max-w-2xl mx-auto py-2 space-y-3.5 md:space-y-4 flex flex-col justify-start overflow-visible">
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         {/* 2. Ultra-Compact Header */}
         <div className="text-center">
           <h1 className="text-xl md:text-2xl font-bold text-center tracking-tight text-slate-950">
@@ -384,7 +427,11 @@ export default function DirektoriProdiPage() {
 
           {/* 4. Internal Scrollable Combobox Suggestions Dropdown (Glassmorphism & Clean Layers) */}
           {showDropdown && !selectedProdi && (
+<<<<<<< HEAD
             <Card className="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
+=======
+            <Card className="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl z-50 max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
               {loading ? (
                 <div className="flex items-center justify-center p-5 space-x-2 text-slate-500 text-xs font-medium">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-600" />

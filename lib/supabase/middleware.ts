@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+<<<<<<< HEAD
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -13,6 +14,13 @@ export async function updateSession(request: NextRequest) {
     request: {
       headers: requestHeaders,
     },
+=======
+import { NextResponse, type NextRequest } from "next/server";
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   });
 
   const supabase = createServerClient(
@@ -28,9 +36,13 @@ export async function updateSession(request: NextRequest) {
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
+<<<<<<< HEAD
             request: {
               headers: requestHeaders,
             },
+=======
+            request,
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
           });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -40,15 +52,24 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+<<<<<<< HEAD
   // Extract user session from Supabase
+=======
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+<<<<<<< HEAD
+=======
+  const pathname = request.nextUrl.pathname;
+
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   // ========================================================
   // 1. OBSCURE ADMIN ROUTE PROTECTION (/hq-core-updateptn/*)
   // ========================================================
   if (pathname.startsWith("/hq-core-updateptn")) {
+<<<<<<< HEAD
     const isAdminLoginRoute = pathname === "/hq-core-updateptn/login";
 
     let isAdmin = false;
@@ -110,12 +131,34 @@ export async function updateSession(request: NextRequest) {
       if (!user) {
         url.searchParams.set("redirect", pathname);
       }
+=======
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/student";
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       return NextResponse.redirect(url);
     }
   }
 
   // ========================================================
+<<<<<<< HEAD
   // 2. STRICT PROTECTION FOR INTERNAL ROUTES
+=======
+  // 2. STRICT ZERO-TRUST PROTECTION FOR INTERNAL ROUTES
+>>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   // Protect: /direktori-prodi, /dashboard, /tryout
   // ========================================================
   if (
