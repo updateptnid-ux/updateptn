@@ -253,16 +253,18 @@ export default function SubtesDetailPage() {
                     </div>
 
                     {/* Right CTA */}
-                    <Button
-                      className={`${
-                        module.isCompleted
-                          ? "bg-slate-600 hover:bg-slate-700"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      } text-white font-bold rounded-xl gap-2 shadow-sm shrink-0`}
-                    >
-                      <PlayCircle className="h-4 w-4" />
-                      <span>{module.isCompleted ? "Ulangi" : "Mulai"}</span>
-                    </Button>
+                    <Link href={`/tryout/latihan-${subtesId}`}>
+                      <Button
+                        className={`${
+                          module.isCompleted
+                            ? "bg-slate-600 hover:bg-slate-700"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        } text-white font-bold rounded-xl gap-2 shadow-sm shrink-0`}
+                      >
+                        <PlayCircle className="h-4 w-4" />
+                        <span>{module.isCompleted ? "Ulangi" : "Mulai"}</span>
+                      </Button>
+                    </Link>
                   </div>
                 </Card>
               </MotionCard>

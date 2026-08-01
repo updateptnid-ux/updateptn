@@ -196,14 +196,14 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               {[
-                { name: "UI", logo: "/logo.png" },
-                { name: "ITB", logo: "/logo.png" },
-                { name: "UGM", logo: "/logo.png" },
-                { name: "ITS", logo: "/logo.png" },
-                { name: "UNPAD", logo: "/logo.png" },
-                { name: "UNAIR", logo: "/logo.png" },
-                { name: "UB", logo: "/logo.png" },
-                { name: "UNS", logo: "/logo.png" }
+                { name: "Universitas Indonesia", logo: "/logo-univ/univ/Universitas Indonesia.png" },
+                { name: "Institut Teknologi Bandung", logo: "/logo-univ/intitut/Logo_Institut_Teknologi_Bandung-removebg-preview.png" },
+                { name: "Universitas Gadjah Mada", logo: "/logo-univ/univ/Universitas Gadjah Mada.png" },
+                { name: "Institut Teknologi Sepuluh November", logo: "/logo-univ/intitut/Logo_ITS-removebg-preview.png" },
+                { name: "Universitas Padjadjaran", logo: "/logo-univ/univ/Universitas Padjadjaran.png" },
+                { name: "Universitas Airlangga", logo: "/logo-univ/univ/UNIVERSITAS AIRLANGGA.png" },
+                { name: "Universitas Brawijaya", logo: "/logo-univ/univ/UNIVERSITAS BRAWIJAYA.png" },
+                { name: "Universitas Diponegoro", logo: "/logo-univ/univ/Universitas Diponegoro.png" }
               ].map((univ) => (
                 <div
                   key={univ.name}
@@ -217,6 +217,7 @@ export default function LandingPage() {
                       width={56}
                       height={56}
                       className="object-contain"
+                      loading="lazy"
                     />
                   </div>
                 </div>

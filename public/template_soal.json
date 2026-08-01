@@ -1,0 +1,12 @@
+[
+  {
+    "text": "TEMPLATE: Tuliskan pertanyaan soal di sini dengan lengkap dan jelas.",
+    "option_a": "Pilihan jawaban A",
+    "option_b": "Pilihan jawaban B",
+    "option_c": "Pilihan jawaban C",
+    "option_d": "Pilihan jawaban D",
+    "option_e": "Pilihan jawaban E",
+    "correct_answer": "A",
+    "explanation": "Tulis pembahasan/penjelasan kunci jawaban di sini mengapa jawaban A benar."
+  }
+]

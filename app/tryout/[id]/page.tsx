@@ -61,14 +61,49 @@ export default function TryoutEnginePage({
       try {
         setLoading(true);
         const supabase = createClient();
-        const { data } = await supabase
-          .from("questions")
-          .select("*")
-          .eq("tryout_id", tryoutId)
-          .order("id");
+        let dbData = null;
+        if (tryoutId.startsWith("latihan-")) {
+          const categorySlug = tryoutId.replace("latihan-", "");
+          const slugToName: Record<string, string> = {
+            "penalaran-umum": "Penalaran Umum",
+            "pengetahuan-kuantitatif": "Pengetahuan Kuantitatif",
+            "literasi-indonesia": "Literasi B. Indonesia",
+            "literasi-inggris": "Literasi B. Inggris",
+            "penalaran-matematika": "Penalaran Matematika"
+          };
+          const subtestName = slugToName[categorySlug] || "Penalaran Umum";
 
-        if (data && data.length > 0) {
-          setQuestions(data);
+          const { data } = await supabase
+            .from("questions")
+            .select("*")
+            .ilike("text", `%%`); // Fetch all questions first
+
+          if (data && data.length > 0) {
+            // Filter by subtest name (case insensitive/loose match)
+            const matched = data.filter((q: any) => 
+              (q.subtest || "").toLowerCase().includes(subtestName.toLowerCase()) || 
+              (q.text || "").toLowerCase().includes(subtestName.toLowerCase())
+            );
+            
+            if (matched.length > 0) {
+              // Shuffle and select up to 15 questions for quick practice session
+              dbData = [...matched].sort(() => 0.5 - Math.random()).slice(0, 15);
+            } else {
+              // Fallback to any random questions from the database if no direct match is found
+              dbData = [...data].sort(() => 0.5 - Math.random()).slice(0, 15);
+            }
+          }
+        } else {
+          const { data } = await supabase
+            .from("questions")
+            .select("*")
+            .eq("tryout_id", tryoutId)
+            .order("id");
+          dbData = data;
+        }
+
+        if (dbData && dbData.length > 0) {
+          setQuestions(dbData);
         } else {
           // Fallback sample questions if DB empty
           setQuestions([
