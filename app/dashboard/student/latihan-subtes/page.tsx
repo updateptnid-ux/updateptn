@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
+import { createClient } from "@/lib/supabase/client";
+import { getUserTier } from "@/actions/subscription";
 import {
   Brain,
   Calculator,
@@ -16,6 +18,7 @@ import {
   PlayCircle,
   Target,
   CheckCircle2,
+  Crown,
 } from "lucide-react";
 
 // Data struktur latihan per subtes
@@ -84,6 +87,30 @@ const subtesCategories = [
 
 export default function LatihanSubtesPage() {
   const [activeFilter, setActiveFilter] = useState<"semua" | "gratis" | "premium">("semua");
+  const [userTier, setUserTier] = useState<"Basic" | "Premium" | "Platinum">("Basic");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserTier = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const tier = await getUserTier(user.id);
+          setUserTier(tier);
+        }
+      } catch (error) {
+        console.error("Error loading user tier:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserTier();
+  }, []);
+
+  const hasPremiumAccess = userTier === "Premium" || userTier === "Platinum";
 
   const filteredCategories = subtesCategories.filter((cat) => {
     if (activeFilter === "semua") return true;
@@ -190,27 +217,27 @@ export default function LatihanSubtesPage() {
 
                   {/* CTA Button */}
                   <div className="pt-4 border-t border-slate-100">
-                    <Link href={`/dashboard/student/latihan-subtes/${category.id}`} className="w-full">
-                      <Button
-                        className={`w-full h-11 font-bold rounded-xl gap-2 shadow-sm transition-all ${
-                          category.isPremium
-                            ? "bg-blue-400 hover:bg-blue-500 text-white"
-                            : "bg-blue-500 hover:bg-blue-600 text-white"
-                        }`}
-                      >
-                        {category.isPremium ? (
-                          <>
-                            <Lock className="h-4 w-4" />
-                            <span>Upgrade Premium</span>
-                          </>
-                        ) : (
-                          <>
-                            <PlayCircle className="h-4 w-4" />
-                            <span>Mulai Latihan</span>
-                          </>
-                        )}
-                      </Button>
-                    </Link>
+                    {category.isPremium && !hasPremiumAccess ? (
+                      // Premium content, user belum premium - show upgrade button
+                      <Link href="/pricing" className="w-full">
+                        <Button
+                          className="w-full h-11 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          <Lock className="h-4 w-4" />
+                          <span>Upgrade Premium</span>
+                        </Button>
+                      </Link>
+                    ) : (
+                      // Free content or user already premium - show start button
+                      <Link href={`/dashboard/student/latihan-subtes/${category.id}`} className="w-full">
+                        <Button
+                          className="w-full h-11 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white"
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                          <span>Mulai Latihan</span>
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </Card>
               </MotionCard>
@@ -219,24 +246,52 @@ export default function LatihanSubtesPage() {
         })}
       </StaggerContainer>
 
-      {/* Info Banner */}
-      <MotionCard className="rounded-2xl">
-        <Card className="bg-blue-500 text-white p-8 rounded-2xl border-0 shadow-xl">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="space-y-2">
-              <h3 className="text-2xl font-extrabold">Tingkatkan Persiapanmu dengan Premium!</h3>
-              <p className="text-blue-50 text-sm max-w-2xl">
-                Akses semua subtes, video pembahasan eksklusif, dan live class bersama Master Tutor alumni PTN favorit.
-              </p>
+      {/* Info Banner - Only show if user doesn't have premium */}
+      {!hasPremiumAccess && (
+        <MotionCard className="rounded-2xl">
+          <Card className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8 rounded-2xl border-0 shadow-xl">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Crown className="h-6 w-6 text-amber-300" />
+                  <h3 className="text-2xl font-extrabold">Tingkatkan Persiapanmu dengan Premium!</h3>
+                </div>
+                <p className="text-blue-50 text-sm max-w-2xl">
+                  Akses semua subtes, video pembahasan eksklusif, dan live class bersama Master Tutor alumni PTN favorit.
+                </p>
+              </div>
+              <Link href="/pricing">
+                <Button className="bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-xl px-8 h-12 shadow-sm shrink-0 gap-2">
+                  <Crown className="h-4 w-4" />
+                  <span>Lihat Paket Premium</span>
+                </Button>
+              </Link>
             </div>
-            <Link href="/pricing">
-              <Button className="bg-white text-blue-500 hover:bg-blue-50 font-bold rounded-xl px-8 h-12 shadow-sm shrink-0">
-                Lihat Paket Premium
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </MotionCard>
+          </Card>
+        </MotionCard>
+      )}
+
+      {/* Premium Active Badge - Show if user has premium */}
+      {hasPremiumAccess && (
+        <MotionCard className="rounded-2xl">
+          <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 p-6 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Status: {userTier} Member</h3>
+                  <p className="text-sm text-slate-600">Kamu memiliki akses ke semua fitur premium! 🎉</p>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 text-white font-bold px-4 py-2">
+                {userTier.toUpperCase()}
+              </Badge>
+            </div>
+          </Card>
+        </MotionCard>
+      )}
     </div>
   );
 }

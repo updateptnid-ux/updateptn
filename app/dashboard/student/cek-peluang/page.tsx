@@ -285,14 +285,14 @@ export default function CekPeluangPage() {
       </div>
 
       {/* Input Form Card */}
-      <Card className="border border-slate-200 shadow-md rounded-2xl bg-white p-6 sm:p-8">
+      <div className="border border-slate-200 shadow-md rounded-2xl bg-white p-6 sm:p-8" style={{ overflow: "visible" }}>
         {loadingUnivs ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
             <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
             <p className="text-xs font-semibold text-slate-500">Memuat Database 4.900+ PTN & Jurusan...</p>
           </div>
         ) : (
-          <form onSubmit={handleAnalyze} className="space-y-6">
+          <form onSubmit={handleAnalyze} className="space-y-6" style={{ overflow: "visible" }}>
             {/* Skor UTBK Input Section */}
             <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -319,9 +319,9 @@ export default function CekPeluangPage() {
             </div>
 
             {/* Selection Grid: PTN & Jurusan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ overflow: "visible" }}>
               {/* PTN Selection Combobox */}
-              <div className="space-y-2 relative" ref={univContainerRef}>
+              <div className="space-y-2" ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 100 : 1 }}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
                   <span>1. Perguruan Tinggi Negeri (PTN)</span>
                   <span className="text-[11px] font-normal text-slate-400">{universities.length} PTN</span>
@@ -329,36 +329,36 @@ export default function CekPeluangPage() {
 
                 <button
                   type="button"
-                  onClick={() => setIsUnivOpen(!isUnivOpen)}
+                  onClick={() => { setIsUnivOpen(!isUnivOpen); setIsMajorOpen(false); }}
                   className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs"
                 >
                   <div className="flex items-center gap-3 truncate">
                     <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
                     <span className="truncate">{selectedUniv || "Pilih PTN Target"}</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
+                  <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isUnivOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
-                    <div className="relative">
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
+                    <div className="relative flex-shrink-0">
                       <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={univSearch}
                         onChange={(e) => setUnivSearch(e.target.value)}
                         placeholder="Ketik nama PTN (cth: UI, ITB, UGM)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400 flex-shrink-0">
                       <span>Daftar Kampus Negeri</span>
                       <span>{filteredUnivs.length} ditemukan</span>
                     </div>
 
-                    <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
                       {filteredUnivs.length > 0 ? (
                         filteredUnivs.map((univName) => (
                           <button
@@ -390,7 +390,7 @@ export default function CekPeluangPage() {
               </div>
 
               {/* Major Selection Combobox */}
-              <div className="space-y-2 relative" ref={majorContainerRef}>
+              <div className="space-y-2" ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 100 : 1 }}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
                   <span>2. Program Studi (Jurusan)</span>
                   {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
@@ -399,7 +399,7 @@ export default function CekPeluangPage() {
                 <button
                   type="button"
                   disabled={loadingMajors || majors.length === 0}
-                  onClick={() => setIsMajorOpen(!isMajorOpen)}
+                  onClick={() => { setIsMajorOpen(!isMajorOpen); setIsUnivOpen(false); }}
                   className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3 truncate">
@@ -410,29 +410,29 @@ export default function CekPeluangPage() {
                         : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
+                  <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isMajorOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
-                    <div className="relative">
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
+                    <div className="relative flex-shrink-0">
                       <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={majorSearch}
                         onChange={(e) => setMajorSearch(e.target.value)}
                         placeholder="Ketik jurusan (cth: Kedokteran, Informatika)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400 flex-shrink-0">
                       <span>Jurusan di {selectedUniv}</span>
                       <span>{filteredMajors.length} prodi</span>
                     </div>
 
-                    <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
                       {filteredMajors.length > 0 ? (
                         filteredMajors.map((m) => {
                           const isSelected = String(m.id) === String(selectedProdiId);
@@ -487,7 +487,7 @@ export default function CekPeluangPage() {
             </Button>
           </form>
         )}
-      </Card>
+      </div>
 
       {/* PREDICTION RESULT DISPLAY CARD */}
       {result && (

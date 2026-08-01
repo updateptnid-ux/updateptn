@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { getUserTier } from "@/actions/subscription";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
   Star,
   Eye,
   Loader2,
+  Lock,
 } from "lucide-react";
 
 interface Modul {
@@ -42,6 +44,7 @@ export default function ModulPage() {
   const [activeTab, setActiveTab] = useState("semua");
   const [moduls, setModuls] = useState<Modul[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userTier, setUserTier] = useState<string>("Basic");
 
   useEffect(() => {
     fetchModuls();
@@ -51,6 +54,14 @@ export default function ModulPage() {
     try {
       setLoading(true);
       const supabase = createClient();
+      
+      // Get user tier using the subscription action
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const tier = await getUserTier(user.id);
+        setUserTier(tier);
+      }
+
       const { data, error } = await supabase
         .from("moduls")
         .select("*")
@@ -81,11 +92,11 @@ export default function ModulPage() {
       {/* Header Section */}
       <div className="space-y-4">
         <div>
-          <Badge variant="outline" className="text-xs font-bold bg-purple-50 text-purple-700 border-purple-200 mb-3">
+          <Badge variant="outline" className="text-xs font-bold bg-blue-50 text-blue-700 border-blue-200 mb-3">
             Materi Pembelajaran
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Modul <span className="text-purple-600">Belajar</span>
+            Modul <span className="text-blue-600">Belajar</span>
           </h1>
           <p className="text-slate-600 text-base mt-2 max-w-2xl">
             Kumpulan video pembelajaran dan modul PDF dari Master Tutor alumni PTN favorit.
@@ -212,32 +223,39 @@ export default function ModulPage() {
 
                       {/* CTA Button */}
                       {modul.content_url && modul.content_url.startsWith('http') ? (
-                        <a
-                          href={modul.content_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
-                        >
-                          <Button
-                            className={`w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all ${
-                              modul.is_premium
-                                ? "bg-blue-400 hover:bg-blue-500 text-white"
-                                : "bg-blue-500 hover:bg-blue-600 text-white"
-                            }`}
+                        modul.is_premium && userTier === "Basic" ? (
+                          <Link href="/pricing" className="block">
+                            <Button
+                              className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-400 hover:bg-blue-500 text-white"
+                            >
+                              <Lock className="h-4 w-4" />
+                              <span>Unlock Premium</span>
+                            </Button>
+                          </Link>
+                        ) : (
+                          <a
+                            href={modul.content_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
                           >
-                            {modul.type === "video" ? (
-                              <>
-                                <PlayCircle className="h-4 w-4" />
-                                <span>{modul.is_premium ? "Unlock Premium" : "Tonton Sekarang"}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Download className="h-4 w-4" />
-                                <span>{modul.is_premium ? "Unlock Premium" : "Download PDF"}</span>
-                              </>
-                            )}
-                          </Button>
-                        </a>
+                            <Button
+                              className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white"
+                            >
+                              {modul.type === "video" ? (
+                                <>
+                                  <PlayCircle className="h-4 w-4" />
+                                  <span>Tonton Sekarang</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4" />
+                                  <span>Download PDF</span>
+                                </>
+                              )}
+                            </Button>
+                          </a>
+                        )
                       ) : (
                         <Button
                           disabled

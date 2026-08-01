@@ -659,6 +659,11 @@ export default function LandingPage() {
                       Daftar Akun Gratis
                     </Button>
                   </Link>
+                  <Link href="/pricing" className="w-full">
+                    <Button variant="ghost" className="w-full h-9 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                      Lihat Semua Paket
+                    </Button>
+                  </Link>
                 </Card>
               </MotionCard>
             </StaggerItem>
@@ -711,7 +716,7 @@ export default function LandingPage() {
                     </ul>
                   </div>
 
-                  <Link href="/register" className="w-full pt-4">
+                  <Link href="/pricing" className="w-full pt-4">
                     <Button className="w-full h-12 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25">
                       Pilih Paket All Access
                     </Button>
@@ -720,6 +725,19 @@ export default function LandingPage() {
               </MotionCard>
             </StaggerItem>
           </StaggerContainer>
+
+          {/* CTA to see all packages */}
+          <div className="text-center pt-8">
+            <p className="text-sm text-slate-600 mb-4">
+              Butuh paket yang lebih sesuai dengan timeline persiapanmu?
+            </p>
+            <Link href="/pricing">
+              <Button variant="outline" size="lg" className="h-12 px-8 font-bold rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-50 gap-2">
+                <span>Lihat Semua Paket Belajar</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 

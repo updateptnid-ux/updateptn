@@ -78,6 +78,7 @@ export default function TryoutEnginePage({
   const [selectedProdi, setSelectedProdi] = useState("");
   const [selectedPg, setSelectedPg] = useState<number>(695);
   const [targetConfirmed, setTargetConfirmed] = useState(false);
+  const [accessDenied, setAccessDenied] = useState<{ isDenied: boolean; reason: string; requiresUpgrade: boolean }>({ isDenied: false, reason: "", requiresUpgrade: false });
 
   // Helper to normalize question objects
   const normalizeQuestions = (data: any[]): QuestionItem[] => {
@@ -95,6 +96,36 @@ export default function TryoutEnginePage({
       try {
         setLoading(true);
         const supabase = createClient();
+        
+        // Cek autentikasi
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push(`/login?redirect=/tryout/${tryoutId}`);
+          return;
+        }
+
+        // Limit Check (hanya untuk try out asli, bukan latihan subtes)
+        if (!tryoutId.startsWith("latihan-")) {
+          const [subsRes, resultsRes] = await Promise.all([
+            supabase.from("subscriptions").select("tier").eq("user_id", user.id).single(),
+            supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId)
+          ]);
+
+          const isPremium = subsRes.data?.tier === "Premium" || subsRes.data?.tier === "Platinum";
+          const attempts = resultsRes.data?.length || 0;
+          const maxAttempts = isPremium ? 3 : 1;
+
+          if (attempts >= maxAttempts) {
+            setAccessDenied({
+              isDenied: true,
+              reason: `Kamu sudah mencapai batas pengerjaan Try Out ini (${maxAttempts} kali).`,
+              requiresUpgrade: !isPremium
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
         let dbData: any[] | null = null;
 
         if (tryoutId.startsWith("latihan-")) {
@@ -221,7 +252,13 @@ export default function TryoutEnginePage({
 
   // Show target picker after loading finishes (only once per session)
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !accessDenied.isDenied) {
+      if (tryoutId.startsWith("latihan-")) {
+        setTargetConfirmed(true);
+        setShowTargetPicker(false);
+        return;
+      }
+
       const saved = localStorage.getItem("tryout_target_ptn");
       if (!saved) {
         setShowTargetPicker(true);
@@ -232,7 +269,7 @@ export default function TryoutEnginePage({
         setTargetConfirmed(true);
       }
     }
-  }, [loading]);
+  }, [loading, accessDenied.isDenied, tryoutId]);
 
   const handleConfirmTarget = () => {
     if (!selectedPtn || !selectedProdi) return;
@@ -291,6 +328,9 @@ export default function TryoutEnginePage({
 
       if (res?.success && res?.resultId) {
         router.push(`/tryout/result/${res.resultId}`);
+      } else {
+        alert(res?.error || "Gagal mengumpulkan jawaban. Silakan coba lagi.");
+        setIsSubmitDialogOpen(false);
       }
     });
   };
@@ -300,6 +340,33 @@ export default function TryoutEnginePage({
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center space-y-4 font-sans">
         <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
         <p className="text-sm font-semibold text-slate-600">Menyiapkan Lembar Ujian CBT...</p>
+      </div>
+    );
+  }
+
+  // --- ACCESS DENIED SCREEN ---
+  if (accessDenied.isDenied) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans text-center">
+        <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg">
+          <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-extrabold text-slate-900 mb-2">Batas Pengerjaan Habis</h2>
+          <p className="text-sm text-slate-500 mb-6">{accessDenied.reason}</p>
+          
+          <div className="space-y-3">
+            {accessDenied.requiresUpgrade && (
+              <Button className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl gap-2 shadow-sm" onClick={() => router.push("/dashboard/student/modul")}>
+                <Target className="h-4 w-4" />
+                Upgrade ke Premium
+              </Button>
+            )}
+            <Button variant="outline" className="w-full h-11 border-slate-200 font-semibold rounded-xl" onClick={() => router.push("/dashboard/student")}>
+              Kembali ke Dashboard
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

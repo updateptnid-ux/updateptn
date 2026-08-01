@@ -114,17 +114,39 @@ export default function LeaderboardPage() {
         const { data: resData } = await resQuery;
 
         if (resData && resData.length > 0) {
-          const formatted: LeaderboardEntry[] = resData.map((item: any, idx: number) => ({
-            user_id: item.user_id,
-            full_name: item.profiles?.full_name || item.user_name || "Siswa Pejuang PTN",
-            asal_sekolah: item.profiles?.asal_sekolah || "SMA Negeri",
-            target_prodi: item.profiles?.target_prodi || "Ilmu Komputer (UI)",
-            best_score: Math.round(Number(item.irt_score || item.score || 0)),
-            total_tryouts: 1,
-            tryout_title: item.tryouts?.title || "Try Out SNBT 2026",
-            tryout_id: item.tryout_id,
+          // Deduplikasi berdasarkan user_id, ambil skor tertinggi
+          const dedupedMap = new Map<string, any>();
+          
+          resData.forEach((item: any) => {
+            const currentScore = Math.round(Number(item.irt_score || item.score || 0));
+            
+            if (!dedupedMap.has(item.user_id)) {
+              dedupedMap.set(item.user_id, {
+                user_id: item.user_id,
+                full_name: item.profiles?.full_name || item.user_name || "Siswa Pejuang PTN",
+                asal_sekolah: item.profiles?.asal_sekolah || "SMA Negeri",
+                target_prodi: item.profiles?.target_prodi || "Ilmu Komputer (UI)",
+                best_score: currentScore,
+                total_tryouts: 1,
+                tryout_title: item.tryouts?.title || "Try Out SNBT 2026",
+                tryout_id: item.tryout_id,
+              });
+            } else {
+              const existing = dedupedMap.get(item.user_id);
+              existing.total_tryouts += 1;
+              if (currentScore > existing.best_score) {
+                existing.best_score = currentScore;
+              }
+            }
+          });
+
+          const sorted = Array.from(dedupedMap.values()).sort((a, b) => b.best_score - a.best_score);
+          
+          const formatted: LeaderboardEntry[] = sorted.map((item, idx) => ({
+            ...item,
             rank: idx + 1,
           }));
+          
           setLeaderboard(formatted);
           const myEntry = formatted.find((e) => e.user_id === user.id);
           setMyRank(myEntry || null);
