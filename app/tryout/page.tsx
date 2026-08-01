@@ -45,39 +45,8 @@ export default function JadwalTryOutPage() {
         if (!error && data) {
           setTryouts(data as TryoutItem[]);
         } else {
-          // Fallback demo data
-          setTryouts([
-            {
-              id: "1",
-              title: "Try Out Nasional UTBK SNBT - Seri 01",
-              description: "Simulasi lengkap TPS & Literasi sesuai kisi-kisi terbaru SNPMB 2026",
-              duration_minutes: 120,
-              total_questions: 155,
-              scheduled_date: "2026-08-05",
-              is_free: true,
-              participants_count: 12450,
-            },
-            {
-              id: "2",
-              title: "Try Out Khusus Saintek - Batch 3",
-              description: "Fokus TPS & Penalaran Matematika untuk jurusan saintek",
-              duration_minutes: 90,
-              total_questions: 100,
-              scheduled_date: "2026-08-08",
-              is_free: false,
-              participants_count: 8920,
-            },
-            {
-              id: "3",
-              title: "Try Out Khusus Soshum - Batch 3",
-              description: "Fokus TPS & Literasi Bahasa untuk jurusan soshum",
-              duration_minutes: 90,
-              total_questions: 100,
-              scheduled_date: "2026-08-10",
-              is_free: false,
-              participants_count: 7150,
-            },
-          ]);
+          // Empty state - no tryouts available
+          setTryouts([]);
         }
       } catch (err) {
         console.error("Error fetching tryouts:", err);

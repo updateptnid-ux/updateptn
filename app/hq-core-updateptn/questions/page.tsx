@@ -38,6 +38,7 @@ interface QuestionRecord {
   option_e: string;
   correct_answer: string;
   explanation: string | null;
+  subtest: string;
 }
 
 interface TryoutItem {
@@ -67,6 +68,7 @@ export default function AdminQuestionsPage() {
     option_e: "",
     correct_answer: "A",
     explanation: "",
+    subtest: "Penalaran Umum",
   });
 
   const mockQuestions: QuestionRecord[] = [
@@ -82,6 +84,7 @@ export default function AdminQuestionsPage() {
       option_e: "Tidak dapat ditentukan nilai kebenarannya",
       correct_answer: "B",
       explanation: "Implikasi p -> q hanya bernilai salah jika p benar dan q salah.",
+      subtest: "Penalaran Umum",
     },
     {
       id: "q2",
@@ -95,6 +98,7 @@ export default function AdminQuestionsPage() {
       option_e: "43",
       correct_answer: "C",
       explanation: "Beda b=4, suku pertama a=3. Suku ke-10 adalah 3 + 9(4) = 39.",
+      subtest: "Penalaran Matematika",
     },
   ];
 
@@ -135,6 +139,7 @@ export default function AdminQuestionsPage() {
             option_e: item.option_e,
             correct_answer: item.correct_answer,
             explanation: item.explanation,
+            subtest: item.subtest || "Penalaran Umum",
           }))
         );
         setIsDemoMode(false);
@@ -160,6 +165,7 @@ export default function AdminQuestionsPage() {
       option_e: "",
       correct_answer: "A",
       explanation: "",
+      subtest: "Penalaran Umum",
     });
     setIsDialogOpen(true);
   };
@@ -176,6 +182,7 @@ export default function AdminQuestionsPage() {
       option_e: q.option_e,
       correct_answer: q.correct_answer,
       explanation: q.explanation || "",
+      subtest: q.subtest || "Penalaran Umum",
     });
     setIsDialogOpen(true);
   };
@@ -247,6 +254,7 @@ export default function AdminQuestionsPage() {
         option_e: q.option_e || "",
         correct_answer: q.correct_answer || "A",
         explanation: q.explanation || null,
+        subtest: q.subtest || "Penalaran Umum",
       }));
 
       if (isDemoMode) {
@@ -263,6 +271,7 @@ export default function AdminQuestionsPage() {
             option_e: q.option_e,
             correct_answer: q.correct_answer,
             explanation: q.explanation,
+            subtest: q.subtest,
           })),
           ...prev,
         ]);
@@ -338,6 +347,7 @@ export default function AdminQuestionsPage() {
           <TableHeader>
             <TableRow className="border-slate-200 bg-slate-50/50">
               <TableHead className="font-bold text-slate-700">Soal</TableHead>
+              <TableHead className="font-bold text-slate-700">Subtest / Mapel</TableHead>
               <TableHead className="font-bold text-slate-700">Try Out Terkait</TableHead>
               <TableHead className="font-bold text-slate-700">Kunci Jawaban</TableHead>
               <TableHead className="font-bold text-slate-700">Pembahasan</TableHead>
@@ -347,11 +357,11 @@ export default function AdminQuestionsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Memuat data...</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-500">Memuat data...</TableCell>
               </TableRow>
             ) : questions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Belum ada data.</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-500">Belum ada data.</TableCell>
               </TableRow>
             ) : (
               questions.map((quest) => (
@@ -361,6 +371,11 @@ export default function AdminQuestionsPage() {
                       <FileQuestion className="h-4 w-4 text-blue-600 shrink-0" />
                       <span className="truncate">{quest.text}</span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-700 font-semibold truncate max-w-[120px]">
+                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 text-slate-600 border-slate-200">
+                      {quest.subtest}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-xs text-slate-700 font-semibold truncate max-w-[150px]">
                     {quest.tryout_title}
@@ -432,6 +447,20 @@ export default function AdminQuestionsPage() {
               )}
             </div>
             <div className="space-y-2">
+              <Label>Subtest (Mata Pelajaran) *</Label>
+              <select
+                value={formData.subtest}
+                onChange={e => setFormData({ ...formData, subtest: e.target.value })}
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="Penalaran Umum">Penalaran Umum</option>
+                <option value="Pengetahuan Kuantitatif">Pengetahuan Kuantitatif</option>
+                <option value="Literasi B. Indonesia">Literasi B. Indonesia</option>
+                <option value="Literasi B. Inggris">Literasi B. Inggris</option>
+                <option value="Penalaran Matematika">Penalaran Matematika</option>
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label>Teks Pertanyaan Soal *</Label>
               <textarea
                 value={formData.text}
@@ -486,7 +515,7 @@ export default function AdminQuestionsPage() {
               />
             </div>
           </div>
-           <DialogFooter>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
             <Button onClick={handleSave} disabled={isSaving || !formData.text || !formData.tryout_id} className="bg-blue-600 hover:bg-blue-700 text-white">Simpan</Button>
           </DialogFooter>

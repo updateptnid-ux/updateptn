@@ -57,27 +57,6 @@ export default function AdminQuotasPage() {
     keketatan_percentage: "5.00%",
   });
 
-  const mockQuotas: QuotaRecord[] = [
-    {
-      id: "q1",
-      major_id: "m1",
-      major_name: "S1 Ilmu Komputer",
-      university_name: "Universitas Indonesia (UI)",
-      quota_snbt: 60,
-      applicants_last_year: 2450,
-      keketatan_percentage: "2.44%",
-    },
-    {
-      id: "q2",
-      major_id: "m2",
-      major_name: "S1 Kedokteran",
-      university_name: "Universitas Indonesia (UI)",
-      quota_snbt: 75,
-      applicants_last_year: 3820,
-      keketatan_percentage: "1.96%",
-    },
-  ];
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -93,16 +72,17 @@ export default function AdminQuotasPage() {
       const { data, error } = await supabase.from("quotas").select("*").order("created_at", { ascending: false });
 
       if (error) {
-        setIsDemoMode(true);
-        setQuotas(mockQuotas);
+        console.error("Error fetching quotas:", error);
+        setQuotas([]);
+        setIsDemoMode(false);
       } else if (data) {
         setQuotas(data as QuotaRecord[]);
         setIsDemoMode(false);
       }
     } catch (err) {
-      console.error(err);
-      setIsDemoMode(true);
-      setQuotas(mockQuotas);
+      console.error("Error in fetchData:", err);
+      setQuotas([]);
+      setIsDemoMode(false);
     } finally {
       setLoading(false);
     }

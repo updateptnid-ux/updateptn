@@ -55,29 +55,6 @@ export default function AdminVouchersPage() {
     expires_at: "",
   });
 
-  const mockVouchers: VoucherRecord[] = [
-    {
-      id: "v1",
-      code: "MERDEKA81",
-      discount_type: "percentage",
-      value: "17%",
-      usage_limit: 1000,
-      usage_count: 450,
-      status: "active",
-      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
-    },
-    {
-      id: "v2",
-      code: "UPDATEPTNJAYA",
-      discount_type: "fixed",
-      value: "Rp 50.000",
-      usage_limit: 500,
-      usage_count: 500,
-      status: "expired",
-      expires_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-  ];
-
   useEffect(() => {
     fetchVouchers();
   }, []);
@@ -89,16 +66,17 @@ export default function AdminVouchersPage() {
       const { data, error } = await supabase.from("vouchers").select("*").order("created_at", { ascending: false });
 
       if (error) {
-        setIsDemoMode(true);
-        setVouchers(mockVouchers);
+        console.error("Error fetching vouchers:", error);
+        setVouchers([]);
+        setIsDemoMode(false);
       } else if (data) {
         setVouchers(data as VoucherRecord[]);
         setIsDemoMode(false);
       }
     } catch (err) {
-      console.error(err);
-      setIsDemoMode(true);
-      setVouchers(mockVouchers);
+      console.error("Error in fetchVouchers:", err);
+      setVouchers([]);
+      setIsDemoMode(false);
     } finally {
       setLoading(false);
     }

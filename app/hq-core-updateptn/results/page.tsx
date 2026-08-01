@@ -42,19 +42,16 @@ export default function AdminResultsPage() {
       setLoading(true);
       const supabase = createClient();
 
-      // Get results with tryout title via join
       const { data, error } = await supabase
         .from("results")
         .select("*, tryouts(title)")
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching results:", error.message);
+        console.error("Error fetching results:", error);
         setIsDemoMode(true);
-        return;
-      }
-
-      if (data) {
+        setResults([]);
+      } else if (data) {
         setResults(
           data.map((item: any) => ({
             id: item.id,
@@ -71,8 +68,9 @@ export default function AdminResultsPage() {
         setIsDemoMode(false);
       }
     } catch (err) {
-      console.error("Exception:", err);
+      console.error("Exception in fetchResults:", err);
       setIsDemoMode(true);
+      setResults([]);
     } finally {
       setLoading(false);
     }

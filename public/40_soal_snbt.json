@@ -7,7 +7,8 @@
     "option_d": "Ada siswa konsisten yang tidak lulus UTBK",
     "option_e": "Amanda harus belajar lebih rajin",
     "correct_answer": "C",
-    "explanation": "Menggunakan modus ponens: p -> q (Siswa konsisten -> lulus), p (Amanda konsisten), maka q (Amanda lulus)."
+    "explanation": "Menggunakan modus ponens: p -> q (Siswa konsisten -> lulus), p (Amanda konsisten), maka q (Amanda lulus).",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Jika hari ini hujan, maka jalanan basah. Hari ini jalanan tidak basah. Kesimpulan yang sah adalah...",
@@ -17,7 +18,8 @@
     "option_d": "Jalanan sedang dibersihkan",
     "option_e": "Hari ini mendung",
     "correct_answer": "A",
-    "explanation": "Menggunakan modus tollens: p -> q, ~q, maka ~p (Hari ini tidak hujan)."
+    "explanation": "Menggunakan modus tollens: p -> q, ~q, maka ~p (Hari ini tidak hujan).",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Semua mamalia bernapas dengan paru-paru. Lumba-lumba adalah mamalia. Kesimpulan yang benar adalah...",
@@ -27,7 +29,8 @@
     "option_d": "Lumba-lumba bernapas dengan paru-paru",
     "option_e": "Lumba-lumba bukan mamalia biasa",
     "correct_answer": "D",
-    "explanation": "Silogisme kategori sederhana: Semua A adalah B. C adalah A. Maka C adalah B."
+    "explanation": "Silogisme kategori sederhana: Semua A adalah B. C adalah A. Maka C adalah B.",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Nilai dari 15% dari 200 adalah...",
@@ -37,7 +40,8 @@
     "option_d": "35",
     "option_e": "40",
     "correct_answer": "C",
-    "explanation": "Kalkulasi: 0,15 x 200 = 30."
+    "explanation": "Kalkulasi: 0,15 x 200 = 30.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Jika 3x + 5 = 20, berapakah nilai x?",
@@ -47,7 +51,8 @@
     "option_d": "6",
     "option_e": "7",
     "correct_answer": "C",
-    "explanation": "3x = 20 - 5 => 3x = 15 => x = 5."
+    "explanation": "3x = 20 - 5 => 3x = 15 => x = 5.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Sebuah toko memberikan diskon 20%. Jika harga awal baju adalah Rp 150.000, berapakah harga baju setelah diskon?",
@@ -57,7 +62,8 @@
     "option_d": "Rp 140.000",
     "option_e": "Rp 100.000",
     "correct_answer": "B",
-    "explanation": "Diskon = 20% x 150.000 = 30.000. Harga akhir = 150.000 - 30.000 = 120.000."
+    "explanation": "Diskon = 20% x 150.000 = 30.000. Harga akhir = 150.000 - 30.000 = 120.000.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Manakah deret selanjutnya dari 2, 4, 8, 16, ...?",
@@ -67,7 +73,8 @@
     "option_d": "32",
     "option_e": "36",
     "correct_answer": "D",
-    "explanation": "Pola deret adalah dikalikan 2 (geometri dengan rasio r=2). Angka selanjutnya: 16 x 2 = 32."
+    "explanation": "Pola deret adalah dikalikan 2 (geometri dengan rasio r=2). Angka selanjutnya: 16 x 2 = 32.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Deret angka: 3, 5, 9, 17, ... Berapakah angka berikutnya?",
@@ -77,7 +84,8 @@
     "option_d": "35",
     "option_e": "37",
     "correct_answer": "C",
-    "explanation": "Polanya adalah ditambah selisih yang berlipat ganda (+2, +4, +8, +16). 17 + 16 = 33."
+    "explanation": "Polanya adalah ditambah selisih yang berlipat ganda (+2, +4, +8, +16). 17 + 16 = 33.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Jika p adalah bilangan prima ganjil, manakah di bawah ini yang pasti bernilai genap?",
@@ -87,7 +95,8 @@
     "option_d": "p * p",
     "option_e": "p^3",
     "correct_answer": "A",
-    "explanation": "Bilangan ganjil ditambah bilangan ganjil (1) pasti menghasilkan bilangan genap."
+    "explanation": "Bilangan ganjil ditambah bilangan ganjil (1) pasti menghasilkan bilangan genap.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Rata-rata dari lima bilangan ganjil berurutan adalah 15. Berapakah bilangan terbesar?",
@@ -97,7 +106,8 @@
     "option_d": "21",
     "option_e": "23",
     "correct_answer": "C",
-    "explanation": "Bilangan tersebut adalah 11, 13, 15, 17, 19. Bilangan terbesar adalah 19."
+    "explanation": "Bilangan tersebut adalah 11, 13, 15, 17, 19. Bilangan terbesar adalah 19.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Sebuah mobil menempuh jarak 120 km dalam waktu 2 jam. Berapa kecepatan rata-rata mobil tersebut?",
@@ -107,17 +117,19 @@
     "option_d": "65 km/jam",
     "option_e": "70 km/jam",
     "correct_answer": "C",
-    "explanation": "Kecepatan = Jarak / Waktu = 120 km / 2 jam = 60 km/jam."
+    "explanation": "Kecepatan = Jarak / Waktu = 120 km / 2 jam = 60 km/jam.",
+    "subtest": "Penalaran Matematika"
   },
   {
-    "text": "Jika a = 2 dan b = 3, maka nilai dari a^2 + 2ab + b^2 adalah...",
+    "text": "Jika a = 2 and b = 3, maka nilai dari a^2 + 2ab + b^2 adalah...",
     "option_a": "16",
     "option_b": "20",
     "option_c": "25",
     "option_d": "30",
     "option_e": "36",
     "correct_answer": "C",
-    "explanation": "(a+b)^2 = (2+3)^2 = 5^2 = 25."
+    "explanation": "(a+b)^2 = (2+3)^2 = 5^2 = 25.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Manakah kata di bawah ini yang penulisan ejaannya TIDAK baku?",
@@ -127,7 +139,8 @@
     "option_d": "Kwitansi",
     "option_e": "Kualitas",
     "correct_answer": "D",
-    "explanation": "Bentuk baku dari 'Kwitansi' adalah 'Kuitansi'."
+    "explanation": "Bentuk baku dari 'Kwitansi' adalah 'Kuitansi'.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "Manakah kalimat berikut yang merupakan kalimat efektif?",
@@ -137,7 +150,8 @@
     "option_d": "Ia bekerja sangat giat sekali.",
     "option_e": "Hasil daripada penelitian itu memuaskan.",
     "correct_answer": "B",
-    "explanation": "Kalimat B paling efektif dan hemat kata tanpa repetisi jamak/pleonasme."
+    "explanation": "Kalimat B paling efektif dan hemat kata tanpa repetisi jamak/pleonasme.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "Ide pokok paragraf biasanya dapat ditemukan pada...",
@@ -147,7 +161,8 @@
     "option_d": "Kata kunci terakhir",
     "option_e": "Judul karangan",
     "correct_answer": "A",
-    "explanation": "Ide pokok terletak di dalam kalimat utama paragraf deduktif, induktif, atau campuran."
+    "explanation": "Ide pokok terletak di dalam kalimat utama paragraf deduktif, induktif, atau campuran.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "What is the synonym of the word 'ANCIENT'?",
@@ -157,7 +172,8 @@
     "option_d": "Fragile",
     "option_e": "Clean",
     "correct_answer": "B",
-    "explanation": "'Ancient' means belonging to the very distant past (sangat tua/kuno)."
+    "explanation": "'Ancient' means belonging to the very distant past (sangat tua/kuno).",
+    "subtest": "Literasi B. Inggris"
   },
   {
     "text": "Which sentence is grammatically correct?",
@@ -167,7 +183,8 @@
     "option_d": "She don't likes apples.",
     "option_e": "She is not like apples.",
     "correct_answer": "C",
-    "explanation": "Subject 'she' takes auxiliary 'does not' followed by bare infinitive 'like'."
+    "explanation": "Subject 'she' takes auxiliary 'does not' followed by bare infinitive 'like'.",
+    "subtest": "Literasi B. Inggris"
   },
   {
     "text": "If a triangle has angles of 50 degrees and 60 degrees, what is the measure of the third angle?",
@@ -177,7 +194,8 @@
     "option_d": "80 degrees",
     "option_e": "90 degrees",
     "correct_answer": "C",
-    "explanation": "Total angles in a triangle = 180 degrees. Third angle = 180 - (50 + 60) = 70 degrees."
+    "explanation": "Total angles in a triangle = 180 degrees. Third angle = 180 - (50 + 60) = 70 degrees.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Sebuah dadu dilempar satu kali. Peluang munculnya mata dadu ganjil adalah...",
@@ -187,7 +205,8 @@
     "option_d": "4/6",
     "option_e": "5/6",
     "correct_answer": "C",
-    "explanation": "Mata dadu ganjil: {1, 3, 5} ada 3 buah. Peluang = 3/6 = 1/2."
+    "explanation": "Mata dadu ganjil: {1, 3, 5} ada 3 buah. Peluang = 3/6 = 1/2.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Jika x adalah bilangan genap dan y adalah bilangan ganjil, maka xy adalah...",
@@ -197,7 +216,8 @@
     "option_d": "Bilangan negatif",
     "option_e": "Tidak dapat ditentukan",
     "correct_answer": "B",
-    "explanation": "Perkalian bilangan genap dengan bilangan ganjil/genap apa pun pasti menghasilkan bilangan genap."
+    "explanation": "Perkalian bilangan genap dengan bilangan ganjil/genap apa pun pasti menghasilkan bilangan genap.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Manakah antonim dari kata 'OPTIMIS'?",
@@ -207,7 +227,8 @@
     "option_d": "Apatis",
     "option_e": "Idealis",
     "correct_answer": "A",
-    "explanation": "Antonim dari optimis (yakin/berpengharapan baik) adalah pesimis (ragu/berpengharapan buruk)."
+    "explanation": "Antonim dari optimis (yakin/berpengharapan baik) adalah pesimis (ragu/berpengharapan buruk).",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Jika 5 buku harganya Rp 25.000, berapakah harga 8 buku?",
@@ -217,7 +238,8 @@
     "option_d": "Rp 50.000",
     "option_e": "Rp 55.000",
     "correct_answer": "B",
-    "explanation": "Harga 1 buku = 25.000 / 5 = 5.000. Harga 8 buku = 8 x 5.000 = 40.000."
+    "explanation": "Harga 1 buku = 25.000 / 5 = 5.000. Harga 8 buku = 8 x 5.000 = 40.000.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Hasil dari -12 + 8 * 2 - 4 adalah...",
@@ -227,7 +249,8 @@
     "option_d": "4",
     "option_e": "8",
     "correct_answer": "C",
-    "explanation": "Kerjakan perkalian dulu: 8 * 2 = 16. Maka -12 + 16 - 4 = 4 - 4 = 0."
+    "explanation": "Kerjakan perkalian dulu: 8 * 2 = 16. Maka -12 + 16 - 4 = 4 - 4 = 0.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Semua guru memiliki kompetensi mengajar. Sebagian sarjana pendidikan menjadi guru. Kesimpulan yang benar adalah...",
@@ -237,7 +260,8 @@
     "option_d": "Sarjana pendidikan pasti memiliki kompetensi mengajar",
     "option_e": "Tidak ada sarjana pendidikan yang kompeten",
     "correct_answer": "B",
-    "explanation": "Karena sebagian sarjana pendidikan menjadi guru, dan semua guru memiliki kompetensi, maka sebagian sarjana pendidikan tersebut memiliki kompetensi mengajar."
+    "explanation": "Karena sebagian sarjana pendidikan menjadi guru, dan semua guru memiliki kompetensi, maka sebagian sarjana pendidikan tersebut memiliki kompetensi mengajar.",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Manakah bentuk baku dari kata di bawah ini?",
@@ -247,7 +271,8 @@
     "option_d": "Teknik",
     "option_e": "Nomer",
     "correct_answer": "D",
-    "explanation": "Kata 'Teknik' adalah bentuk baku (bukan tehnik). Bentuk baku lainnya: sistem, jadwal, pikir, nomor."
+    "explanation": "Kata 'Teknik' adalah bentuk baku (bukan tehnik). Bentuk baku lainnya: sistem, jadwal, pikir, nomor.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "Choose the correct preposition: 'He is interested ___ learning new languages.'",
@@ -257,7 +282,8 @@
     "option_d": "with",
     "option_e": "about",
     "correct_answer": "B",
-    "explanation": "Pasangan adjektiva 'interested' adalah preposisi 'in' (interested in)."
+    "explanation": "Pasangan adjektiva 'interested' adalah preposisi 'in' (interested in).",
+    "subtest": "Literasi B. Inggris"
   },
   {
     "text": "Jika volume sebuah kubus adalah 27 cm^3, berapakah panjang rusuk kubus tersebut?",
@@ -267,7 +293,8 @@
     "option_d": "5 cm",
     "option_e": "6 cm",
     "correct_answer": "B",
-    "explanation": "Volume kubus = s^3 = 27. Maka s = akar pangkat tiga dari 27 = 3 cm."
+    "explanation": "Volume kubus = s^3 = 27. Maka s = akar pangkat tiga dari 27 = 3 cm.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Suhu udara mula-mula adalah -5 derajat Celcius. Jika suhu naik sebesar 12 derajat Celcius, berapakah suhu udara sekarang?",
@@ -277,7 +304,8 @@
     "option_d": "17 derajat Celcius",
     "option_e": "12 derajat Celcius",
     "correct_answer": "C",
-    "explanation": "Suhu akhir = -5 + 12 = 7 derajat Celcius."
+    "explanation": "Suhu akhir = -5 + 12 = 7 derajat Celcius.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Nilai dari 1/2 + 3/4 - 1/8 adalah...",
@@ -287,7 +315,8 @@
     "option_d": "13/8",
     "option_e": "5/8",
     "correct_answer": "B",
-    "explanation": "Penyebut disamakan menjadi 8: 4/8 + 6/8 - 1/8 = 9/8."
+    "explanation": "Penyebut disamakan menjadi 8: 4/8 + 6/8 - 1/8 = 9/8.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Jika suatu lingkaran memiliki jari-jari 7 cm, berapakah keliling lingkaran tersebut? (gunakan pi = 22/7)",
@@ -297,7 +326,8 @@
     "option_d": "154 cm",
     "option_e": "176 cm",
     "correct_answer": "B",
-    "explanation": "Keliling = 2 * pi * r = 2 * (22/7) * 7 = 44 cm."
+    "explanation": "Keliling = 2 * pi * r = 2 * (22/7) * 7 = 44 cm.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Manakah dari kata berikut yang bersinonim dengan 'KONTRAK'?",
@@ -307,7 +337,8 @@
     "option_d": "Pembatalan",
     "option_e": "Pelepasan",
     "correct_answer": "A",
-    "explanation": "Sinonim terdekat kontrak adalah perjanjian tertulis secara hukum."
+    "explanation": "Sinonim terdekat kontrak adalah perjanjian tertulis secara hukum.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "Find the correctly spelled word:",
@@ -317,17 +348,19 @@
     "option_d": "Embarrassment",
     "option_e": "Embarasement",
     "correct_answer": "D",
-    "explanation": "Kata yang tepat ejaannya adalah 'embarrassment' dengan double 'r' dan double 's'."
+    "explanation": "Kata yang tepat ejaannya adalah 'embarrassment' dengan double 'r' dan double 's'.",
+    "subtest": "Literasi B. Inggris"
   },
   {
-    "text": "Sebuah prisma segitiga memiliki luas alas 20 cm^2 dan tinggi 10 cm. Volume prisma tersebut adalah...",
+    "text": "Sebuah prisma segitiga memiliki luas alas 20 cm^2 and tinggi 10 cm. Volume prisma tersebut adalah...",
     "option_a": "100 cm^3",
     "option_b": "200 cm^3",
     "option_c": "300 cm^3",
     "option_d": "400 cm^3",
     "option_e": "500 cm^3",
     "correct_answer": "B",
-    "explanation": "Volume prisma = Luas alas x tinggi = 20 x 10 = 200 cm^3."
+    "explanation": "Volume prisma = Luas alas x tinggi = 20 x 10 = 200 cm^3.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Pernyataan 'Jika nilai ujian bagus maka saya senang' setara/ekuivalen dengan pernyataan...",
@@ -337,7 +370,8 @@
     "option_d": "Saya tidak senang atau nilai ujian bagus",
     "option_e": "Nilai ujian tidak bagus atau saya senang",
     "correct_answer": "C",
-    "explanation": "Kontraposisi dari p -> q adalah ~q -> ~p (Jika tidak senang maka nilai tidak bagus)."
+    "explanation": "Kontraposisi dari p -> q adalah ~q -> ~p (Jika tidak senang maka nilai tidak bagus).",
+    "subtest": "Penalaran Umum"
   },
   {
     "text": "Dalam 1 jam, sebuah jarum menit berputar sebesar...",
@@ -347,7 +381,8 @@
     "option_d": "360 derajat",
     "option_e": "720 derajat",
     "correct_answer": "D",
-    "explanation": "Dalam 1 jam (60 menit), jarum menit menyelesaikan tepat 1 putaran penuh (360 derajat)."
+    "explanation": "Dalam 1 jam (60 menit), jarum menit menyelesaikan tepat 1 putaran penuh (360 derajat).",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "What is the past tense of the verb 'GO'?",
@@ -357,7 +392,8 @@
     "option_d": "Goned",
     "option_e": "Going",
     "correct_answer": "B",
-    "explanation": "The past tense of the irregular verb 'go' is 'went'."
+    "explanation": "The past tense of the irregular verb 'go' is 'went'.",
+    "subtest": "Literasi B. Inggris"
   },
   {
     "text": "Jika 4y - 7 = 9, maka nilai dari 2y adalah...",
@@ -367,7 +403,8 @@
     "option_d": "10",
     "option_e": "12",
     "correct_answer": "C",
-    "explanation": "4y = 9 + 7 => 4y = 16 => y = 4. Maka 2y = 2 x 4 = 8."
+    "explanation": "4y = 9 + 7 => 4y = 16 => y = 4. Maka 2y = 2 x 4 = 8.",
+    "subtest": "Pengetahuan Kuantitatif"
   },
   {
     "text": "Manakah penulisan kalimat di bawah ini yang paling tepat sesuai PUEBI?",
@@ -377,7 +414,8 @@
     "option_d": "Ibu membeli buah: apel, jeruk dan mangga.",
     "option_e": "Ibu membeli buah, apel, jeruk, mangga.",
     "correct_answer": "C",
-    "explanation": "Kalimat C merupakan penulisan yang benar dan efektif tanpa kesalahan tanda baca titik dua yang tidak lengkap atau ketidakkonsistenan tanda koma serial."
+    "explanation": "Kalimat C merupakan penulisan yang benar dan efektif tanpa kesalahan tanda baca titik dua yang tidak lengkap atau ketidakkonsistenan tanda koma serial.",
+    "subtest": "Literasi B. Indonesia"
   },
   {
     "text": "Jika x = 5 dan y = x + 3, maka nilai dari x^2 - y^2 adalah...",
@@ -387,7 +425,8 @@
     "option_d": "39",
     "option_e": "25",
     "correct_answer": "A",
-    "explanation": "x = 5, y = 8. x^2 - y^2 = 25 - 64 = -39."
+    "explanation": "x = 5, y = 8. x^2 - y^2 = 25 - 64 = -39.",
+    "subtest": "Penalaran Matematika"
   },
   {
     "text": "Manakah kata di bawah ini yang bersinonim dengan 'ITERASI'?",
@@ -397,6 +436,7 @@
     "option_d": "Percepatan",
     "option_e": "Pemisahan",
     "correct_answer": "A",
-    "explanation": "Iterasi artinya adalah perulangan atau pengulangan proses."
+    "explanation": "Iterasi artinya adalah perulangan atau pengulangan proses.",
+    "subtest": "Penalaran Umum"
   }
 ]

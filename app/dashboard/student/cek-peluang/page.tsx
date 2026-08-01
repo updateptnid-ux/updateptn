@@ -78,39 +78,69 @@ export default function CekPeluangPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 1. Fetch Complete List of Unique Universities from prodi_reference
+  // 1. Fetch Complete List of Unique Universities from prodi_reference or JSON fallback
   useEffect(() => {
     async function loadUniversities() {
       try {
         setLoadingUnivs(true);
         const supabase = createClient();
 
-        // Query up to 5000 records to extract ALL unique PTNs across Indonesia
-        const { data, error } = await supabase
-          .from("prodi_reference")
-          .select("univ")
-          .range(0, 5000)
-          .order("univ", { ascending: true });
+        let allData: any[] = [];
+        let from = 0;
+        const batchSize = 1000;
+        let hasMore = true;
 
-        if (!error && data && data.length > 0) {
-          const uniqueUnivs = Array.from(new Set(data.map((item) => item.univ).filter(Boolean))).sort();
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("prodi_reference")
+            .select("univ")
+            .order("univ", { ascending: true })
+            .range(from, from + batchSize - 1);
+
+          if (error) {
+            console.error("DB error:", error);
+            break;
+          }
+
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            from += batchSize;
+            if (data.length < batchSize) hasMore = false;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        if (allData.length > 0) {
+          const uniqueUnivs = Array.from(new Set(allData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
           setUniversities(uniqueUnivs);
           if (uniqueUnivs.length > 0) {
             setSelectedUniv(uniqueUnivs[0]);
           }
         } else {
-          const fallbackUnivs = [
-            "UNIVERSITAS INDONESIA",
-            "INSTITUT TEKNOLOGI BANDUNG",
-            "UNIVERSITAS GADJAH MADA",
-            "UNIVERSITAS BRAWIJAYA",
-            "UNIVERSITAS AIRLANGGA",
-            "UNIVERSITAS DIPONEGORO",
-            "UNIVERSITAS PADJADJARAN",
-            "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
-          ];
-          setUniversities(fallbackUnivs);
-          setSelectedUniv(fallbackUnivs[0]);
+          // Fallback to local /data_snbt.json
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
+            setUniversities(uniqueUnivs);
+            if (uniqueUnivs.length > 0) {
+              setSelectedUniv(uniqueUnivs[0]);
+            }
+          } else {
+            const fallbackUnivs = [
+              "UNIVERSITAS INDONESIA",
+              "INSTITUT TEKNOLOGI BANDUNG",
+              "UNIVERSITAS GADJAH MADA",
+              "UNIVERSITAS BRAWIJAYA",
+              "UNIVERSITAS AIRLANGGA",
+              "UNIVERSITAS DIPONEGORO",
+              "UNIVERSITAS PADJADJARAN",
+              "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
+            ];
+            setUniversities(fallbackUnivs);
+            setSelectedUniv(fallbackUnivs[0]);
+          }
         }
       } catch (err) {
         console.error("Error loading PTN list:", err);
@@ -142,13 +172,24 @@ export default function CekPeluangPage() {
           setMajors(data as ProdiReferenceItem[]);
           setSelectedProdiId(String(data[0].id));
         } else {
-          const sample = [
-            { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
-            { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
-            { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
-          ];
-          setMajors(sample);
-          setSelectedProdiId("1");
+          // Fallback to local /data_snbt.json
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.univ === selectedUniv);
+            if (filtered.length > 0) {
+              setMajors(filtered);
+              setSelectedProdiId(String(filtered[0].id));
+            } else {
+              const sample = [
+                { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
+                { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
+                { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
+              ];
+              setMajors(sample);
+              setSelectedProdiId("1");
+            }
+          }
         }
       } catch (err) {
         console.error("Error loading majors:", err);
@@ -167,6 +208,9 @@ export default function CekPeluangPage() {
     const numScore = Number(score) || 720;
 
     startTransition(async () => {
+      // Find selected prodi object
+      let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
+      
       const res = await calculateProbabilityAction({
         score: numScore,
         universityName: selectedUniv,
@@ -174,7 +218,41 @@ export default function CekPeluangPage() {
       });
 
       if (res?.success) {
-        setResult(res as PredictionResult);
+        // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
+        if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
+          const pg = Number(currentProdi.passing_grade_est);
+          const diff = numScore - pg;
+          let percentage = 75;
+          let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+          let recommendation = "";
+
+          if (diff >= 20) {
+            status = "AMAN";
+            percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+            recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
+          } else if (diff >= 0) {
+            status = "BERSAING";
+            percentage = Math.round(60 + (diff / 20) * 24);
+            recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
+          } else {
+            status = "RENTAN";
+            percentage = Math.max(25, Math.round(60 + diff * 1.2));
+            recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
+          }
+
+          setResult({
+            score: numScore,
+            passingGrade: pg,
+            diff,
+            percentage,
+            status,
+            majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
+            universityName: selectedUniv,
+            recommendation,
+          });
+        } else {
+          setResult(res as PredictionResult);
+        }
       }
     });
   };
@@ -207,7 +285,7 @@ export default function CekPeluangPage() {
       </div>
 
       {/* Input Form Card */}
-      <Card className="border border-slate-200 shadow-sm rounded-2xl bg-white p-6 sm:p-8">
+      <Card className="border border-slate-200 shadow-md rounded-2xl bg-white p-6 sm:p-8">
         {loadingUnivs ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
             <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
@@ -215,12 +293,15 @@ export default function CekPeluangPage() {
           </div>
         ) : (
           <form onSubmit={handleAnalyze} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* 1. Score Input */}
-              <div className="space-y-2">
-                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Skor UTBK / Try Out
+            {/* Skor UTBK Input Section */}
+            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                  Skor IRT UTBK / Try Out Kamu
                 </Label>
+                <p className="text-xs text-slate-400">Masukkan total skor hasil Try Out atau latihan subtes</p>
+              </div>
+              <div className="w-full sm:w-48">
                 <Input
                   id="score"
                   type="number"
@@ -229,56 +310,55 @@ export default function CekPeluangPage() {
                   value={score}
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (val === "") {
-                      setScore("");
-                    } else {
-                      setScore(Number(val));
-                    }
+                    setScore(val === "" ? "" : Number(val));
                   }}
                   required
-                  className="h-11 rounded-xl text-base font-bold text-blue-600 border-slate-200"
+                  className="h-12 rounded-xl text-lg font-black text-blue-600 bg-white border-slate-300 text-center"
                 />
-                <span className="text-[11px] text-slate-400 block">Rentang: 300 - 1000</span>
               </div>
+            </div>
 
-              {/* 2. Custom Floating PTN Combobox */}
+            {/* Selection Grid: PTN & Jurusan */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* PTN Selection Combobox */}
               <div className="space-y-2 relative" ref={univContainerRef}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Pilihan PTN Target
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                  <span>1. Perguruan Tinggi Negeri (PTN)</span>
+                  <span className="text-[11px] font-normal text-slate-400">{universities.length} PTN</span>
                 </Label>
 
                 <button
                   type="button"
                   onClick={() => setIsUnivOpen(!isUnivOpen)}
-                  className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-300 transition-colors focus:outline-hidden"
+                  className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs"
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-3 truncate">
+                    <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
                     <span className="truncate">{selectedUniv || "Pilih PTN Target"}</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                  <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
                 </button>
 
                 {isUnivOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 shadow-xl rounded-2xl p-2.5 flex flex-col gap-2 max-h-72 animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
                     <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3" />
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={univSearch}
                         onChange={(e) => setUnivSearch(e.target.value)}
-                        placeholder="Cari PTN (cth: UI, ITB, UGM)..."
-                        className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600"
+                        placeholder="Ketik nama PTN (cth: UI, ITB, UGM)..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
                         autoFocus
                       />
                     </div>
 
                     <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
-                      <span>Daftar PTN</span>
-                      <span>{filteredUnivs.length} pilihan</span>
+                      <span>Daftar Kampus Negeri</span>
+                      <span>{filteredUnivs.length} ditemukan</span>
                     </div>
 
-                    <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
+                    <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
                       {filteredUnivs.length > 0 ? (
                         filteredUnivs.map((univName) => (
                           <button
@@ -289,14 +369,14 @@ export default function CekPeluangPage() {
                               setIsUnivOpen(false);
                               setUnivSearch("");
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                               selectedUniv === univName
-                                ? "bg-blue-50 text-blue-600"
-                                : "text-slate-700 hover:bg-slate-100"
+                                ? "bg-blue-600 text-white"
+                                : "text-slate-800 hover:bg-slate-100"
                             }`}
                           >
                             <span className="truncate">{univName}</span>
-                            {selectedUniv === univName && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                            {selectedUniv === univName && <Check className="h-4 w-4 text-white shrink-0" />}
                           </button>
                         ))
                       ) : (
@@ -309,50 +389,50 @@ export default function CekPeluangPage() {
                 )}
               </div>
 
-              {/* 3. Custom Floating Major Combobox */}
+              {/* Major Selection Combobox */}
               <div className="space-y-2 relative" ref={majorContainerRef}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                  <span>Pilihan Jurusan Target</span>
-                  {loadingMajors && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                  <span>2. Program Studi (Jurusan)</span>
+                  {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
                 </Label>
 
                 <button
                   type="button"
                   disabled={loadingMajors || majors.length === 0}
                   onClick={() => setIsMajorOpen(!isMajorOpen)}
-                  className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-300 transition-colors focus:outline-hidden disabled:opacity-50"
+                  className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />
+                  <div className="flex items-center gap-3 truncate">
+                    <BookOpen className="h-5 w-5 text-blue-600 shrink-0" />
                     <span className="truncate">
                       {selectedProdiObj
                         ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
                         : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                  <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
                 </button>
 
                 {isMajorOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 shadow-xl rounded-2xl p-2.5 flex flex-col gap-2 max-h-72 animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
                     <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3" />
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={majorSearch}
                         onChange={(e) => setMajorSearch(e.target.value)}
-                        placeholder="Cari jurusan (cth: Informatika, Kedokteran)..."
-                        className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600"
+                        placeholder="Ketik jurusan (cth: Kedokteran, Informatika)..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
                         autoFocus
                       />
                     </div>
 
                     <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
-                      <span>Jurusan {selectedUniv}</span>
+                      <span>Jurusan di {selectedUniv}</span>
                       <span>{filteredMajors.length} prodi</span>
                     </div>
 
-                    <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
+                    <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
                       {filteredMajors.length > 0 ? (
                         filteredMajors.map((m) => {
                           const isSelected = String(m.id) === String(selectedProdiId);
@@ -366,14 +446,14 @@ export default function CekPeluangPage() {
                                 setIsMajorOpen(false);
                                 setMajorSearch("");
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                                 isSelected
-                                  ? "bg-blue-50 text-blue-600"
-                                  : "text-slate-700 hover:bg-slate-100"
+                                  ? "bg-blue-600 text-white"
+                                  : "text-slate-800 hover:bg-slate-100"
                               }`}
                             >
                               <span className="truncate">{label}</span>
-                              {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
+                              {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
                             </button>
                           );
                         })
@@ -391,12 +471,12 @@ export default function CekPeluangPage() {
             <Button
               type="submit"
               disabled={isPending || !selectedProdiId}
-              className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-sm"
+              className="w-full h-13 text-base font-extrabold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
             >
               {isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Menganalisis Peluang...</span>
+                  <span>Menganalisis Algoritma Rasionalisasi...</span>
                 </>
               ) : (
                 <>

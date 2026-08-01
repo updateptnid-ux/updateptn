@@ -125,19 +125,9 @@ export default function RegisterPage() {
           setProdiSuggestions((data as ProdiSuggestion[]).slice(0, 8));
           setShowProdiDropdown(true);
         } else {
-          // Fallback mock
-          const mock: ProdiSuggestion[] = [
-            { id: "1", univ: "UNIVERSITAS INDONESIA", prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek" },
-            { id: "2", univ: "UNIVERSITAS INDONESIA", prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek" },
-            { id: "3", univ: "UNIVERSITAS GADJAH MADA", prodi: "Teknologi Informasi", jenjang: "S1", kelompok: "Saintek" },
-            { id: "4", univ: "INSTITUT TEKNOLOGI BANDUNG", prodi: "Teknik Informatika", jenjang: "S1", kelompok: "Saintek" },
-          ].filter(
-            (i) =>
-              i.univ.toLowerCase().includes(prodiQuery.toLowerCase()) ||
-              i.prodi.toLowerCase().includes(prodiQuery.toLowerCase())
-          );
-          setProdiSuggestions(mock);
-          if (mock.length > 0) setShowProdiDropdown(true);
+          // No suggestions found
+          setProdiSuggestions([]);
+          setShowProdiDropdown(false);
         }
       } catch {
         // silent

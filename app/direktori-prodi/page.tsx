@@ -164,88 +164,38 @@ export default function DirektoriProdiPage() {
           keyword: searchQuery.trim(),
         });
 
+        let results: ProdiRecord[] = [];
+
         if (!error && data && data.length > 0) {
-          let results = data as ProdiRecord[];
-
-          // Apply pre-filter constraints
-          if (selectedKelompok !== "ALL") {
-            results = results.filter((item) =>
-              item.kelompok?.toUpperCase().includes(selectedKelompok)
-            );
-          }
-          if (selectedJenjang !== "ALL") {
-            results = results.filter(
-              (item) => item.jenjang?.toUpperCase() === selectedJenjang
-            );
-          }
-
-          setSuggestions(results.slice(0, 10));
-          setShowDropdown(true);
+          results = data as ProdiRecord[];
         } else {
-          // Fallback mock suggestions
-          const mockData: ProdiRecord[] = [
-            {
-              id: "1",
-              univ: "UNIVERSITAS INDONESIA",
-              prodi: "Ilmu Komputer",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 728.5,
-              daya_tampung: 60,
-              peminat: 2450,
-              keketatan: 2.45,
-              ukt_min: 500000,
-              ukt_max: 17500000,
-            },
-            {
-              id: "2",
-              univ: "UNIVERSITAS INDONESIA",
-              prodi: "Kedokteran",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 742.0,
-              daya_tampung: 75,
-              peminat: 3820,
-              keketatan: 1.96,
-              ukt_min: 500000,
-              ukt_max: 20000000,
-            },
-            {
-              id: "3",
-              univ: "UNIVERSITAS GADJAH MADA",
-              prodi: "Teknologi Informasi",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 715.0,
-              daya_tampung: 70,
-              peminat: 2100,
-              keketatan: 3.33,
-              ukt_min: 500000,
-              ukt_max: 13500000,
-            },
-            {
-              id: "4",
-              univ: "INSTITUT TEKNOLOGI BANDUNG",
-              prodi: "Teknik Informatika (STEI-K)",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 735.0,
-              daya_tampung: 100,
-              peminat: 3950,
-              keketatan: 2.53,
-              ukt_min: 500000,
-              ukt_max: 14500000,
-            },
-          ];
-
-          const filtered = mockData.filter(
-            (item) =>
-              item.univ.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.prodi.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          setSuggestions(filtered);
-          setShowDropdown(true);
+          // Fallback to local /data_snbt.json search
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData: ProdiRecord[] = await res.json();
+            const q = searchQuery.toLowerCase().trim();
+            results = localData.filter((item) =>
+              `${item.univ} ${item.prodi} ${item.jenjang || ""} ${item.kelompok || ""}`
+                .toLowerCase()
+                .includes(q)
+            );
+          }
         }
+
+        // Apply pre-filter constraints
+        if (selectedKelompok !== "ALL") {
+          results = results.filter((item) =>
+            item.kelompok?.toUpperCase().includes(selectedKelompok)
+          );
+        }
+        if (selectedJenjang !== "ALL") {
+          results = results.filter(
+            (item) => item.jenjang?.toUpperCase() === selectedJenjang
+          );
+        }
+
+        setSuggestions(results.slice(0, 15));
+        setShowDropdown(results.length > 0);
       } catch (err) {
         console.error("Error fetching suggestions:", err);
       } finally {

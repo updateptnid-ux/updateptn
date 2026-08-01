@@ -52,26 +52,8 @@ export default async function StudentDashboardPage() {
     }
   }
 
-  // Fallback demo tryouts if DB empty
-  const activeTryouts =
-    tryoutsData && tryoutsData.length > 0
-      ? tryoutsData
-      : [
-          {
-            id: "11111111-1111-1111-1111-111111111111",
-            title: "Try Out Nasional UTBK SNBT - Seri 01",
-            duration_minutes: 120,
-            total_questions: 155,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: "11111111-1111-1111-1111-111111111112",
-            title: "Simulasi TPS & Literasi Bahasa UTBK - Seri 02",
-            duration_minutes: 90,
-            total_questions: 100,
-            created_at: new Date().toISOString(),
-          },
-        ];
+  // Use real tryouts from database only
+  const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
 
   const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
   const targetUniv = user?.user_metadata?.target_univ as string | undefined;
@@ -143,9 +125,11 @@ export default async function StudentDashboardPage() {
                 </div>
               </div>
               <p className="text-3xl font-extrabold text-slate-900">
-                {lastResult ? Math.round(Number(lastResult.score)) : "720"}
+                {lastResult ? Math.round(Number(lastResult.score)) : "—"}
               </p>
-              <p className="text-xs text-slate-500 font-medium">Skor Pembobotan IRT</p>
+              <p className="text-xs text-slate-500 font-medium">
+                {lastResult ? "Skor Pembobotan IRT" : "Belum ada tryout"}
+              </p>
             </Card>
           </MotionCard>
         </StaggerItem>

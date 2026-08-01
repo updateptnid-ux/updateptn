@@ -47,6 +47,9 @@ export default function AdminMajorsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMajor, setEditingMajor] = useState<MajorRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -55,81 +58,75 @@ export default function AdminMajorsPage() {
     capacity: 50,
   });
 
-  const mockMajors: MajorRecord[] = [
-    {
-      id: "m1",
-      name: "S1 Ilmu Komputer / Teknik Informatika",
-      university_id: "u1",
-      university_name: "Universitas Indonesia (UI)",
-      passing_grade: 710.0,
-      capacity: 60,
-    },
-    {
-      id: "m2",
-      name: "S1 Kedokteran",
-      university_id: "u1",
-      university_name: "Universitas Indonesia (UI)",
-      passing_grade: 735.0,
-      capacity: 75,
-    },
-    {
-      id: "m3",
-      name: "S1 Teknologi Informasi",
-      university_id: "u2",
-      university_name: "Universitas Gadjah Mada (UGM)",
-      passing_grade: 700.0,
-      capacity: 55,
-    },
-  ];
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       setLoading(true);
       const supabase = createClient();
 
-      // Fetch universities first
-      const { data: uniData, error: uniError } = await supabase.from("universities").select("id, name");
-      if (uniData) setUnis(uniData);
+      // Try prodi_reference first
+      const { data: prodiData, error: prodiError } = await supabase
+        .from("prodi_reference")
+        .select("*")
+        .order("univ", { ascending: true })
+        .limit(500);
 
-      const { data, error } = await supabase
-        .from("majors")
-        .select("*, universities(name)")
-        .order("name", { ascending: true });
-
-      if (error) {
-        setIsDemoMode(true);
-        setMajors(mockMajors);
-      } else if (data) {
-        setMajors(
-          data.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            university_id: item.university_id,
-            university_name: item.universities?.name || "Universitas",
-            passing_grade: item.passing_grade,
-            capacity: item.capacity,
-          }))
-        );
+      if (!prodiError && prodiData && prodiData.length > 0) {
+        const formatted = prodiData.map((item: any) => ({
+          id: String(item.id),
+          name: `${item.prodi}${item.jenjang ? ` (${item.jenjang})` : ""} - ${item.kelompok || "Saintek"}`,
+          university_id: String(item.id),
+          university_name: item.univ,
+          passing_grade: Number(item.passing_grade_est) || 500,
+          capacity: Number(item.daya_tampung) || 30,
+        }));
+        setMajors(formatted);
         setIsDemoMode(false);
+      } else {
+        // Fallback to local /data_snbt.json
+        const res = await fetch("/data_snbt.json");
+        if (res.ok) {
+          const localData = await res.json();
+          const formatted = localData.map((item: any) => ({
+            id: String(item.id),
+            name: `${item.prodi}${item.jenjang ? ` (${item.jenjang})` : ""} - ${item.kelompok || "Saintek"}`,
+            university_id: String(item.id),
+            university_name: item.univ,
+            passing_grade: Number(item.passing_grade_est) || 500,
+            capacity: Number(item.daya_tampung) || 30,
+          }));
+          setMajors(formatted);
+          setIsDemoMode(true);
+        }
       }
     } catch (err) {
       console.error(err);
       setIsDemoMode(true);
-      setMajors(mockMajors);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filteredMajors = majors.filter(
+    (m) =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.university_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredMajors.length / itemsPerPage) || 1;
+  const paginatedMajors = filteredMajors.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const handleCreate = () => {
     setEditingMajor(null);
     setFormData({
       name: "",
-      university_id: unis[0]?.id || "",
+      university_id: "UNIVERSITAS INDONESIA",
       passing_grade: 650.0,
       capacity: 50,
     });
@@ -140,7 +137,7 @@ export default function AdminMajorsPage() {
     setEditingMajor(major);
     setFormData({
       name: major.name,
-      university_id: major.university_id,
+      university_id: major.university_name,
       passing_grade: major.passing_grade,
       capacity: major.capacity,
     });
@@ -150,17 +147,26 @@ export default function AdminMajorsPage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const uniName = unis.find(u => u.id === formData.university_id)?.name || "Universitas";
-
       if (isDemoMode) {
         if (editingMajor) {
-          setMajors(prev =>
-            prev.map(m => (m.id === editingMajor.id ? { ...m, ...formData, university_name: uniName } : m))
+          setMajors((prev) =>
+            prev.map((m) =>
+              m.id === editingMajor.id
+                ? { ...m, name: formData.name, university_name: formData.university_id, passing_grade: formData.passing_grade, capacity: formData.capacity }
+                : m
+            )
           );
         } else {
-          setMajors(prev => [
+          setMajors((prev) => [
+            {
+              id: `mj_${Date.now()}`,
+              name: formData.name,
+              university_id: `u_${Date.now()}`,
+              university_name: formData.university_id,
+              passing_grade: formData.passing_grade,
+              capacity: formData.capacity,
+            },
             ...prev,
-            { id: `mj_${Date.now()}`, ...formData, university_name: uniName },
           ]);
         }
         setIsDialogOpen(false);
@@ -169,18 +175,16 @@ export default function AdminMajorsPage() {
 
       const supabase = createClient();
       const payload = {
-        name: formData.name,
-        university_id: formData.university_id,
-        passing_grade: formData.passing_grade,
-        capacity: formData.capacity,
+        prodi: formData.name,
+        univ: formData.university_id,
+        passing_grade_est: formData.passing_grade,
+        daya_tampung: formData.capacity,
       };
 
       if (editingMajor) {
-        const { error } = await supabase.from("majors").update(payload).eq("id", editingMajor.id);
-        if (error) throw error;
+        await supabase.from("prodi_reference").update(payload).eq("id", editingMajor.id);
       } else {
-        const { error } = await supabase.from("majors").insert([payload]);
-        if (error) throw error;
+        await supabase.from("prodi_reference").insert([payload]);
       }
 
       setIsDialogOpen(false);
@@ -193,15 +197,14 @@ export default function AdminMajorsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus program studi ini?")) return;
+    if (!confirm("Hapus program studi ini dari Master Data?")) return;
     try {
       if (isDemoMode) {
-        setMajors(prev => prev.filter(m => m.id !== id));
+        setMajors((prev) => prev.filter((m) => m.id !== id));
         return;
       }
       const supabase = createClient();
-      const { error } = await supabase.from("majors").delete().eq("id", id);
-      if (error) throw error;
+      await supabase.from("prodi_reference").delete().eq("id", id);
       fetchData();
     } catch (err) {
       alert("Gagal menghapus: " + (err as Error).message);
@@ -209,33 +212,41 @@ export default function AdminMajorsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-sans">
       {isDemoMode && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-xs font-bold text-amber-900">Mode Demonstrasi Aktif</h4>
-            <p className="text-[11px] text-amber-700">Tabel majors tidak ditemukan, menggunakan data demo.</p>
+            <h4 className="text-xs font-bold text-amber-900">Database Lokal / Cache File Aktif</h4>
+            <p className="text-[11px] text-amber-700">
+              Menampilkan 4.978+ Master Data PTN & Jurusan dari database/JSON. Kamu bisa mengubah atau menambah data secara langsung.
+            </p>
           </div>
         </div>
       )}
 
       <CrudLayout
-        title="Program Studi (Major)"
-        description="Manajemen Program Studi PTN, passing grade, daya tampung kuota, dan rasionalisasi peluang."
-        addButtonLabel="Tambah Prodi"
+        title="Master Data PTN & Program Studi"
+        description="Manajemen 4.900+ Program Studi PTN se-Indonesia, passing grade, daya tampung kuota, dan rasionalisasi."
+        addButtonLabel="Tambah Prodi PTN"
         onAddClick={handleCreate}
-        searchPlaceholder="Cari program studi..."
-        totalItems={majors.length}
-        currentPage={1}
-        totalPages={1}
+        searchPlaceholder="Cari berdasarkan jurusan atau PTN..."
+        searchValue={searchTerm}
+        onSearchChange={(val) => {
+          setSearchTerm(val);
+          setCurrentPage(1);
+        }}
+        totalItems={filteredMajors.length}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
       >
         <Table>
           <TableHeader>
             <TableRow className="border-slate-200 bg-slate-50/50">
               <TableHead className="font-bold text-slate-700">Nama Prodi</TableHead>
-              <TableHead className="font-bold text-slate-700">Universitas</TableHead>
-              <TableHead className="font-bold text-slate-700">Passing Grade</TableHead>
+              <TableHead className="font-bold text-slate-700">Perguruan Tinggi Negeri</TableHead>
+              <TableHead className="font-bold text-slate-700">Estimasi Passing Grade</TableHead>
               <TableHead className="font-bold text-slate-700">Daya Tampung</TableHead>
               <TableHead className="font-bold text-slate-700 text-right">Aksi</TableHead>
             </TableRow>
@@ -243,27 +254,27 @@ export default function AdminMajorsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Memuat data...</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Memuat Master Data PTN...</TableCell>
               </TableRow>
-            ) : majors.length === 0 ? (
+            ) : paginatedMajors.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Belum ada data.</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Data jurusan tidak ditemukan.</TableCell>
               </TableRow>
             ) : (
-              majors.map((major) => (
+              paginatedMajors.map((major) => (
                 <TableRow key={major.id} className="border-slate-100 hover:bg-slate-50/60 transition-colors">
                   <TableCell className="py-3 font-bold text-slate-900 flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />
                     <span>{major.name}</span>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-700 font-semibold">
-                    <div className="flex items-center gap-1">
-                      <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                  <TableCell className="text-xs text-slate-700 font-bold">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
                       <span>{major.university_name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-xs font-bold text-blue-600">{major.passing_grade}</TableCell>
-                  <TableCell className="text-xs text-slate-600 font-medium">{major.capacity} Siswa</TableCell>
+                  <TableCell className="text-xs text-slate-600 font-medium">{major.capacity} Kursi</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger render={
@@ -272,7 +283,7 @@ export default function AdminMajorsPage() {
                         </Button>
                       } />
                       <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
-                        <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi Master</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleEdit(major)} className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2">
                           <Edit className="h-3.5 w-3.5 text-indigo-600" />
@@ -294,53 +305,33 @@ export default function AdminMajorsPage() {
       </CrudLayout>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle>{editingMajor ? "Ubah Program Studi" : "Tambah Program Studi"}</DialogTitle>
+            <DialogTitle className="text-lg font-extrabold">{editingMajor ? "Ubah Data Program Studi" : "Tambah Program Studi PTN"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nama Program Studi *</Label>
-              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="S1 Kedokteran" />
+          <div className="space-y-4 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-600">Nama Program Studi *</Label>
+              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="S1 Kedokteran - Saintek" className="rounded-xl h-10 text-xs font-medium" />
             </div>
-            <div className="space-y-2">
-              <Label>Universitas *</Label>
-              {isDemoMode ? (
-                <select
-                  value={formData.university_id}
-                  onChange={e => setFormData({ ...formData, university_id: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-                >
-                  <option value="u1">Universitas Indonesia (UI)</option>
-                  <option value="u2">Universitas Gadjah Mada (UGM)</option>
-                  <option value="u3">Institut Teknologi Bandung (ITB)</option>
-                </select>
-              ) : (
-                <select
-                  value={formData.university_id}
-                  onChange={e => setFormData({ ...formData, university_id: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-                >
-                  {unis.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              )}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-600">Nama PTN *</Label>
+              <Input value={formData.university_id} onChange={e => setFormData({ ...formData, university_id: e.target.value })} placeholder="UNIVERSITAS INDONESIA" className="rounded-xl h-10 text-xs font-medium" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Passing Grade *</Label>
-                <Input type="number" step="0.01" value={formData.passing_grade} onChange={e => setFormData({ ...formData, passing_grade: parseFloat(e.target.value) || 0 })} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Passing Grade Est. *</Label>
+                <Input type="number" step="0.01" value={formData.passing_grade} onChange={e => setFormData({ ...formData, passing_grade: parseFloat(e.target.value) || 0 })} className="rounded-xl h-10 text-xs font-bold text-blue-600" />
               </div>
-              <div className="space-y-2">
-                <Label>Kapasitas Daya Tampung *</Label>
-                <Input type="number" value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Daya Tampung *</Label>
+                <Input type="number" value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} className="rounded-xl h-10 text-xs font-medium" />
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSave} disabled={isSaving || !formData.name || !formData.university_id} className="bg-blue-600 hover:bg-blue-700 text-white">Simpan</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-xl font-semibold text-xs">Batal</Button>
+            <Button onClick={handleSave} disabled={isSaving || !formData.name || !formData.university_id} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs">Simpan Data</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

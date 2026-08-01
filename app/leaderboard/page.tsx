@@ -30,18 +30,7 @@ interface TryoutOption {
   title: string;
 }
 
-const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { user_id: "1", full_name: "Andi Prasetyo", asal_sekolah: "SMAN 1 Surabaya", target_prodi: "Teknik Informatika", best_score: 748.5, total_tryouts: 3, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 1 },
-  { user_id: "2", full_name: "Siti Rahayu", asal_sekolah: "MAN 2 Jakarta", target_prodi: "Kedokteran", best_score: 741.2, total_tryouts: 2, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 2 },
-  { user_id: "3", full_name: "Budi Santoso", asal_sekolah: "SMAN 3 Bandung", target_prodi: "Hukum", best_score: 738.8, total_tryouts: 4, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 3 },
-  { user_id: "4", full_name: "Dewi Kusuma", asal_sekolah: "SMAN 8 Yogyakarta", target_prodi: "Arsitektur", best_score: 731.0, total_tryouts: 2, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 4 },
-  { user_id: "5", full_name: "Rizky Firmansyah", asal_sekolah: "SMAN 2 Medan", target_prodi: "Ilmu Komputer", best_score: 725.5, total_tryouts: 3, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 5 },
-  { user_id: "6", full_name: "Laila Putri", asal_sekolah: "SMAN 1 Makassar", target_prodi: "Ekonomi", best_score: 719.3, total_tryouts: 1, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 6 },
-  { user_id: "7", full_name: "Fajar Nugroho", asal_sekolah: "SMAN 5 Semarang", target_prodi: "Farmasi", best_score: 715.7, total_tryouts: 2, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 7 },
-  { user_id: "8", full_name: "Nadia Fransisca", asal_sekolah: "SMAN 1 Palembang", target_prodi: "Psikologi", best_score: 710.1, total_tryouts: 3, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 8 },
-  { user_id: "9", full_name: "Hendra Wijaya", asal_sekolah: "SMAN 4 Bogor", target_prodi: "Teknik Sipil", best_score: 706.9, total_tryouts: 2, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 9 },
-  { user_id: "10", full_name: "Mega Wulandari", asal_sekolah: "SMAN 1 Malang", target_prodi: "Biologi", best_score: 701.4, total_tryouts: 1, tryout_title: "Try Out SNBT 2026 - Episode 1", tryout_id: "1", rank: 10 },
-];
+// REMOVED: Mock leaderboard data - now using REAL data from database only
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return (
@@ -91,9 +80,9 @@ export default function LeaderboardPage() {
         .from("tryouts")
         .select("id, title")
         .order("created_at", { ascending: false });
-      if (tryoutsData) setTryouts(tryoutsData);
+      if (tryoutsData && tryoutsData.length > 0) setTryouts(tryoutsData);
 
-      // Try to fetch leaderboard view
+      // 1. Try to fetch from leaderboard view
       let query = supabase
         .from("leaderboard")
         .select("*")
@@ -111,13 +100,43 @@ export default function LeaderboardPage() {
         const myEntry = data.find((e: LeaderboardEntry) => e.user_id === user.id);
         setMyRank(myEntry || null);
       } else {
-        // Fallback mock data
-        setLeaderboard(MOCK_LEADERBOARD);
-        setMyRank(null);
+        // 2. Fallback: Query results table directly with join
+        let resQuery = supabase
+          .from("results")
+          .select("id, user_id, score, irt_score, tryout_id, created_at, profiles(full_name, target_prodi, asal_sekolah), tryouts(title)")
+          .order("score", { ascending: false })
+          .limit(50);
+
+        if (selectedTryout !== "all") {
+          resQuery = resQuery.eq("tryout_id", selectedTryout);
+        }
+
+        const { data: resData } = await resQuery;
+
+        if (resData && resData.length > 0) {
+          const formatted: LeaderboardEntry[] = resData.map((item: any, idx: number) => ({
+            user_id: item.user_id,
+            full_name: item.profiles?.full_name || item.user_name || "Siswa Pejuang PTN",
+            asal_sekolah: item.profiles?.asal_sekolah || "SMA Negeri",
+            target_prodi: item.profiles?.target_prodi || "Ilmu Komputer (UI)",
+            best_score: Math.round(Number(item.irt_score || item.score || 0)),
+            total_tryouts: 1,
+            tryout_title: item.tryouts?.title || "Try Out SNBT 2026",
+            tryout_id: item.tryout_id,
+            rank: idx + 1,
+          }));
+          setLeaderboard(formatted);
+          const myEntry = formatted.find((e) => e.user_id === user.id);
+          setMyRank(myEntry || null);
+        } else {
+          // 3. Benar-benar kosong — tidak ada dummy data
+          setLeaderboard([]);
+          setMyRank(null);
+        }
       }
       setLastUpdated(new Date());
-    } catch {
-      setLeaderboard(MOCK_LEADERBOARD);
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
     } finally {
       setLoading(false);
     }
@@ -201,6 +220,22 @@ export default function LeaderboardPage() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
         </div>
+      ) : leaderboard.length === 0 ? (
+        /* Empty State — Belum ada peserta */
+        <Card className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-xs">
+          <div className="h-16 w-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto mb-4">
+            <Trophy className="h-8 w-8 text-slate-300" />
+          </div>
+          <h3 className="text-base font-extrabold text-slate-700 mb-1">Belum Ada Peserta</h3>
+          <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto leading-relaxed">
+            Ranking akan muncul otomatis setelah kamu atau peserta lain menyelesaikan Try Out pertama.
+          </p>
+          <div className="mt-5 p-3 rounded-xl bg-blue-50 border border-blue-100 inline-block">
+            <p className="text-[11px] text-blue-700 font-bold">
+              💡 Ikuti Try Out sekarang dan jadilah yang pertama di ranking!
+            </p>
+          </div>
+        </Card>
       ) : (
         <>
           {/* Top 3 Podium */}

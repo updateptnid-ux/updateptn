@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   GraduationCap,
   Clock,
@@ -23,13 +24,27 @@ import {
   Loader2,
   AlertTriangle,
   FileCheck2,
+  Search,
+  Target,
+  BookOpen,
+  CheckCircle2,
 } from "lucide-react";
+
+interface ProdiItem {
+  id: string | number;
+  univ: string;
+  prodi: string;
+  jenjang?: string;
+  kelompok?: string;
+  passing_grade_est?: number;
+}
 
 interface QuestionItem {
   id: string;
-  tryout_id: string;
+  tryout_id?: string;
   subtest: string;
-  question_text: string;
+  question_text?: string;
+  text?: string;
   option_a: string;
   option_b: string;
   option_c: string;
@@ -50,18 +65,38 @@ export default function TryoutEnginePage({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(7200); // 120 mins
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(7200);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
 
-  // Fetch Questions from Supabase
+  // Target Jurusan Picker state
+  const [showTargetPicker, setShowTargetPicker] = useState<boolean>(false);
+  const [prodiList, setProdiList] = useState<ProdiItem[]>([]);
+  const [prodiSearch, setProdiSearch] = useState("");
+  const [selectedPtn, setSelectedPtn] = useState("");
+  const [selectedProdi, setSelectedProdi] = useState("");
+  const [selectedPg, setSelectedPg] = useState<number>(695);
+  const [targetConfirmed, setTargetConfirmed] = useState(false);
+
+  // Helper to normalize question objects
+  const normalizeQuestions = (data: any[]): QuestionItem[] => {
+    return data.map((q, idx) => ({
+      ...q,
+      id: q.id || `q-${idx + 1}`,
+      question_text: q.text || q.question_text || "Teks soal tidak tersedia.",
+      text: q.text || q.question_text || "Teks soal tidak tersedia.",
+    }));
+  };
+
+  // Fetch Questions from Supabase or Fallback JSON
   useEffect(() => {
     async function loadQuestions() {
       try {
         setLoading(true);
         const supabase = createClient();
-        let dbData = null;
+        let dbData: any[] | null = null;
+
         if (tryoutId.startsWith("latihan-")) {
           const categorySlug = tryoutId.replace("latihan-", "");
           const slugToName: Record<string, string> = {
@@ -75,21 +110,17 @@ export default function TryoutEnginePage({
 
           const { data } = await supabase
             .from("questions")
-            .select("*")
-            .ilike("text", `%%`); // Fetch all questions first
+            .select("*");
 
           if (data && data.length > 0) {
-            // Filter by subtest name (case insensitive/loose match)
             const matched = data.filter((q: any) => 
               (q.subtest || "").toLowerCase().includes(subtestName.toLowerCase()) || 
-              (q.text || "").toLowerCase().includes(subtestName.toLowerCase())
+              (q.text || q.question_text || "").toLowerCase().includes(subtestName.toLowerCase())
             );
             
             if (matched.length > 0) {
-              // Shuffle and select up to 15 questions for quick practice session
               dbData = [...matched].sort(() => 0.5 - Math.random()).slice(0, 15);
             } else {
-              // Fallback to any random questions from the database if no direct match is found
               dbData = [...data].sort(() => 0.5 - Math.random()).slice(0, 15);
             }
           }
@@ -100,53 +131,47 @@ export default function TryoutEnginePage({
             .eq("tryout_id", tryoutId)
             .order("id");
           dbData = data;
+
+          // If no questions specific to tryoutId, fetch all DB questions
+          if (!dbData || dbData.length === 0) {
+            const { data: allData } = await supabase.from("questions").select("*");
+            if (allData && allData.length > 0) {
+              dbData = allData;
+            }
+          }
         }
 
         if (dbData && dbData.length > 0) {
-          setQuestions(dbData);
+          setQuestions(normalizeQuestions(dbData));
         } else {
-          // Fallback sample questions if DB empty
-          setQuestions([
-            {
-              id: "q1",
-              tryout_id: tryoutId,
-              subtest: "Penalaran Umum",
-              question_text:
-                "Jika semua siswa yang belajar secara konsisten lulus UTBK, dan Amanda adalah siswa yang belajar secara konsisten, maka kesimpulan yang paling tepat adalah...",
-              option_a: "Amanda mungkin lulus UTBK jika beruntung.",
-              option_b: "Amanda pasti lulus UTBK.",
-              option_c: "Amanda tidak akan lulus UTBK.",
-              option_d: "Amanda harus belajar lebih keras lagi.",
-              option_e: "Siswa selain Amanda juga dipastikan lulus UTBK.",
-            },
-            {
-              id: "q2",
-              tryout_id: tryoutId,
-              subtest: "Penalaran Matematika",
-              question_text:
-                "Sebuah nilai rata-rata Try Out 5 orang siswa adalah 700. Jika nilai satu orang siswa baru dimasukkan, rata-ratanya menjadi 720. Berapakah nilai siswa baru tersebut?",
-              option_a: "780",
-              option_b: "800",
-              option_c: "820",
-              option_d: "840",
-              option_e: "860",
-            },
-            {
-              id: "q3",
-              tryout_id: tryoutId,
-              subtest: "Literasi Bahasa Indonesia",
-              question_text:
-                "Gagasan utama paragraf di atas menekankan pentingnya peningkatan literasi digital bagi generasi muda untuk menghadapi persaingan global. Kata 'literasi' dalam konteks ini bermakna...",
-              option_a: "Kemampuan membaca dan menulis secara mekanis.",
-              option_b: "Kemampuan memahami dan mengaplikasikan informasi secara kritis.",
-              option_c: "Keterampilan mengoperasikan perangkat komputer modern.",
-              option_d: "Koleksi buku-buku digital di perpustakaan daring.",
-              option_e: "Kemampuan berkomunikasi di media sosial.",
-            },
-          ]);
+          // Fallback to local /40_soal_snbt.json
+          try {
+            const res = await fetch("/40_soal_snbt.json");
+            if (res.ok) {
+              const localJson = await res.json();
+              if (localJson && localJson.length > 0) {
+                setQuestions(normalizeQuestions(localJson));
+              } else {
+                setQuestions([]);
+              }
+            }
+          } catch (jsonErr) {
+            console.error("Error loading JSON fallback:", jsonErr);
+            setQuestions([]);
+          }
         }
       } catch (err) {
         console.error("Error fetching questions:", err);
+        // Try JSON fallback on error
+        try {
+          const res = await fetch("/40_soal_snbt.json");
+          if (res.ok) {
+            const localJson = await res.json();
+            setQuestions(normalizeQuestions(localJson));
+          }
+        } catch {
+          setQuestions([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -154,6 +179,82 @@ export default function TryoutEnginePage({
 
     loadQuestions();
   }, [tryoutId]);
+
+  // Fetch Autocomplete Suggestions via Supabase RPC search_kampus_pintar
+  useEffect(() => {
+    if (prodiSearch.trim().length < 2) {
+      setProdiList([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.rpc("search_kampus_pintar", {
+          keyword: prodiSearch.trim(),
+        });
+
+        if (!error && data && data.length > 0) {
+          setProdiList(data as ProdiItem[]);
+        } else {
+          // Fallback to local
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const q = prodiSearch.toLowerCase();
+            const filtered = localData.filter((p: any) => 
+              p.univ.toLowerCase().includes(q) || 
+              p.prodi.toLowerCase().includes(q)
+            ).slice(0, 30);
+            setProdiList(filtered);
+          }
+        }
+      } catch (err) {
+        console.error("Error searching prodi:", err);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [prodiSearch]);
+
+  const filteredProdi = prodiList;
+
+  // Show target picker after loading finishes (only once per session)
+  useEffect(() => {
+    if (!loading) {
+      const saved = localStorage.getItem("tryout_target_ptn");
+      if (!saved) {
+        setShowTargetPicker(true);
+      } else {
+        setSelectedPtn(localStorage.getItem("tryout_target_ptn") || "");
+        setSelectedProdi(localStorage.getItem("tryout_target_prodi") || "");
+        setSelectedPg(Number(localStorage.getItem("tryout_target_pg")) || 695);
+        setTargetConfirmed(true);
+      }
+    }
+  }, [loading]);
+
+
+
+  const handleConfirmTarget = () => {
+    if (!selectedPtn || !selectedProdi) return;
+    localStorage.setItem("tryout_target_ptn", selectedPtn);
+    localStorage.setItem("tryout_target_prodi", selectedProdi);
+    localStorage.setItem("tryout_target_pg", String(selectedPg));
+    setTargetConfirmed(true);
+    setShowTargetPicker(false);
+  };
+
+  const handleSkipTarget = () => {
+    localStorage.setItem("tryout_target_ptn", "UNIVERSITAS INDONESIA");
+    localStorage.setItem("tryout_target_prodi", "S1 Ilmu Komputer");
+    localStorage.setItem("tryout_target_pg", "710");
+    setSelectedPtn("UNIVERSITAS INDONESIA");
+    setSelectedProdi("S1 Ilmu Komputer");
+    setSelectedPg(710);
+    setTargetConfirmed(true);
+    setShowTargetPicker(false);
+  };
 
   // Sticky Countdown Timer Effect
   useEffect(() => {
@@ -204,6 +305,125 @@ export default function TryoutEnginePage({
       </div>
     );
   }
+
+  // --- TARGET JURUSAN PICKER SCREEN ---
+  if (showTargetPicker) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Sebelum Mulai Try Out</p>
+                <h2 className="text-xl font-extrabold">Pilih Target Jurusan</h2>
+              </div>
+            </div>
+            <p className="text-sm opacity-80 leading-relaxed">
+              Pilih PTN & Program Studi impianmu. Setelah TO selesai, kamu akan melihat analisis peluang kelulusan berdasarkan skor dan jurusan ini.
+            </p>
+          </div>
+
+          {/* Search Input */}
+          <div className="px-6 pt-5 pb-2">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={prodiSearch}
+                onChange={(e) => {
+                  setProdiSearch(e.target.value);
+                  setSelectedPtn("");
+                  setSelectedProdi("");
+                }}
+                placeholder="Cari jurusan atau nama PTN..."
+                className="pl-10 rounded-xl border-slate-200 bg-slate-50 h-11 text-sm font-medium"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Selected Banner */}
+          {selectedProdi && (
+            <div className="mx-6 mb-2 p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-blue-900 truncate">{selectedProdi}</p>
+                <p className="text-[11px] text-blue-600 font-medium truncate">{selectedPtn}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Prodi List */}
+          <div className="px-6 pb-2 max-h-64 overflow-y-auto space-y-1.5">
+            {prodiSearch.length < 2 ? (
+              <div className="text-center py-8 text-sm text-slate-400 font-medium">
+                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                Ketik nama jurusan atau PTN untuk mencari...
+              </div>
+            ) : filteredProdi.length === 0 ? (
+              <div className="text-center py-6 text-sm text-slate-400">Jurusan tidak ditemukan.</div>
+            ) : (
+              filteredProdi.map((p) => {
+                const isSelected = selectedPtn === p.univ && selectedProdi === p.prodi;
+                return (
+                  <button
+                    key={`${p.univ}-${p.prodi}`}
+                    onClick={() => {
+                      setSelectedPtn(p.univ);
+                      setSelectedProdi(p.prodi);
+                      setSelectedPg(Number(p.passing_grade_est) || 695);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                      isSelected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                    }`}
+                  >
+                    <p className={`text-xs font-extrabold truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
+                      {p.prodi}{p.jenjang ? ` (${p.jenjang})` : ""}
+                    </p>
+                    <p className={`text-[11px] font-medium truncate ${isSelected ? "text-blue-100" : "text-slate-500"}`}>
+                      {p.univ} · Est. PG {p.passing_grade_est ?? "–"}
+                    </p>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="px-6 py-5 border-t border-slate-100 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleSkipTarget}
+              className="flex-1 rounded-xl border-slate-200 text-slate-600 font-semibold text-xs h-11"
+            >
+              Lewati
+            </Button>
+            <Button
+              onClick={handleConfirmTarget}
+              disabled={!selectedPtn || !selectedProdi}
+              className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-2"
+            >
+              <Target className="h-4 w-4" />
+              Mulai Try Out
+            </Button>
+          </div>
+        </div>
+
+        {/* Already confirmed indicator */}
+        {targetConfirmed && (
+          <p className="mt-4 text-xs text-white/60">
+            Target tersimpan · {selectedProdi} di {selectedPtn}
+          </p>
+        )}
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none">
@@ -311,7 +531,7 @@ export default function TryoutEnginePage({
             {/* Question Reading Body */}
             <div className="space-y-4">
               <p className="text-base sm:text-lg text-slate-900 font-medium leading-relaxed">
-                {currentQ?.question_text}
+                {currentQ?.question_text || currentQ?.text}
               </p>
             </div>
 

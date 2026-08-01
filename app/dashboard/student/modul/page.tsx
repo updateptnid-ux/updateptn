@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,88 +19,57 @@ import {
   CheckCircle2,
   Star,
   Eye,
+  Loader2,
 } from "lucide-react";
 
-// Data modul belajar dengan kategori
-const modulCategories = {
-  semua: [
-    {
-      id: 1,
-      type: "video",
-      category: "PENALARAN UMUM",
-      title: "Konsep Dasar IRT & Strategi Pengerjaan",
-      thumbnail: "/logo.png",
-      duration: "12:45",
-      views: 5420,
-      rating: 4.8,
-      isWatched: false,
-      isPremium: false,
-    },
-    {
-      id: 2,
-      type: "video",
-      category: "PENGETAHUAN KUANTITATIF",
-      title: "Trik Cepat Aljabar UTBK 2026",
-      thumbnail: "/logo.png",
-      duration: "18:30",
-      views: 8125,
-      rating: 4.9,
-      isWatched: true,
-      isPremium: false,
-    },
-    {
-      id: 3,
-      type: "pdf",
-      category: "LITERASI INDONESIA",
-      title: "Bedah Teks Literasi: Mencari Ide Pokok",
-      thumbnail: "/logo.png",
-      pages: 24,
-      downloads: 3200,
-      rating: 4.7,
-      isPremium: true,
-    },
-    {
-      id: 4,
-      type: "video",
-      category: "LITERASI INGGRIS",
-      title: "Mastering English Vocabulary for UTBK",
-      thumbnail: "/logo.png",
-      duration: "22:15",
-      views: 6890,
-      rating: 4.6,
-      isWatched: false,
-      isPremium: true,
-    },
-    {
-      id: 5,
-      type: "pdf",
-      category: "PENALARAN MATEMATIKA",
-      title: "Logika Proposisi & Penalaran Kesimpulan",
-      thumbnail: "/logo.png",
-      pages: 32,
-      downloads: 4150,
-      rating: 4.9,
-      isPremium: false,
-    },
-    {
-      id: 6,
-      type: "video",
-      category: "PENALARAN UMUM",
-      title: "Pola Barisan & Deret Logika",
-      thumbnail: "/logo.png",
-      duration: "15:20",
-      views: 4320,
-      rating: 4.5,
-      isWatched: false,
-      isPremium: false,
-    },
-  ],
-};
+interface Modul {
+  id: string;
+  type: "video" | "pdf";
+  category: string;
+  title: string;
+  thumbnail_url: string;
+  content_url: string;
+  duration?: string;
+  pages?: number;
+  views?: number;
+  downloads?: number;
+  rating?: number;
+  is_premium: boolean;
+  is_active: boolean;
+}
 
 export default function ModulPage() {
   const [activeTab, setActiveTab] = useState("semua");
+  const [moduls, setModuls] = useState<Modul[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredModuls = modulCategories.semua.filter((modul) => {
+  useEffect(() => {
+    fetchModuls();
+  }, []);
+
+  const fetchModuls = async () => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("moduls")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setModuls(data as Modul[]);
+      } else {
+        console.error("Error fetching moduls:", error);
+      }
+    } catch (err) {
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredModuls = moduls.filter((modul) => {
     if (activeTab === "semua") return true;
     if (activeTab === "video") return modul.type === "video";
     if (activeTab === "pdf") return modul.type === "pdf";
@@ -140,19 +110,42 @@ export default function ModulPage() {
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-8">
-          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.08}>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
+              <p className="text-slate-600 font-semibold">Memuat modul belajar...</p>
+            </div>
+          ) : filteredModuls.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <BookOpen className="h-16 w-16 text-slate-300 mb-4" />
+              <p className="text-slate-600 font-semibold text-lg">Belum ada modul tersedia</p>
+              <p className="text-slate-500 text-sm">Admin akan segera menambahkan modul pembelajaran</p>
+            </div>
+          ) : (
+            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.08}>
             {filteredModuls.map((modul) => (
               <StaggerItem key={modul.id}>
                 <MotionCard className="h-full rounded-2xl">
                   <Card className="bg-white/90 backdrop-blur-md border border-slate-200 shadow-xs rounded-2xl overflow-hidden flex flex-col h-full hover:shadow-xl hover:scale-[1.02] transition-all">
                     {/* Thumbnail */}
                     <div className="relative aspect-video bg-slate-100">
-                      <Image
-                        src={modul.thumbnail}
-                        alt={modul.title}
-                        fill
-                        className="object-cover"
-                      />
+                      {modul.thumbnail_url && modul.thumbnail_url.startsWith('http') ? (
+                        <Image
+                          src={modul.thumbnail_url}
+                          alt={modul.title}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-200">
+                          {modul.type === "video" ? (
+                            <Video className="h-12 w-12 text-slate-400" />
+                          ) : (
+                            <FileText className="h-12 w-12 text-slate-400" />
+                          )}
+                        </div>
+                      )}
                       {modul.type === "video" && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                           <div className="h-14 w-14 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center">
@@ -160,15 +153,15 @@ export default function ModulPage() {
                           </div>
                         </div>
                       )}
-                      {modul.isPremium && (
+                      {modul.is_premium && (
                         <Badge className="absolute top-3 right-3 bg-blue-400 text-white font-bold text-[10px] shadow-lg">
                           PREMIUM
                         </Badge>
                       )}
-                      {modul.type === "video" && modul.isWatched && (
-                        <Badge className="absolute top-3 left-3 bg-emerald-500 text-white font-bold text-[10px] shadow-lg">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          DITONTON
+                      {modul.type === "video" && modul.views && modul.views > 0 && (
+                        <Badge className="absolute top-3 left-3 bg-emerald-500 text-white font-bold text-[10px] shadow-lg flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {modul.views}
                         </Badge>
                       )}
                       {/* Duration or Pages Badge */}
@@ -202,47 +195,65 @@ export default function ModulPage() {
                           {modul.type === "video" ? (
                             <div className="flex items-center gap-1">
                               <Eye className="h-3.5 w-3.5 text-slate-400" />
-                              <span>{modul.views?.toLocaleString()} views</span>
+                              <span>{modul.views?.toLocaleString() || 0} views</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
                               <Download className="h-3.5 w-3.5 text-slate-400" />
-                              <span>{modul.downloads?.toLocaleString()} downloads</span>
+                              <span>{modul.downloads?.toLocaleString() || 0} downloads</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1">
                             <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                            <span>{modul.rating}</span>
+                            <span>{modul.rating?.toFixed(1) || "5.0"}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* CTA Button */}
-                      <Button
-                        className={`w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all ${
-                          modul.isPremium
-                            ? "bg-blue-400 hover:bg-blue-500 text-white"
-                            : "bg-blue-500 hover:bg-blue-600 text-white"
-                        }`}
-                      >
-                        {modul.type === "video" ? (
-                          <>
-                            <PlayCircle className="h-4 w-4" />
-                            <span>{modul.isPremium ? "Unlock Premium" : "Tonton Sekarang"}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4" />
-                            <span>{modul.isPremium ? "Unlock Premium" : "Download PDF"}</span>
-                          </>
-                        )}
-                      </Button>
+                      {modul.content_url && modul.content_url.startsWith('http') ? (
+                        <a
+                          href={modul.content_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <Button
+                            className={`w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all ${
+                              modul.is_premium
+                                ? "bg-blue-400 hover:bg-blue-500 text-white"
+                                : "bg-blue-500 hover:bg-blue-600 text-white"
+                            }`}
+                          >
+                            {modul.type === "video" ? (
+                              <>
+                                <PlayCircle className="h-4 w-4" />
+                                <span>{modul.is_premium ? "Unlock Premium" : "Tonton Sekarang"}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4" />
+                                <span>{modul.is_premium ? "Unlock Premium" : "Download PDF"}</span>
+                              </>
+                            )}
+                          </Button>
+                        </a>
+                      ) : (
+                        <Button
+                          disabled
+                          className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm bg-slate-300 text-slate-500 cursor-not-allowed"
+                        >
+                          <FileText className="h-4 w-4" />
+                          <span>URL Tidak Valid</span>
+                        </Button>
+                      )}
                     </div>
                   </Card>
                 </MotionCard>
               </StaggerItem>
             ))}
           </StaggerContainer>
+          )}
         </TabsContent>
       </Tabs>
 
