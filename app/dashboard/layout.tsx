@@ -19,11 +19,8 @@ import {
   Menu,
   ChevronRight,
   BookOpen,
-<<<<<<< HEAD
-=======
   Trophy,
   UserCircle2,
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -41,8 +38,6 @@ export default function DashboardLayout({
       icon: LayoutDashboard,
     },
     {
-<<<<<<< HEAD
-=======
       name: "Latihan Per Subtes",
       href: "/dashboard/student/latihan-subtes",
       icon: BookOpen,
@@ -58,7 +53,6 @@ export default function DashboardLayout({
       icon: Video,
     },
     {
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       name: "Cek Peluang PTN",
       href: "/dashboard/student/cek-peluang",
       icon: Target,
@@ -69,11 +63,6 @@ export default function DashboardLayout({
       icon: BookOpen,
     },
     {
-<<<<<<< HEAD
-      name: "Live Class & Rekaman",
-      href: "/dashboard/student/live-class",
-      icon: Video,
-=======
       name: "Live Rank SNBT",
       href: "/leaderboard",
       icon: Trophy,
@@ -82,7 +71,6 @@ export default function DashboardLayout({
       name: "Profil & Sandi",
       href: "/profile",
       icon: UserCircle2,
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
     },
   ];
 
@@ -246,14 +234,9 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content Viewport */}
-<<<<<<< HEAD
-      <main className="flex-1 overflow-y-auto p-4 sm:p-8">
-=======
       <main className="flex-1 overflow-visible p-4 sm:p-8">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         {children}
       </main>
     </div>
   );
 }
-

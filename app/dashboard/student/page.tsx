@@ -1,20 +1,13 @@
 import Link from "next/link";
-<<<<<<< HEAD
-=======
 import Image from "next/image";
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-<<<<<<< HEAD
-import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
-=======
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import {
   GraduationCap,
   Clock,
@@ -59,28 +52,6 @@ export default async function StudentDashboardPage() {
     }
   }
 
-<<<<<<< HEAD
-  // Fallback demo tryouts if DB empty
-  const activeTryouts =
-    tryoutsData && tryoutsData.length > 0
-      ? tryoutsData
-      : [
-          {
-            id: "11111111-1111-1111-1111-111111111111",
-            title: "Try Out Nasional UTBK SNBT - Seri 01",
-            duration_minutes: 120,
-            total_questions: 155,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: "11111111-1111-1111-1111-111111111112",
-            title: "Simulasi TPS & Literasi Bahasa UTBK - Seri 02",
-            duration_minutes: 90,
-            total_questions: 100,
-            created_at: new Date().toISOString(),
-          },
-        ];
-=======
   // Use real tryouts from database only
   const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
 
@@ -92,7 +63,6 @@ export default async function StudentDashboardPage() {
     targetProdi && targetUniv
       ? `${targetProdi} — ${targetUniv.replace("UNIVERSITAS ", "").replace("INSTITUT ", "")}`
       : targetUniv || targetProdi || null;
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -109,19 +79,16 @@ export default async function StudentDashboardPage() {
             <p className="text-slate-500 text-sm">
               Pantau perkembangan skor IRT dan ikuti simulasi Try Out UTBK terbaru.
             </p>
-<<<<<<< HEAD
-=======
             {asalSekolah && (
               <p className="text-xs text-slate-400 font-medium flex items-center gap-1 pt-0.5">
                 <span>🏫</span>
                 <span>{asalSekolah}</span>
               </p>
             )}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
           </div>
 
           <Link href="/dashboard/student/cek-peluang">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-sm shrink-0 hover:scale-105 active:scale-95 transition-all">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-xs shrink-0 hover:scale-105 active:scale-95 transition-all">
               <Target className="h-4 w-4" />
               <span>Cek Peluang PTN</span>
             </Button>
@@ -158,17 +125,11 @@ export default async function StudentDashboardPage() {
                 </div>
               </div>
               <p className="text-3xl font-extrabold text-slate-900">
-<<<<<<< HEAD
-                {lastResult ? Math.round(Number(lastResult.score)) : "720"}
-              </p>
-              <p className="text-xs text-slate-500 font-medium">Skor Pembobotan IRT</p>
-=======
                 {lastResult ? Math.round(Number(lastResult.score)) : "—"}
               </p>
               <p className="text-xs text-slate-500 font-medium">
                 {lastResult ? "Skor Pembobotan IRT" : "Belum ada tryout"}
               </p>
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             </Card>
           </MotionCard>
         </StaggerItem>
@@ -179,17 +140,6 @@ export default async function StudentDashboardPage() {
             <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-2 h-full">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Target Utama</span>
-<<<<<<< HEAD
-                <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-xl font-extrabold text-slate-900 truncate">UI - Teknik Informatika</p>
-              <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                <TrendingUp className="h-3.5 w-3.5" />
-                <span>Estimasi Peluang 88%</span>
-              </p>
-=======
                 {targetUniv ? (
                   <Avatar className="h-9 w-9 rounded-xl border border-slate-200">
                     <AvatarImage
@@ -224,7 +174,6 @@ export default async function StudentDashboardPage() {
                   </Link>
                 </>
               )}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             </Card>
           </MotionCard>
         </StaggerItem>
@@ -256,7 +205,7 @@ export default async function StudentDashboardPage() {
                     <div className="space-y-2">
                       <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{to.title}</h3>
                       <p className="text-xs text-slate-500">
-                        Mencakup Tes Potensi Skolastik (TPS) & Literasi Bahasa Indonesia/Inggris.
+                        Mencakup Tes Potensi Skolastik (TPS) &amp; Literasi Bahasa Indonesia/Inggris.
                       </p>
                     </div>
 
@@ -274,7 +223,7 @@ export default async function StudentDashboardPage() {
 
                   <div className="pt-6 border-t border-slate-100 mt-4">
                     <Link href={`/tryout/${to.id}`} className="w-full">
-                      <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-sm transition-all hover:scale-[1.01]">
+                      <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-xs transition-all hover:scale-[1.01]">
                         <PlayCircle className="h-4 w-4" />
                         <span>Mulai Ujian Sekarang</span>
                       </Button>
@@ -289,4 +238,3 @@ export default async function StudentDashboardPage() {
     </div>
   );
 }
-

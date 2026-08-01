@@ -13,10 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-<<<<<<< HEAD
-=======
 import { Input } from "@/components/ui/input";
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import {
   GraduationCap,
   Clock,
@@ -27,15 +24,6 @@ import {
   Loader2,
   AlertTriangle,
   FileCheck2,
-<<<<<<< HEAD
-} from "lucide-react";
-
-interface QuestionItem {
-  id: string;
-  tryout_id: string;
-  subtest: string;
-  question_text: string;
-=======
   Search,
   Target,
   BookOpen,
@@ -57,7 +45,6 @@ interface QuestionItem {
   subtest: string;
   question_text?: string;
   text?: string;
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   option_a: string;
   option_b: string;
   option_c: string;
@@ -78,18 +65,11 @@ export default function TryoutEnginePage({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
-<<<<<<< HEAD
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(7200); // 120 mins
-=======
   const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(7200);
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
 
-<<<<<<< HEAD
-  // Fetch Questions from Supabase
-=======
   // Target Jurusan Picker state
   const [showTargetPicker, setShowTargetPicker] = useState<boolean>(false);
   const [prodiList, setProdiList] = useState<ProdiItem[]>([]);
@@ -110,65 +90,11 @@ export default function TryoutEnginePage({
   };
 
   // Fetch Questions from Supabase or Fallback JSON
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   useEffect(() => {
     async function loadQuestions() {
       try {
         setLoading(true);
         const supabase = createClient();
-<<<<<<< HEAD
-        const { data } = await supabase
-          .from("questions")
-          .select("*")
-          .eq("tryout_id", tryoutId)
-          .order("id");
-
-        if (data && data.length > 0) {
-          setQuestions(data);
-        } else {
-          // Fallback sample questions if DB empty
-          setQuestions([
-            {
-              id: "q1",
-              tryout_id: tryoutId,
-              subtest: "Penalaran Umum",
-              question_text:
-                "Jika semua siswa yang belajar secara konsisten lulus UTBK, dan Amanda adalah siswa yang belajar secara konsisten, maka kesimpulan yang paling tepat adalah...",
-              option_a: "Amanda mungkin lulus UTBK jika beruntung.",
-              option_b: "Amanda pasti lulus UTBK.",
-              option_c: "Amanda tidak akan lulus UTBK.",
-              option_d: "Amanda harus belajar lebih keras lagi.",
-              option_e: "Siswa selain Amanda juga dipastikan lulus UTBK.",
-            },
-            {
-              id: "q2",
-              tryout_id: tryoutId,
-              subtest: "Penalaran Matematika",
-              question_text:
-                "Sebuah nilai rata-rata Try Out 5 orang siswa adalah 700. Jika nilai satu orang siswa baru dimasukkan, rata-ratanya menjadi 720. Berapakah nilai siswa baru tersebut?",
-              option_a: "780",
-              option_b: "800",
-              option_c: "820",
-              option_d: "840",
-              option_e: "860",
-            },
-            {
-              id: "q3",
-              tryout_id: tryoutId,
-              subtest: "Literasi Bahasa Indonesia",
-              question_text:
-                "Gagasan utama paragraf di atas menekankan pentingnya peningkatan literasi digital bagi generasi muda untuk menghadapi persaingan global. Kata 'literasi' dalam konteks ini bermakna...",
-              option_a: "Kemampuan membaca dan menulis secara mekanis.",
-              option_b: "Kemampuan memahami dan mengaplikasikan informasi secara kritis.",
-              option_c: "Keterampilan mengoperasikan perangkat komputer modern.",
-              option_d: "Koleksi buku-buku digital di perpustakaan daring.",
-              option_e: "Kemampuan berkomunikasi di media sosial.",
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error("Error fetching questions:", err);
-=======
         let dbData: any[] | null = null;
 
         if (tryoutId.startsWith("latihan-")) {
@@ -246,7 +172,6 @@ export default function TryoutEnginePage({
         } catch {
           setQuestions([]);
         }
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       } finally {
         setLoading(false);
       }
@@ -255,8 +180,6 @@ export default function TryoutEnginePage({
     loadQuestions();
   }, [tryoutId]);
 
-<<<<<<< HEAD
-=======
   // Fetch Autocomplete Suggestions via Supabase RPC search_kampus_pintar
   useEffect(() => {
     if (prodiSearch.trim().length < 2) {
@@ -311,8 +234,6 @@ export default function TryoutEnginePage({
     }
   }, [loading]);
 
-
-
   const handleConfirmTarget = () => {
     if (!selectedPtn || !selectedProdi) return;
     localStorage.setItem("tryout_target_ptn", selectedPtn);
@@ -333,7 +254,6 @@ export default function TryoutEnginePage({
     setShowTargetPicker(false);
   };
 
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   // Sticky Countdown Timer Effect
   useEffect(() => {
     if (timeLeftSeconds <= 0) return;
@@ -384,218 +304,224 @@ export default function TryoutEnginePage({
     );
   }
 
-<<<<<<< HEAD
-=======
   // --- TARGET JURUSAN PICKER SCREEN ---
   if (showTargetPicker) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-linear-to-br from-blue-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 font-sans">
         <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
+          <div className="bg-linear-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center">
                 <Target className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Sebelum Mulai Try Out</p>
-                <h2 className="text-xl font-extrabold">Pilih Target Jurusan</h2>
+                <span className="text-xs font-semibold text-blue-100 uppercase tracking-wider block">Langkah Penting</span>
+                <h2 className="text-lg font-bold">Pilih PTN Target Kamu</h2>
               </div>
             </div>
-            <p className="text-sm opacity-80 leading-relaxed">
-              Pilih PTN & Program Studi impianmu. Setelah TO selesai, kamu akan melihat analisis peluang kelulusan berdasarkan skor dan jurusan ini.
+            <p className="text-xs text-blue-100 leading-relaxed">
+              Hasil Try Out akan langsung membandingkan skormu dengan Passing Grade jurusan impianmu secara akurat.
             </p>
           </div>
 
-          {/* Search Input */}
-          <div className="px-6 pt-5 pb-2">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                value={prodiSearch}
-                onChange={(e) => {
-                  setProdiSearch(e.target.value);
-                  setSelectedPtn("");
-                  setSelectedProdi("");
-                }}
-                placeholder="Cari jurusan atau nama PTN..."
-                className="pl-10 rounded-xl border-slate-200 bg-slate-50 h-11 text-sm font-medium"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* Selected Banner */}
-          {selectedProdi && (
-            <div className="mx-6 mb-2 p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs font-extrabold text-blue-900 truncate">{selectedProdi}</p>
-                <p className="text-[11px] text-blue-600 font-medium truncate">{selectedPtn}</p>
+          {/* Body */}
+          <div className="p-6 space-y-5">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
+                Cari PTN atau Jurusan Impian
+              </label>
+              <div className="relative">
+                <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <Input
+                  value={prodiSearch}
+                  onChange={(e) => setProdiSearch(e.target.value)}
+                  placeholder="Ketik cth: Kedokteran UI, Teknik ITB..."
+                  className="pl-10 h-12 rounded-xl text-sm border-slate-300 font-medium"
+                />
               </div>
+              <p className="text-[11px] text-slate-400">Ketik minimal 2 karakter untuk melihat daftar saran PTN & Prodi</p>
             </div>
-          )}
 
-          {/* Prodi List */}
-          <div className="px-6 pb-2 max-h-64 overflow-y-auto space-y-1.5">
-            {prodiSearch.length < 2 ? (
-              <div className="text-center py-8 text-sm text-slate-400 font-medium">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                Ketik nama jurusan atau PTN untuk mencari...
+            {/* Suggestions list */}
+            {filteredProdi.length > 0 && (
+              <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 rounded-2xl p-2 bg-slate-50">
+                {filteredProdi.map((p) => {
+                  const isSelected = selectedPtn === p.univ && selectedProdi === p.prodi;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPtn(p.univ);
+                        setSelectedProdi(`${p.jenjang ? `${p.jenjang} ` : ""}${p.prodi}`);
+                        if (p.passing_grade_est) setSelectedPg(Number(p.passing_grade_est));
+                      }}
+                      className={`w-full text-left p-3 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? "bg-blue-600 text-white font-bold"
+                          : "hover:bg-slate-200 text-slate-800 bg-white"
+                      }`}
+                    >
+                      <div className="truncate pr-2">
+                        <span className="font-bold block truncate">{p.prodi}</span>
+                        <span className="opacity-80 block text-[11px] truncate">{p.univ}</span>
+                      </div>
+                      {p.passing_grade_est && (
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 ${isSelected ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"}`}>
+                          PG ~{p.passing_grade_est}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            ) : filteredProdi.length === 0 ? (
-              <div className="text-center py-6 text-sm text-slate-400">Jurusan tidak ditemukan.</div>
-            ) : (
-              filteredProdi.map((p) => {
-                const isSelected = selectedPtn === p.univ && selectedProdi === p.prodi;
-                return (
-                  <button
-                    key={`${p.univ}-${p.prodi}`}
-                    onClick={() => {
-                      setSelectedPtn(p.univ);
-                      setSelectedProdi(p.prodi);
-                      setSelectedPg(Number(p.passing_grade_est) || 695);
-                    }}
-                    className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
-                      isSelected
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50"
-                    }`}
-                  >
-                    <p className={`text-xs font-extrabold truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
-                      {p.prodi}{p.jenjang ? ` (${p.jenjang})` : ""}
-                    </p>
-                    <p className={`text-[11px] font-medium truncate ${isSelected ? "text-blue-100" : "text-slate-500"}`}>
-                      {p.univ} · Est. PG {p.passing_grade_est ?? "–"}
-                    </p>
-                  </button>
-                );
-              })
             )}
-          </div>
 
-          {/* Footer Actions */}
-          <div className="px-6 py-5 border-t border-slate-100 flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleSkipTarget}
-              className="flex-1 rounded-xl border-slate-200 text-slate-600 font-semibold text-xs h-11"
-            >
-              Lewati
-            </Button>
-            <Button
-              onClick={handleConfirmTarget}
-              disabled={!selectedPtn || !selectedProdi}
-              className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-2"
-            >
-              <Target className="h-4 w-4" />
-              Mulai Try Out
-            </Button>
+            {/* Selected Summary Card */}
+            {selectedPtn && selectedProdi && (
+              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
+                <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">Jurusan Terpilih</span>
+                <p className="text-sm font-bold text-slate-900">{selectedProdi}</p>
+                <p className="text-xs text-slate-600">{selectedPtn} • Estimasi PG: <strong className="text-blue-700">{selectedPg}</strong></p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-2">
+              <Button
+                disabled={!selectedPtn || !selectedProdi}
+                onClick={handleConfirmTarget}
+                className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Mulai Try Out dengan Target Ini</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={handleSkipTarget}
+                className="w-full h-10 text-xs text-slate-500 hover:text-slate-900 rounded-xl"
+              >
+                Gunakan Target Default (S1 Ilmu Komputer UI)
+              </Button>
+            </div>
           </div>
         </div>
-
-        {/* Already confirmed indicator */}
-        {targetConfirmed && (
-          <p className="mt-4 text-xs text-white/60">
-            Target tersimpan · {selectedProdi} di {selectedPtn}
-          </p>
-        )}
       </div>
     );
   }
 
-
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none">
-      {/* ---------------- FIXED CBT HEADER BAR ---------------- */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 h-16 px-4 sm:px-8 flex items-center justify-between shadow-xs">
+    <div className="min-h-screen bg-slate-50/70 font-sans pb-12">
+      {/* Top Header Navbar with Sticky Timer */}
+      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-xs px-4 sm:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/student" className="flex items-center gap-2">
-            <Image
-              src="/logo.svg"
-              alt="UpdatePTN Logo"
-              width={32}
-              height={32}
-              className="h-8 w-auto object-contain"
-            />
-          </Link>
+          <Image
+            src="/logo.svg"
+            alt="UpdatePTN Logo"
+            width={32}
+            height={32}
+            className="h-8 w-auto object-contain"
+          />
           <div>
-            <h1 className="font-extrabold text-sm sm:text-base text-slate-900">Simulasi CBT UTBK</h1>
-            <p className="text-[11px] text-slate-500 font-medium">{currentQ?.subtest || "Subtes UTBK"}</p>
-          </div>
-        </div>
-
-        {/* Timer Display */}
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-100 border border-slate-200 px-4 py-1.5 rounded-xl flex items-center gap-2">
-            <Clock className="h-4 w-4 text-blue-600 animate-pulse" />
-            <span className="font-mono font-bold text-sm sm:text-base text-slate-900">
-              {formatTimer(timeLeftSeconds)}
+            <span className="font-extrabold text-sm sm:text-base text-slate-900 block leading-tight">
+              Update<span className="text-blue-600">PTN</span> CBT Engine
+            </span>
+            <span className="text-[11px] text-slate-500 font-semibold hidden sm:block">
+              Lembar Ujian SNBT Standard IRT
             </span>
           </div>
-
-          {/* Submit Dialog Button */}
-          <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
-            <DialogTrigger render={
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl gap-2 h-10 px-4">
-                <Send className="h-4 w-4" />
-                <span className="hidden sm:inline">Selesai Ujian</span>
-              </Button>
-            } />
-            <DialogContent className="sm:max-w-md rounded-2xl bg-white p-6">
-              <DialogHeader className="space-y-2">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                  <FileCheck2 className="h-6 w-6" />
-                </div>
-                <DialogTitle className="text-xl font-bold text-center text-slate-900">
-                  Kirim Lembar Jawaban?
-                </DialogTitle>
-                <DialogDescription className="text-center text-sm text-slate-500">
-                  Kamu telah menjawab <strong className="text-slate-900">{Object.keys(answers).length}</strong> dari <strong className="text-slate-900">{questions.length}</strong> soal. Setelah dikirim, jawaban tidak dapat diubah lagi.
-                </DialogDescription>
-              </DialogHeader>
-
-              <DialogFooter className="flex sm:flex-row gap-2 pt-4 border-t border-slate-100">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsSubmitDialogOpen(false)}
-                  className="flex-1 rounded-xl border-slate-200 font-semibold"
-                >
-                  Periksa Kembali
-                </Button>
-                <Button
-                  onClick={handleSubmitTest}
-                  disabled={isPending}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl gap-2"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Menilai...</span>
-                    </>
-                  ) : (
-                    <span>Ya, Selesaikan</span>
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
+
+        {/* Sticky Timer Display */}
+        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200/80 px-4 py-1.5 rounded-full">
+          <Clock className="h-4 w-4 text-blue-600 animate-pulse" />
+          <span className="font-mono text-sm sm:text-base font-extrabold text-blue-700">
+            {formatTimer(timeLeftSeconds)}
+          </span>
+        </div>
+
+        {/* Finish & Submit Trigger Modal */}
+        <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+          <DialogTrigger render={
+            <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl gap-2 h-10 px-4 shadow-sm">
+              <Send className="h-4 w-4" />
+              <span>Selesai & Kumpulkan</span>
+            </Button>
+          } />
+          <DialogContent className="sm:max-w-md rounded-2xl bg-white p-6">
+            <DialogHeader className="space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mx-auto">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <DialogTitle className="text-center text-xl font-bold text-slate-900">
+                Kumpulkan Jawaban Try Out?
+              </DialogTitle>
+              <DialogDescription className="text-center text-xs text-slate-500 leading-relaxed">
+                Kamu telah menjawab <strong>{Object.keys(answers).length}</strong> dari total <strong>{questions.length}</strong> soal. Pastikan seluruh soal telah diperiksa sebelum mengakhiri sesi.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 text-xs text-slate-600 my-2">
+              <div className="flex justify-between">
+                <span>Soal Terjawab:</span>
+                <strong className="text-slate-900">{Object.keys(answers).length} Soal</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Ditandai Ragu-Ragu:</span>
+                <strong className="text-amber-600">{Object.values(flagged).filter(Boolean).length} Soal</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Sisa Waktu:</span>
+                <strong className="text-blue-600 font-mono">{formatTimer(timeLeftSeconds)}</strong>
+              </div>
+            </div>
+
+            <DialogFooter className="flex sm:flex-row gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsSubmitDialogOpen(false)}
+                className="w-full sm:w-1/2 rounded-xl text-xs font-semibold h-11 border-slate-200"
+              >
+                Kembali Periksa
+              </Button>
+              <Button
+                disabled={isPending}
+                onClick={handleSubmitTest}
+                className="w-full sm:w-1/2 rounded-xl text-xs font-bold h-11 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Memproses IRT...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileCheck2 className="h-4 w-4" />
+                    <span>Ya, Kumpulkan Now</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </header>
 
-      {/* ---------------- MAIN CBT TEST VIEWPORT ---------------- */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left/Middle: Question & Answer Block (max-w-3xl reading area) */}
+      {/* Main Workspace Layout */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: Question & Options Interface */}
         <div className="lg:col-span-8 space-y-6">
-          <Card className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 sm:p-8 space-y-6">
-            {/* Question Header Status */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-bold text-xs">
-                  Soal No. {currentIndex + 1}
+          <Card className="bg-white border border-slate-200/80 shadow-xs rounded-2xl p-6 sm:p-8 space-y-6">
+            {/* Question Header Status Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200">
+                  Soal Nomor {currentIndex + 1} / {questions.length}
                 </Badge>
-                <span className="text-xs font-semibold text-slate-400">/ {questions.length}</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  Subtes: <strong className="text-slate-800">{currentQ?.subtest || "Penalaran Umum"}</strong>
+                </span>
               </div>
 
               <Button
@@ -612,11 +538,7 @@ export default function TryoutEnginePage({
             {/* Question Reading Body */}
             <div className="space-y-4">
               <p className="text-base sm:text-lg text-slate-900 font-medium leading-relaxed">
-<<<<<<< HEAD
-                {currentQ?.question_text}
-=======
                 {currentQ?.question_text || currentQ?.text}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
               </p>
             </div>
 

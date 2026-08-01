@@ -21,8 +21,6 @@ export async function loginAction(formData: FormData) {
     return { error: error.message };
   }
 
-<<<<<<< HEAD
-=======
   // Auto redirect admin ke dashboard admin
   const ADMIN_EMAILS = ["updateptnid@gmail.com"];
   if (ADMIN_EMAILS.includes(email.toLowerCase())) {
@@ -30,7 +28,6 @@ export async function loginAction(formData: FormData) {
   }
 
   // User biasa ke dashboard student
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   redirect("/dashboard/student");
 }
 
@@ -38,13 +35,10 @@ export async function registerAction(formData: FormData) {
   const fullName = formData.get("fullName") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-<<<<<<< HEAD
-  const targetPtn = formData.get("targetPtn") as string;
-=======
   const asalSekolah = formData.get("asalSekolah") as string;
   const targetUniv = formData.get("targetUniv") as string;
   const targetProdi = formData.get("targetProdi") as string;
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
+  const targetPtn = (formData.get("targetPtn") as string) || targetUniv || "";
 
   if (!email || !password || !fullName) {
     return { error: "Nama lengkap, email, dan kata sandi wajib diisi." };
@@ -57,15 +51,10 @@ export async function registerAction(formData: FormData) {
     options: {
       data: {
         full_name: fullName,
-<<<<<<< HEAD
-        target_ptn: targetPtn || "",
-=======
         asal_sekolah: asalSekolah || "",
         target_univ: targetUniv || "",
         target_prodi: targetProdi || "",
-        // legacy field kept for backward compat
-        target_ptn: targetUniv || "",
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
+        target_ptn: targetPtn,
       },
     },
   });

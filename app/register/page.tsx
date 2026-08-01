@@ -1,10 +1,6 @@
 "use client";
 
-<<<<<<< HEAD
-import { useState, useTransition } from "react";
-=======
 import { useState, useEffect, useRef, useTransition } from "react";
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -12,12 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< HEAD
-import { MotionCard, MotionButton } from "@/components/ui/fade-in";
-import { ArrowLeft, ArrowRight, Lock, Mail, User, Target, AlertCircle, Loader2 } from "lucide-react";
-import { registerAction } from "@/actions/auth";
-
-=======
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -37,7 +27,7 @@ import {
 import { registerAction } from "@/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 
-// ─── University logo helpers (reused from direktori-prodi) ───────────────────
+// ─── University logo helpers ────────────────────────────────────────────────
 const UNIV_DOMAINS: Record<string, string> = {
   "UNIVERSITAS INDONESIA": "ui.ac.id",
   "INSTITUT TEKNOLOGI BANDUNG": "itb.ac.id",
@@ -83,14 +73,10 @@ interface ProdiSuggestion {
   kelompok?: string;
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-<<<<<<< HEAD
-=======
   // Prodi Impian Autocomplete
   const [prodiQuery, setProdiQuery] = useState("");
   const [prodiSuggestions, setProdiSuggestions] = useState<ProdiSuggestion[]>([]);
@@ -138,7 +124,6 @@ export default function RegisterPage() {
           setProdiSuggestions((data as ProdiSuggestion[]).slice(0, 8));
           setShowProdiDropdown(true);
         } else {
-          // No suggestions found
           setProdiSuggestions([]);
           setShowProdiDropdown(false);
         }
@@ -169,17 +154,12 @@ export default function RegisterPage() {
     setShowProdiDropdown(false);
   };
 
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
-<<<<<<< HEAD
-=======
-    // Override with state values (autocomplete may have set them)
     formData.set("targetUniv", targetUnivValue);
     formData.set("targetProdi", targetProdiValue);
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
 
     startTransition(async () => {
       const result = await registerAction(formData);
@@ -199,21 +179,18 @@ export default function RegisterPage() {
               href="/"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors group"
             >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1 text-slate-400 group-hover:text-blue-600" />
+              <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
               <span>Kembali ke Beranda</span>
             </Link>
-            <Badge variant="outline" className="text-[11px] bg-blue-50/80 text-blue-700 border-blue-200/80 font-bold px-2.5 py-0.5">
-              Pendaftaran Siswa Baru
-            </Badge>
           </div>
 
-          <Link href="/" className="flex items-center gap-2.5 group pt-2">
+          <Link href="/" className="inline-flex items-center gap-2.5">
             <Image
               src="/logo.svg"
               alt="UpdatePTN Logo"
               width={40}
               height={40}
-              className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-10 w-auto object-contain"
               priority
             />
             <span className="font-extrabold text-2xl tracking-tight text-slate-900">
@@ -223,17 +200,6 @@ export default function RegisterPage() {
         </div>
 
         {/* Register Card */}
-<<<<<<< HEAD
-        <Card className="border border-slate-200 shadow-lg rounded-2xl bg-white overflow-hidden p-2 sm:p-4">
-          <CardHeader className="space-y-1.5 text-center pb-4">
-            <CardTitle className="text-2xl font-bold text-slate-900">Mulai Belajar Sekarang</CardTitle>
-            <CardDescription className="text-sm text-slate-500">
-              Buat akun gratis untuk akses 1x Try Out IRT & Cek Peluang PTN
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-=======
         <Card className="border border-slate-200 shadow-lg rounded-2xl bg-white overflow-visible p-2 sm:p-4">
           <CardHeader className="space-y-1.5 text-center pb-4">
             <CardTitle className="text-2xl font-bold text-slate-900">Mulai Belajar Sekarang</CardTitle>
@@ -243,7 +209,6 @@ export default function RegisterPage() {
           </CardHeader>
 
           <CardContent className="space-y-5 overflow-visible">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             {/* Error Banner */}
             {error && (
               <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2.5 text-xs font-medium">
@@ -252,107 +217,10 @@ export default function RegisterPage() {
               </div>
             )}
 
-<<<<<<< HEAD
-            {/* Google OAuth Button */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11 font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center justify-center gap-3"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>Daftar dengan Google</span>
-            </Button>
-
-            <div className="relative flex items-center justify-center my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-200" />
-              </div>
-              <span className="relative bg-white px-3 text-xs uppercase tracking-wider text-slate-400 font-medium">
-                atau email
-              </span>
-            </div>
-
-            {/* Registration Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-xs font-bold text-slate-700">Nama Lengkap</Label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    placeholder="Contoh: Amanda Zevanya"
-                    required
-                    className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-bold text-slate-700">Email Siswa</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="nama@email.com"
-                    required
-                    className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="targetPtn" className="text-xs font-bold text-slate-700">Target PTN Utama (Opsional)</Label>
-                <div className="relative">
-                  <Target className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="targetPtn"
-                    name="targetPtn"
-                    type="text"
-                    placeholder="Misal: Universitas Indonesia, ITB, UGM"
-                    className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-bold text-slate-700">Kata Sandi (Min. 6 Karakter)</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                    className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  />
-=======
             {/* Registration Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* ── Seksi 1: Data Diri ───────────────────────────────── */}
+              {/* Data Diri */}
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <User className="h-3 w-3" /> Data Diri
@@ -391,7 +259,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* ── Seksi 2: Target PTN & Prodi ─────────────────────── */}
+              {/* Target PTN & Prodi */}
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Target className="h-3 w-3" /> Target PTN &amp; Prodi Impian
@@ -404,7 +272,7 @@ export default function RegisterPage() {
                       Prodi &amp; Universitas Impian
                     </Label>
                     <div className="relative">
-                      <div className="relative bg-white rounded-xl border border-slate-200 flex items-center shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                      <div className="relative bg-white rounded-xl border border-slate-200 flex items-center shadow-xs focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                         {selectedProdi ? (
                           <BookOpen className="absolute left-3.5 h-4 w-4 text-blue-600 shrink-0" />
                         ) : (
@@ -426,7 +294,7 @@ export default function RegisterPage() {
                             if (prodiSuggestions.length > 0 && !selectedProdi) setShowProdiDropdown(true);
                           }}
                           placeholder="Ketik nama jurusan atau kampus…"
-                          className="w-full pl-10 pr-9 h-11 bg-transparent border-none outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400"
+                          className="w-full pl-10 pr-9 h-11 bg-transparent border-none outline-hidden text-sm font-medium text-slate-900 placeholder:text-slate-400"
                         />
                         {prodiLoading && (
                           <Loader2 className="absolute right-3.5 h-4 w-4 animate-spin text-blue-600" />
@@ -444,7 +312,7 @@ export default function RegisterPage() {
 
                       {/* Dropdown */}
                       {showProdiDropdown && !selectedProdi && (
-                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-[100] max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
+                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
                           {prodiSuggestions.length === 0 ? (
                             <div className="p-4 text-center text-xs text-slate-500">
                               Tidak ditemukan. Coba kata kunci lain.
@@ -495,7 +363,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* ── Seksi 3: Akun ───────────────────────────────────── */}
+              {/* Data Akun */}
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Lock className="h-3 w-3" /> Data Akun
@@ -533,14 +401,13 @@ export default function RegisterPage() {
                       />
                     </div>
                   </div>
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                 </div>
               </div>
 
               <Button
                 type="submit"
                 disabled={isPending}
-                className="w-full h-11 font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-2 mt-2"
+                className="w-full h-11 font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-2 mt-2"
               >
                 {isPending ? (
                   <>
@@ -557,11 +424,7 @@ export default function RegisterPage() {
             </form>
           </CardContent>
 
-<<<<<<< HEAD
-          <CardFooter className="bg-slate-50 p-4 border-t border-slate-200 justify-center">
-=======
           <CardFooter className="bg-slate-50 p-4 border-t border-slate-200 justify-center rounded-b-2xl">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             <p className="text-xs text-slate-500 font-medium">
               Sudah memiliki akun?{" "}
               <Link href="/login" className="text-blue-600 font-bold hover:underline">

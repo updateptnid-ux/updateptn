@@ -78,28 +78,13 @@ export default function CekPeluangPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-<<<<<<< HEAD
-  // 1. Fetch Complete List of Unique Universities from prodi_reference
-=======
   // 1. Fetch Complete List of Unique Universities from prodi_reference or JSON fallback
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   useEffect(() => {
     async function loadUniversities() {
       try {
         setLoadingUnivs(true);
         const supabase = createClient();
 
-<<<<<<< HEAD
-        // Query up to 5000 records to extract ALL unique PTNs across Indonesia
-        const { data, error } = await supabase
-          .from("prodi_reference")
-          .select("univ")
-          .range(0, 5000)
-          .order("univ", { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          const uniqueUnivs = Array.from(new Set(data.map((item) => item.univ).filter(Boolean))).sort();
-=======
         let allData: any[] = [];
         let from = 0;
         const batchSize = 1000;
@@ -128,26 +113,11 @@ export default function CekPeluangPage() {
 
         if (allData.length > 0) {
           const uniqueUnivs = Array.from(new Set(allData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
           setUniversities(uniqueUnivs);
           if (uniqueUnivs.length > 0) {
             setSelectedUniv(uniqueUnivs[0]);
           }
         } else {
-<<<<<<< HEAD
-          const fallbackUnivs = [
-            "UNIVERSITAS INDONESIA",
-            "INSTITUT TEKNOLOGI BANDUNG",
-            "UNIVERSITAS GADJAH MADA",
-            "UNIVERSITAS BRAWIJAYA",
-            "UNIVERSITAS AIRLANGGA",
-            "UNIVERSITAS DIPONEGORO",
-            "UNIVERSITAS PADJADJARAN",
-            "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
-          ];
-          setUniversities(fallbackUnivs);
-          setSelectedUniv(fallbackUnivs[0]);
-=======
           // Fallback to local /data_snbt.json
           const res = await fetch("/data_snbt.json");
           if (res.ok) {
@@ -171,7 +141,6 @@ export default function CekPeluangPage() {
             setUniversities(fallbackUnivs);
             setSelectedUniv(fallbackUnivs[0]);
           }
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         }
       } catch (err) {
         console.error("Error loading PTN list:", err);
@@ -203,15 +172,6 @@ export default function CekPeluangPage() {
           setMajors(data as ProdiReferenceItem[]);
           setSelectedProdiId(String(data[0].id));
         } else {
-<<<<<<< HEAD
-          const sample = [
-            { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
-            { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
-            { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
-          ];
-          setMajors(sample);
-          setSelectedProdiId("1");
-=======
           // Fallback to local /data_snbt.json
           const res = await fetch("/data_snbt.json");
           if (res.ok) {
@@ -230,7 +190,6 @@ export default function CekPeluangPage() {
               setSelectedProdiId("1");
             }
           }
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         }
       } catch (err) {
         console.error("Error loading majors:", err);
@@ -249,12 +208,9 @@ export default function CekPeluangPage() {
     const numScore = Number(score) || 720;
 
     startTransition(async () => {
-<<<<<<< HEAD
-=======
       // Find selected prodi object
       let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
       
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       const res = await calculateProbabilityAction({
         score: numScore,
         universityName: selectedUniv,
@@ -262,9 +218,6 @@ export default function CekPeluangPage() {
       });
 
       if (res?.success) {
-<<<<<<< HEAD
-        setResult(res as PredictionResult);
-=======
         // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
         if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
           const pg = Number(currentProdi.passing_grade_est);
@@ -300,7 +253,6 @@ export default function CekPeluangPage() {
         } else {
           setResult(res as PredictionResult);
         }
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       }
     });
   };
@@ -333,11 +285,7 @@ export default function CekPeluangPage() {
       </div>
 
       {/* Input Form Card */}
-<<<<<<< HEAD
-      <Card className="border border-slate-200 shadow-sm rounded-2xl bg-white p-6 sm:p-8">
-=======
       <Card className="border border-slate-200 shadow-md rounded-2xl bg-white p-6 sm:p-8">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         {loadingUnivs ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
             <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
@@ -345,14 +293,6 @@ export default function CekPeluangPage() {
           </div>
         ) : (
           <form onSubmit={handleAnalyze} className="space-y-6">
-<<<<<<< HEAD
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* 1. Score Input */}
-              <div className="space-y-2">
-                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Skor UTBK / Try Out
-                </Label>
-=======
             {/* Skor UTBK Input Section */}
             <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -362,7 +302,6 @@ export default function CekPeluangPage() {
                 <p className="text-xs text-slate-400">Masukkan total skor hasil Try Out atau latihan subtes</p>
               </div>
               <div className="w-full sm:w-48">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                 <Input
                   id="score"
                   type="number"
@@ -371,24 +310,6 @@ export default function CekPeluangPage() {
                   value={score}
                   onChange={(e) => {
                     const val = e.target.value;
-<<<<<<< HEAD
-                    if (val === "") {
-                      setScore("");
-                    } else {
-                      setScore(Number(val));
-                    }
-                  }}
-                  required
-                  className="h-11 rounded-xl text-base font-bold text-blue-600 border-slate-200"
-                />
-                <span className="text-[11px] text-slate-400 block">Rentang: 300 - 1000</span>
-              </div>
-
-              {/* 2. Custom Floating PTN Combobox */}
-              <div className="space-y-2 relative" ref={univContainerRef}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Pilihan PTN Target
-=======
                     setScore(val === "" ? "" : Number(val));
                   }}
                   required
@@ -404,27 +325,11 @@ export default function CekPeluangPage() {
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
                   <span>1. Perguruan Tinggi Negeri (PTN)</span>
                   <span className="text-[11px] font-normal text-slate-400">{universities.length} PTN</span>
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                 </Label>
 
                 <button
                   type="button"
                   onClick={() => setIsUnivOpen(!isUnivOpen)}
-<<<<<<< HEAD
-                  className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-300 transition-colors focus:outline-hidden"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
-                    <span className="truncate">{selectedUniv || "Pilih PTN Target"}</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
-                </button>
-
-                {isUnivOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 shadow-xl rounded-2xl p-2.5 flex flex-col gap-2 max-h-72 animate-in fade-in zoom-in-95">
-                    <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3" />
-=======
                   className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs"
                 >
                   <div className="flex items-center gap-3 truncate">
@@ -438,36 +343,22 @@ export default function CekPeluangPage() {
                   <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
                     <div className="relative">
                       <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                       <input
                         type="text"
                         value={univSearch}
                         onChange={(e) => setUnivSearch(e.target.value)}
-<<<<<<< HEAD
-                        placeholder="Cari PTN (cth: UI, ITB, UGM)..."
-                        className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600"
-=======
                         placeholder="Ketik nama PTN (cth: UI, ITB, UGM)..."
                         className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                         autoFocus
                       />
                     </div>
 
                     <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
-<<<<<<< HEAD
-                      <span>Daftar PTN</span>
-                      <span>{filteredUnivs.length} pilihan</span>
-                    </div>
-
-                    <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
-=======
                       <span>Daftar Kampus Negeri</span>
                       <span>{filteredUnivs.length} ditemukan</span>
                     </div>
 
                     <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                       {filteredUnivs.length > 0 ? (
                         filteredUnivs.map((univName) => (
                           <button
@@ -478,16 +369,6 @@ export default function CekPeluangPage() {
                               setIsUnivOpen(false);
                               setUnivSearch("");
                             }}
-<<<<<<< HEAD
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
-                              selectedUniv === univName
-                                ? "bg-blue-50 text-blue-600"
-                                : "text-slate-700 hover:bg-slate-100"
-                            }`}
-                          >
-                            <span className="truncate">{univName}</span>
-                            {selectedUniv === univName && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
-=======
                             className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                               selectedUniv === univName
                                 ? "bg-blue-600 text-white"
@@ -496,7 +377,6 @@ export default function CekPeluangPage() {
                           >
                             <span className="truncate">{univName}</span>
                             {selectedUniv === univName && <Check className="h-4 w-4 text-white shrink-0" />}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                           </button>
                         ))
                       ) : (
@@ -509,51 +389,27 @@ export default function CekPeluangPage() {
                 )}
               </div>
 
-<<<<<<< HEAD
-              {/* 3. Custom Floating Major Combobox */}
-              <div className="space-y-2 relative" ref={majorContainerRef}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                  <span>Pilihan Jurusan Target</span>
-                  {loadingMajors && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
-=======
               {/* Major Selection Combobox */}
               <div className="space-y-2 relative" ref={majorContainerRef}>
                 <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
                   <span>2. Program Studi (Jurusan)</span>
                   {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                 </Label>
 
                 <button
                   type="button"
                   disabled={loadingMajors || majors.length === 0}
                   onClick={() => setIsMajorOpen(!isMajorOpen)}
-<<<<<<< HEAD
-                  className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-300 transition-colors focus:outline-hidden disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />
-=======
                   className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3 truncate">
                     <BookOpen className="h-5 w-5 text-blue-600 shrink-0" />
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                     <span className="truncate">
                       {selectedProdiObj
                         ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
                         : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
                     </span>
                   </div>
-<<<<<<< HEAD
-                  <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
-                </button>
-
-                {isMajorOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 shadow-xl rounded-2xl p-2.5 flex flex-col gap-2 max-h-72 animate-in fade-in zoom-in-95">
-                    <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-3" />
-=======
                   <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
                 </button>
 
@@ -561,36 +417,22 @@ export default function CekPeluangPage() {
                   <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 max-h-80 animate-in fade-in zoom-in-95">
                     <div className="relative">
                       <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                       <input
                         type="text"
                         value={majorSearch}
                         onChange={(e) => setMajorSearch(e.target.value)}
-<<<<<<< HEAD
-                        placeholder="Cari jurusan (cth: Informatika, Kedokteran)..."
-                        className="w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600"
-=======
                         placeholder="Ketik jurusan (cth: Kedokteran, Informatika)..."
                         className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:border-blue-600 font-medium"
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                         autoFocus
                       />
                     </div>
 
                     <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400">
-<<<<<<< HEAD
-                      <span>Jurusan {selectedUniv}</span>
-                      <span>{filteredMajors.length} prodi</span>
-                    </div>
-
-                    <div className="max-h-52 overflow-y-auto space-y-0.5 pr-1">
-=======
                       <span>Jurusan di {selectedUniv}</span>
                       <span>{filteredMajors.length} prodi</span>
                     </div>
 
                     <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                       {filteredMajors.length > 0 ? (
                         filteredMajors.map((m) => {
                           const isSelected = String(m.id) === String(selectedProdiId);
@@ -604,16 +446,6 @@ export default function CekPeluangPage() {
                                 setIsMajorOpen(false);
                                 setMajorSearch("");
                               }}
-<<<<<<< HEAD
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
-                                isSelected
-                                  ? "bg-blue-50 text-blue-600"
-                                  : "text-slate-700 hover:bg-slate-100"
-                              }`}
-                            >
-                              <span className="truncate">{label}</span>
-                              {isSelected && <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />}
-=======
                               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                                 isSelected
                                   ? "bg-blue-600 text-white"
@@ -622,7 +454,6 @@ export default function CekPeluangPage() {
                             >
                               <span className="truncate">{label}</span>
                               {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                             </button>
                           );
                         })
@@ -640,20 +471,12 @@ export default function CekPeluangPage() {
             <Button
               type="submit"
               disabled={isPending || !selectedProdiId}
-<<<<<<< HEAD
-              className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-sm"
-=======
               className="w-full h-13 text-base font-extrabold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
             >
               {isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-<<<<<<< HEAD
-                  <span>Menganalisis Peluang...</span>
-=======
                   <span>Menganalisis Algoritma Rasionalisasi...</span>
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
                 </>
               ) : (
                 <>

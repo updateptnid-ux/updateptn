@@ -118,11 +118,7 @@ export default function DirektoriProdiPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-<<<<<<< HEAD
-  // Strict Zero-Trust Client Auth Guard
-=======
   // Auth guard - harus login
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
   useEffect(() => {
     async function checkAuth() {
       const supabase = createClient();
@@ -168,90 +164,6 @@ export default function DirektoriProdiPage() {
           keyword: searchQuery.trim(),
         });
 
-<<<<<<< HEAD
-        if (!error && data && data.length > 0) {
-          let results = data as ProdiRecord[];
-
-          // Apply pre-filter constraints
-          if (selectedKelompok !== "ALL") {
-            results = results.filter((item) =>
-              item.kelompok?.toUpperCase().includes(selectedKelompok)
-            );
-          }
-          if (selectedJenjang !== "ALL") {
-            results = results.filter(
-              (item) => item.jenjang?.toUpperCase() === selectedJenjang
-            );
-          }
-
-          setSuggestions(results.slice(0, 10));
-          setShowDropdown(true);
-        } else {
-          // Fallback mock suggestions
-          const mockData: ProdiRecord[] = [
-            {
-              id: "1",
-              univ: "UNIVERSITAS INDONESIA",
-              prodi: "Ilmu Komputer",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 728.5,
-              daya_tampung: 60,
-              peminat: 2450,
-              keketatan: 2.45,
-              ukt_min: 500000,
-              ukt_max: 17500000,
-            },
-            {
-              id: "2",
-              univ: "UNIVERSITAS INDONESIA",
-              prodi: "Kedokteran",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 742.0,
-              daya_tampung: 75,
-              peminat: 3820,
-              keketatan: 1.96,
-              ukt_min: 500000,
-              ukt_max: 20000000,
-            },
-            {
-              id: "3",
-              univ: "UNIVERSITAS GADJAH MADA",
-              prodi: "Teknologi Informasi",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 715.0,
-              daya_tampung: 70,
-              peminat: 2100,
-              keketatan: 3.33,
-              ukt_min: 500000,
-              ukt_max: 13500000,
-            },
-            {
-              id: "4",
-              univ: "INSTITUT TEKNOLOGI BANDUNG",
-              prodi: "Teknik Informatika (STEI-K)",
-              jenjang: "S1",
-              kelompok: "Saintek",
-              passing_grade_est: 735.0,
-              daya_tampung: 100,
-              peminat: 3950,
-              keketatan: 2.53,
-              ukt_min: 500000,
-              ukt_max: 14500000,
-            },
-          ];
-
-          const filtered = mockData.filter(
-            (item) =>
-              item.univ.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.prodi.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          setSuggestions(filtered);
-          setShowDropdown(true);
-        }
-=======
         let results: ProdiRecord[] = [];
 
         if (!error && data && data.length > 0) {
@@ -284,7 +196,6 @@ export default function DirektoriProdiPage() {
 
         setSuggestions(results.slice(0, 15));
         setShowDropdown(results.length > 0);
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
       } catch (err) {
         console.error("Error fetching suggestions:", err);
       } finally {
@@ -334,11 +245,7 @@ export default function DirektoriProdiPage() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="w-full max-w-xl md:max-w-2xl mx-auto py-2 space-y-3.5 md:space-y-4 flex flex-col justify-start">
-=======
     <div className="w-full max-w-xl md:max-w-2xl mx-auto py-2 space-y-3.5 md:space-y-4 flex flex-col justify-start overflow-visible">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
         {/* 2. Ultra-Compact Header */}
         <div className="text-center">
           <h1 className="text-xl md:text-2xl font-bold text-center tracking-tight text-slate-950">
@@ -427,11 +334,7 @@ export default function DirektoriProdiPage() {
 
           {/* 4. Internal Scrollable Combobox Suggestions Dropdown (Glassmorphism & Clean Layers) */}
           {showDropdown && !selectedProdi && (
-<<<<<<< HEAD
-            <Card className="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
-=======
             <Card className="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl z-50 max-h-[40vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
->>>>>>> 856ccaee71bcd89c4d1542980f34c3986cd70e3e
               {loading ? (
                 <div className="flex items-center justify-center p-5 space-x-2 text-slate-500 text-xs font-medium">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
