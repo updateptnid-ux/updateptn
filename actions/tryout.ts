@@ -130,6 +130,22 @@ export async function submitTryoutAction(payload: {
     };
   }
 
+  // Jika user punya free claim 'approved' untuk tryout ini,
+  // tandai sebagai 'used' supaya akses terkunci setelah 1x dikerjakan
+  if (!tryoutId.startsWith("latihan-")) {
+    try {
+      await supabase
+        .from("free_access_requests")
+        .update({ status: "used", updated_at: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("tryout_id", tryoutId)
+        .eq("status", "approved");
+    } catch (e) {
+      // Non-fatal: jangan gagalkan submit hanya karena ini
+      console.warn("Gagal update free claim status:", e);
+    }
+  }
+
   return { 
     success: true, 
     resultId: resultData.id, 

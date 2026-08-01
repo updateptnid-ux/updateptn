@@ -37,41 +37,48 @@ export default function StudentTryoutList({
   const [subTier, setSubTier] = useState<string | null>(initialSubscription?.tier || null);
   const [subExpiresAt, setSubExpiresAt] = useState<string | null>(initialSubscription?.expires_at || null);
   
+  // Mapping tryout_id -> status request ('pending', 'approved', 'rejected', atau undefined)
+  const [requestStatuses, setRequestStatuses] = useState<Record<string, string>>({});
   const [selectedTryout, setSelectedTryout] = useState<Tryout | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Check if user has active premium access
-  const isUserPremium =
+  // Pengecekan status Premium Global user (misal langganan berbayar)
+  const isGlobalPremium =
     subStatus === "active" &&
     (subTier === "Premium" || subTier === "Platinum" || subTier === "FreePromo") &&
     (subExpiresAt ? new Date(subExpiresAt) > new Date() : true);
 
-  const fetchSubscription = async () => {
+  const fetchAccessRequests = async () => {
     try {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("status, tier, expires_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data, error } = await supabase
+        .from("free_access_requests")
+        .select("tryout_id, status")
+        .eq("user_id", userId);
 
-      if (data && data.length > 0) {
-        setSubStatus(data[0].status);
-        setSubTier(data[0].tier);
-        setSubExpiresAt(data[0].expires_at);
+      if (!error && data) {
+        const mapping: Record<string, string> = {};
+        data.forEach((req: any) => {
+          mapping[req.tryout_id] = req.status;
+        });
+        setRequestStatuses(mapping);
       }
     } catch (err) {
-      console.error("Gagal reload subscription:", err);
+      console.error("Gagal mengambil status pengajuan:", err);
     }
   };
 
+  useEffect(() => {
+    fetchAccessRequests();
+  }, [userId]);
+
   const handleActionClick = (to: Tryout) => {
-    if (to.is_free || isUserPremium) {
-      // Allow start tryout
+    const isApproved = requestStatuses[to.id] === "approved";
+    if (to.is_free || isGlobalPremium || isApproved) {
+      // Buka halaman ujian
       window.location.href = `/tryout/${to.id}`;
     } else {
-      // Trigger modal follow IG & TT
+      // Buka modal IG & TikTok follow
       setSelectedTryout(to);
       setIsModalOpen(true);
     }
@@ -91,17 +98,12 @@ export default function StudentTryoutList({
 
       <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.1}>
         {tryouts.map((to) => {
-          const isPlayable = to.is_free || isUserPremium;
-          const isPending = !isPlayable && subStatus === "pending" && subTier === "FreePromo";
+          const isReqStatus = requestStatuses[to.id]; // 'pending', 'approved', 'rejected', 'used'
+          const isApproved = isReqStatus === "approved";
+          const isPending = isReqStatus === "pending";
+          const isUsed = isReqStatus === "used";
           
-          // Formatted expiry info if FreePromo is active
-          const formattedExpiry = subExpiresAt && subTier === "FreePromo"
-            ? new Date(subExpiresAt).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric"
-              })
-            : null;
+          const isPlayable = !isUsed && (to.is_free || isGlobalPremium || isApproved);
 
           return (
             <StaggerItem key={to.id}>
@@ -121,10 +123,14 @@ export default function StudentTryoutList({
                           </Badge>
                         )}
                         
-                        {/* Expiration warning for FreePromo users */}
-                        {isPlayable && subTier === "FreePromo" && (
-                          <Badge variant="outline" className="text-[10px] border-amber-200 text-amber-700 bg-amber-50 font-bold px-2 py-0.5 rounded-lg">
-                            Akses Gratis s/d {formattedExpiry}
+                        {isApproved && (
+                          <Badge variant="outline" className="text-[10px] border-emerald-200 text-emerald-700 bg-emerald-50 font-bold px-2 py-0.5 rounded-lg">
+                            Akses Gratis Terbuka
+                          </Badge>
+                        )}
+                        {isUsed && (
+                          <Badge variant="outline" className="text-[10px] border-slate-300 text-slate-500 bg-slate-50 font-bold px-2 py-0.5 rounded-lg">
+                            Sudah Dikerjakan
                           </Badge>
                         )}
                       </div>
@@ -151,7 +157,15 @@ export default function StudentTryoutList({
                   </div>
 
                   <div className="pt-6 border-t border-slate-100 mt-5">
-                    {isPlayable ? (
+                    {isUsed ? (
+                      <Button
+                        disabled
+                        className="w-full h-11 bg-slate-100 text-slate-400 border border-slate-200 font-bold rounded-xl gap-2 cursor-not-allowed"
+                      >
+                        <Lock className="h-4 w-4 text-slate-400" />
+                        <span>Akses Sudah Digunakan (1x)</span>
+                      </Button>
+                    ) : isPlayable ? (
                       <Button
                         onClick={() => handleActionClick(to)}
                         className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-xs transition-all hover:scale-[1.01]"
@@ -194,7 +208,7 @@ export default function StudentTryoutList({
           userId={userId}
           userName={userName}
           userEmail={userEmail}
-          onSuccess={fetchSubscription}
+          onSuccess={fetchAccessRequests}
         />
       )}
     </div>
