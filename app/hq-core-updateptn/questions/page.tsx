@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, FileQuestion, Edit, Trash2, CheckCircle2, X, Save, AlertTriangle, Upload } from "lucide-react";
+import { MoreHorizontal, FileQuestion, Edit, Trash2, X, FileText, ArrowLeft, FolderOpen, Calendar, Clock, Database, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 
 interface QuestionRecord {
   id: string;
   tryout_id: string;
-  tryout_title: string;
   text: string;
   option_a: string;
   option_b: string;
@@ -44,17 +44,50 @@ interface QuestionRecord {
 interface TryoutItem {
   id: string;
   title: string;
+  description: string;
+  scheduled_date: string;
+  duration_minutes: number;
+  total_questions: number;
+  is_active: boolean;
+}
+
+// Official SNBT 2026 Subtests and Quotas
+export const OFFICIAL_SNBT_SUBTESTS = [
+  { name: "Penalaran Umum", max: 30, category: "TPS", duration: 30 },
+  { name: "Pengetahuan dan Pemahaman Umum", max: 20, category: "TPS", duration: 15 },
+  { name: "Kemampuan Memahami Bacaan dan Menulis", max: 20, category: "TPS", duration: 25 },
+  { name: "Pengetahuan Kuantitatif", max: 15, category: "TPS", duration: 20 },
+  { name: "Literasi dalam Bahasa Indonesia", max: 30, category: "Tes Literasi", duration: 45 },
+  { name: "Literasi dalam Bahasa Inggris", max: 20, category: "Tes Literasi", duration: 30 },
+  { name: "Penalaran Matematika", max: 20, category: "Tes Literasi", duration: 30 },
+];
+
+export function getNormalizedSubtest(rawName: string) {
+  const n = (rawName || "").toLowerCase().trim();
+  if (n.includes("penalaran umum")) return "Penalaran Umum";
+  if (n.includes("pemahaman umum") || n === "ppu") return "Pengetahuan dan Pemahaman Umum";
+  if (n.includes("bacaan dan menulis") || n.includes("kbm")) return "Kemampuan Memahami Bacaan dan Menulis";
+  if (n.includes("kuantitatif") || n === "pk") return "Pengetahuan Kuantitatif";
+  if (n.includes("indonesia") || n.includes("literasi b. indonesia")) return "Literasi dalam Bahasa Indonesia";
+  if (n.includes("inggris") || n.includes("literasi b. inggris")) return "Literasi dalam Bahasa Inggris";
+  if (n.includes("matematika") || n.includes("penalaran matematika")) return "Penalaran Matematika";
+  return rawName || "Penalaran Umum";
 }
 
 export default function AdminQuestionsPage() {
-  const [questions, setQuestions] = useState<QuestionRecord[]>([]);
   const [tryouts, setTryouts] = useState<TryoutItem[]>([]);
+  const [questions, setQuestions] = useState<QuestionRecord[]>([]);
+  const [selectedTryout, setSelectedTryout] = useState<TryoutItem | null>(null);
+  const [selectedSubtestFilter, setSelectedSubtestFilter] = useState<string>("ALL");
+  
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [isUploadingJson, setIsUploadingJson] = useState(false);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [uploadTargetTryoutId, setUploadTargetTryoutId] = useState("");
-  const [uploadingBulk, setUploadingBulk] = useState(false);
+  const [isGeneratorDialogOpen, setIsGeneratorDialogOpen] = useState(false);
+  const [rawText, setRawText] = useState("");
+  const [generatedJson, setGeneratedJson] = useState("");
   const [editingQuestion, setEditingQuestion] = useState<QuestionRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,92 +104,64 @@ export default function AdminQuestionsPage() {
     subtest: "Penalaran Umum",
   });
 
-  const mockQuestions: QuestionRecord[] = [
-    {
-      id: "q1",
-      tryout_id: "t1",
-      tryout_title: "Try Out SNBT 2026 - Episode 1",
-      text: "Jika p -> q bernilai salah, manakah dari pernyataan berikut yang pasti bernilai benar?",
-      option_a: "p bernilai salah dan q bernilai benar",
-      option_b: "p bernilai benar dan q bernilai salah",
-      option_c: "p bernilai benar dan q bernilai benar",
-      option_d: "p bernilai salah dan q bernilai salah",
-      option_e: "Tidak dapat ditentukan nilai kebenarannya",
-      correct_answer: "B",
-      explanation: "Implikasi p -> q hanya bernilai salah jika p benar dan q salah.",
-      subtest: "Penalaran Umum",
-    },
-    {
-      id: "q2",
-      tryout_id: "t1",
-      tryout_title: "Try Out SNBT 2026 - Episode 1",
-      text: "Suatu barisan aritmatika memiliki suku ke-3 sama dengan 11 dan suku ke-7 sama dengan 27. Berapakah suku ke-10?",
-      option_a: "35",
-      option_b: "37",
-      option_c: "39",
-      option_d: "41",
-      option_e: "43",
-      correct_answer: "C",
-      explanation: "Beda b=4, suku pertama a=3. Suku ke-10 adalah 3 + 9(4) = 39.",
-      subtest: "Penalaran Matematika",
-    },
-  ];
-
   useEffect(() => {
-    fetchData();
+    fetchTryouts();
   }, []);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    if (selectedTryout) {
+      fetchQuestions(selectedTryout.id);
+    }
+  }, [selectedTryout]);
+
+  const fetchTryouts = async () => {
     try {
       setLoading(true);
       const supabase = createClient();
-
-      const { data: toData } = await supabase.from("tryouts").select("id, title");
-      if (toData && toData.length > 0) {
-        setTryouts(toData);
-        setUploadTargetTryoutId(toData[0].id);
-      }
-
       const { data, error } = await supabase
-        .from("questions")
-        .select("*, tryouts(title)")
-        .order("created_at", { ascending: false });
+        .from("tryouts")
+        .select("*")
+        .order("scheduled_date", { ascending: false });
 
-      if (error) {
-        setIsDemoMode(true);
-        setQuestions(mockQuestions);
-      } else if (data) {
-        setQuestions(
-          data.map((item: any) => ({
-            id: item.id,
-            tryout_id: item.tryout_id,
-            tryout_title: item.tryouts?.title || "Umum / Bank Soal",
-            text: item.text,
-            option_a: item.option_a,
-            option_b: item.option_b,
-            option_c: item.option_c,
-            option_d: item.option_d,
-            option_e: item.option_e,
-            correct_answer: item.correct_answer,
-            explanation: item.explanation,
-            subtest: item.subtest || "Penalaran Umum",
-          }))
-        );
-        setIsDemoMode(false);
+      if (data) {
+        setTryouts(data as TryoutItem[]);
       }
+      if (error) throw error;
     } catch (err) {
       console.error(err);
-      setIsDemoMode(true);
-      setQuestions(mockQuestions);
+      alert("Gagal memuat daftar Try Out.");
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchQuestions = async (tryoutId: string) => {
+    try {
+      setLoadingQuestions(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("tryout_id", tryoutId)
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setQuestions(data as QuestionRecord[]);
+      }
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat soal untuk Try Out ini.");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   const handleCreate = () => {
+    if (!selectedTryout) return;
     setEditingQuestion(null);
     setFormData({
-      tryout_id: tryouts[0]?.id || "",
+      tryout_id: selectedTryout.id,
       text: "",
       option_a: "",
       option_b: "",
@@ -190,24 +195,21 @@ export default function AdminQuestionsPage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const toTitle = tryouts.find(t => t.id === formData.tryout_id)?.title || "Umum";
+      const targetNormSubtest = getNormalizedSubtest(formData.subtest);
+      const subConfig = OFFICIAL_SNBT_SUBTESTS.find(s => s.name === targetNormSubtest);
 
-      if (isDemoMode) {
-        if (editingQuestion) {
-          setQuestions(prev =>
-            prev.map(q => (q.id === editingQuestion.id ? { ...q, ...formData, tryout_title: toTitle } : q))
-          );
-        } else {
-          setQuestions(prev => [
-            ...prev,
-            { id: `q_${Date.now()}`, ...formData, tryout_title: toTitle },
-          ]);
+      // Check quota limit for new questions
+      if (subConfig && !editingQuestion) {
+        const currentCount = questions.filter(q => getNormalizedSubtest(q.subtest) === targetNormSubtest).length;
+        if (currentCount >= subConfig.max) {
+          alert(`Kuota subtes "${targetNormSubtest}" sudah PENUH (${currentCount}/${subConfig.max} soal). Tidak bisa menambah soal lagi untuk subtes ini.`);
+          setIsSaving(false);
+          return;
         }
-        setIsDialogOpen(false);
-        return;
       }
 
       const supabase = createClient();
+      
       if (editingQuestion) {
         const { error } = await supabase.from("questions").update(formData).eq("id", editingQuestion.id);
         if (error) throw error;
@@ -217,7 +219,7 @@ export default function AdminQuestionsPage() {
       }
 
       setIsDialogOpen(false);
-      fetchData();
+      if (selectedTryout) fetchQuestions(selectedTryout.id);
     } catch (err) {
       alert("Gagal menyimpan: " + (err as Error).message);
     } finally {
@@ -225,122 +227,328 @@ export default function AdminQuestionsPage() {
     }
   };
 
-  const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setUploadingBulk(true);
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-
-      if (!Array.isArray(parsed)) {
-        alert("Gagal: Format JSON harus berupa array objek soal!");
-        return;
-      }
-
-      if (!uploadTargetTryoutId) {
-        alert("Gagal: Pilih paket Try Out terlebih dahulu!");
-        return;
-      }
-
-      const questionsToInsert = parsed.map((q: any) => ({
-        tryout_id: uploadTargetTryoutId,
-        text: q.text || q.question_text || "",
-        option_a: q.option_a || "",
-        option_b: q.option_b || "",
-        option_c: q.option_c || "",
-        option_d: q.option_d || "",
-        option_e: q.option_e || "",
-        correct_answer: q.correct_answer || "A",
-        explanation: q.explanation || null,
-        subtest: q.subtest || "Penalaran Umum",
-      }));
-
-      if (isDemoMode) {
-        setQuestions(prev => [
-          ...questionsToInsert.map((q, idx) => ({
-            id: `q_bulk_${Date.now()}_${idx}`,
-            tryout_id: q.tryout_id,
-            tryout_title: tryouts.find(t => t.id === q.tryout_id)?.title || "Demo Tryout",
-            text: q.text,
-            option_a: q.option_a,
-            option_b: q.option_b,
-            option_c: q.option_c,
-            option_d: q.option_d,
-            option_e: q.option_e,
-            correct_answer: q.correct_answer,
-            explanation: q.explanation,
-            subtest: q.subtest,
-          })),
-          ...prev,
-        ]);
-        alert(`[Demo Mode] Simulasi berhasil mengunggah ${questionsToInsert.length} soal!`);
-        setIsUploadDialogOpen(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const { error } = await supabase.from("questions").insert(questionsToInsert);
-      if (error) throw error;
-
-      alert(`Berhasil mengunggah ${questionsToInsert.length} soal ke database!`);
-      setIsUploadDialogOpen(false);
-      fetchData();
-    } catch (err) {
-      alert("Gagal memproses file: " + (err as Error).message);
-    } finally {
-      setUploadingBulk(false);
-      if (event.target) event.target.value = "";
-    }
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus soal ini?")) return;
     try {
-      if (isDemoMode) {
-        setQuestions(prev => prev.filter(q => q.id !== id));
-        return;
-      }
       const supabase = createClient();
       const { error } = await supabase.from("questions").delete().eq("id", id);
       if (error) throw error;
-      fetchData();
+      if (selectedTryout) fetchQuestions(selectedTryout.id);
     } catch (err) {
       alert("Gagal menghapus: " + (err as Error).message);
     }
   };
 
-  return (
-    <div className="space-y-4">
-      {isDemoMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+  const handleUploadJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTryout) return;
+
+    try {
+      setIsUploadingJson(true);
+      const fileContent = await file.text();
+      const parsed = JSON.parse(fileContent);
+
+      if (!Array.isArray(parsed)) {
+        alert("Format JSON tidak valid. Harus berupa array object.");
+        return;
+      }
+
+      // Check quota overload per subtest in uploaded batch
+      const currentCounts: Record<string, number> = {};
+      OFFICIAL_SNBT_SUBTESTS.forEach(s => {
+        currentCounts[s.name] = questions.filter(q => getNormalizedSubtest(q.subtest) === s.name).length;
+      });
+
+      const batchCounts: Record<string, number> = {};
+      parsed.forEach(q => {
+        const normName = getNormalizedSubtest(q.subtest || "");
+        batchCounts[normName] = (batchCounts[normName] || 0) + 1;
+      });
+
+      const overflowErrors: string[] = [];
+      OFFICIAL_SNBT_SUBTESTS.forEach(s => {
+        const curr = currentCounts[s.name] || 0;
+        const add = batchCounts[s.name] || 0;
+        if (curr + add > s.max) {
+          overflowErrors.push(`• ${s.name}: Saat ini ${curr}/${s.max}, akan ditambah ${add} (Melebihi batas max ${s.max})`);
+        }
+      });
+
+      if (overflowErrors.length > 0) {
+        alert(`Gagal upload! Kuota subtes melebihi batas resmi SNBT:\n\n${overflowErrors.join("\n")}\n\nSilakan kurangi jumlah soal di file JSON.`);
+        return;
+      }
+
+      const questionsToInsert = parsed.map((q) => ({
+        ...q,
+        tryout_id: selectedTryout.id,
+      }));
+
+      const supabase = createClient();
+      const { error } = await supabase.from("questions").insert(questionsToInsert);
+
+      if (error) {
+        alert("Gagal upload soal: " + error.message);
+      } else {
+        alert(`Berhasil mengunggah ${questionsToInsert.length} soal!`);
+        fetchQuestions(selectedTryout.id);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Gagal membaca atau mem-parsing file JSON.");
+    } finally {
+      setIsUploadingJson(false);
+      e.target.value = ""; // Reset input
+    }
+  };
+
+  const handleGenerateJson = () => {
+    try {
+      const lines = rawText.split('\n').filter(l => l.trim() !== '');
+      const jsonArray = lines.map((line, index) => {
+        const parts = line.split('|');
+        if (parts.length < 8) {
+          throw new Error(`Baris ${index + 1} tidak valid. Kurang dari 8 kolom.`);
+        }
+        return {
+          subtest: parts[0]?.trim() || "Penalaran Umum",
+          text: parts[1]?.trim() || "",
+          option_a: parts[2]?.trim() || "",
+          option_b: parts[3]?.trim() || "",
+          option_c: parts[4]?.trim() || "",
+          option_d: parts[5]?.trim() || "",
+          option_e: parts[6]?.trim() || "",
+          correct_answer: parts[7]?.trim().toUpperCase() || "A",
+          explanation: parts[8]?.trim() || ""
+        };
+      });
+      setGeneratedJson(JSON.stringify(jsonArray, null, 2));
+    } catch (e: any) {
+      alert("Gagal mem-parsing teks: " + e.message);
+    }
+  };
+
+  const handleCopyJson = () => {
+    if (!generatedJson) return;
+    navigator.clipboard.writeText(generatedJson);
+    alert("JSON berhasil di-copy! Silakan paste ke notepad dan save sebagai .json, atau gunakan langsung.");
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // View: Daftar Try Out
+  if (!selectedTryout) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h4 className="text-xs font-bold text-amber-900">Mode Demonstrasi Aktif</h4>
-            <p className="text-[11px] text-amber-700">Tabel questions tidak ditemukan, menggunakan data demo.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Bank Soal UTBK</h1>
+            <p className="text-sm text-slate-500 mt-1">Pilih paket Try Out untuk mengelola soal di dalamnya.</p>
+          </div>
+          <Button
+            onClick={() => setIsGeneratorDialogOpen(true)}
+            className="rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold gap-2 h-11 px-5 shadow-sm"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Alat Generator JSON</span>
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">Memuat paket Try Out...</div>
+        ) : tryouts.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 bg-white border border-slate-200 rounded-2xl">
+            Belum ada paket Try Out. Buat di menu Manajemen Try Out.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tryouts.map((to) => (
+              <Card 
+                key={to.id} 
+                className="overflow-hidden border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                onClick={() => setSelectedTryout(to)}
+              >
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 group-hover:bg-blue-50/30 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="h-5 w-5 text-blue-500" />
+                        <h3 className="font-bold text-slate-900 truncate" title={to.title}>{to.title}</h3>
+                      </div>
+                      <p className="text-xs text-slate-500 line-clamp-1">{to.description || "Tanpa deskripsi"}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-4 bg-white">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Jadwal</span>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      {to.scheduled_date ? formatDate(to.scheduled_date) : "-"}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Total Soal</span>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                      <Database className="h-3.5 w-3.5 text-slate-400" />
+                      {to.total_questions} soal
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <GeneratorDialog />
+      </div>
+    );
+  }
+
+  // View: Isi Soal Try Out
+  const filteredQuestions = selectedSubtestFilter === "ALL" 
+    ? questions 
+    : questions.filter(q => getNormalizedSubtest(q.subtest) === selectedSubtestFilter);
+
+  const totalQuestionsCount = questions.length;
+  const totalMaxQuota = OFFICIAL_SNBT_SUBTESTS.reduce((acc, curr) => acc + curr.max, 0); // 155
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => setSelectedTryout(null)}
+            className="h-10 px-3 hover:bg-slate-100 rounded-xl text-slate-600 gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Kembali</span>
+          </Button>
+          <div>
+            <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-blue-500" />
+              {selectedTryout.title}
+            </h2>
+            <p className="text-xs text-slate-500">Kelola soal untuk paket Try Out ini.</p>
           </div>
         </div>
-      )}
+        <div className="text-right">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Kuota SNBT 2026</span>
+          <span className="text-sm font-black text-slate-900">{totalQuestionsCount} / {totalMaxQuota} Soal</span>
+        </div>
+      </div>
+
+      {/* SNBT 2026 Subtest Quota Progress Cards */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <Database className="h-3.5 w-3.5 text-blue-600" />
+            Status Kuota 7 Subtes Resmi SNBT 2026
+          </h3>
+          <span className="text-[11px] font-semibold text-slate-400">Klik card subtes untuk memfilter</span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+          {OFFICIAL_SNBT_SUBTESTS.map((sub) => {
+            const count = questions.filter(q => getNormalizedSubtest(q.subtest) === sub.name).length;
+            const pct = Math.min(100, Math.round((count / sub.max) * 100));
+            const isFull = count >= sub.max;
+            const isSelected = selectedSubtestFilter === sub.name;
+
+            return (
+              <div
+                key={sub.name}
+                onClick={() => setSelectedSubtestFilter(isSelected ? "ALL" : sub.name)}
+                className={`cursor-pointer rounded-2xl p-3 border transition-all text-left space-y-2 relative overflow-hidden ${
+                  isSelected
+                    ? "border-blue-600 bg-blue-50/80 ring-2 ring-blue-500/20 shadow-xs"
+                    : isFull
+                    ? "border-emerald-200 bg-emerald-50/30 hover:border-emerald-300"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-900 text-white">
+                    {sub.category}
+                  </span>
+                  <Badge variant="outline" className={`text-[9px] font-black px-1.5 py-0.2 ${
+                    isFull 
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300" 
+                      : count > 0 
+                      ? "bg-blue-100 text-blue-800 border-blue-300"
+                      : "bg-slate-100 text-slate-500 border-slate-200"
+                  }`}>
+                    {isFull ? "FULL" : `${count}/${sub.max}`}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-xs font-extrabold text-slate-900 line-clamp-1" title={sub.name}>{sub.name}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">{sub.duration} Menit</p>
+                </div>
+
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className={`h-1.5 rounded-full transition-all ${isFull ? "bg-emerald-500" : "bg-blue-600"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <CrudLayout
-        title="Bank Soal UTBK"
-        description="Manajemen bank soal persiapan UTBK SNBT, kunci jawaban, subtes mapel, dan video/teks pembahasan."
-        addButtonLabel="Tambah Soal"
+        title=""
+        description=""
+        addButtonLabel="Tambah Soal Manual"
         onAddClick={handleCreate}
-        searchPlaceholder="Cari berdasarkan teks soal..."
-        totalItems={questions.length}
+        searchPlaceholder="Cari soal..."
+        totalItems={filteredQuestions.length}
         currentPage={1}
         totalPages={1}
         filterComponent={
-          <Button
-            variant="outline"
-            onClick={() => setIsUploadDialogOpen(true)}
-            className="rounded-xl border border-slate-200 hover:bg-slate-50 font-bold gap-2 text-slate-700 h-10 px-4"
-          >
-            <Upload className="h-4 w-4 text-slate-500" />
-            <span>Bulk Upload Soal</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Filter Subtest Dropdown */}
+            <select
+              value={selectedSubtestFilter}
+              onChange={(e) => setSelectedSubtestFilter(e.target.value)}
+              className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="ALL">Semua Subtes ({questions.length} Soal)</option>
+              {OFFICIAL_SNBT_SUBTESTS.map((s) => {
+                const count = questions.filter(q => getNormalizedSubtest(q.subtest) === s.name).length;
+                return (
+                  <option key={s.name} value={s.name}>
+                    {s.name} ({count}/{s.max} Soal {count >= s.max ? "• FULL" : ""})
+                  </option>
+                );
+              })}
+            </select>
+
+            <input 
+              type="file" 
+              accept=".json" 
+              id="upload-json-btn"
+              className="hidden" 
+              onChange={handleUploadJson} 
+              disabled={isUploadingJson}
+            />
+            <label htmlFor="upload-json-btn">
+              <div className={`cursor-pointer flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-slate-700 text-xs ${isUploadingJson ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <Upload className="h-4 w-4 text-slate-500" />
+                <span>{isUploadingJson ? 'Mengunggah...' : 'Upload JSON Soal'}</span>
+              </div>
+            </label>
+          </div>
         }
       >
         <Table>
@@ -348,65 +556,67 @@ export default function AdminQuestionsPage() {
             <TableRow className="border-slate-200 bg-slate-50/50">
               <TableHead className="font-bold text-slate-700">Soal</TableHead>
               <TableHead className="font-bold text-slate-700">Subtest / Mapel</TableHead>
-              <TableHead className="font-bold text-slate-700">Try Out Terkait</TableHead>
               <TableHead className="font-bold text-slate-700">Kunci Jawaban</TableHead>
               <TableHead className="font-bold text-slate-700">Pembahasan</TableHead>
               <TableHead className="font-bold text-slate-700 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {loadingQuestions ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-500">Memuat data...</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">Memuat soal...</TableCell>
               </TableRow>
-            ) : questions.length === 0 ? (
+            ) : filteredQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-500">Belum ada data.</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-500">
+                  {selectedSubtestFilter !== "ALL"
+                    ? `Belum ada soal untuk subtes "${selectedSubtestFilter}".`
+                    : "Belum ada soal di Try Out ini. Silakan upload JSON atau tambah manual."}
+                </TableCell>
               </TableRow>
             ) : (
-              questions.map((quest) => (
+              filteredQuestions.map((quest) => (
                 <TableRow key={quest.id} className="border-slate-100 hover:bg-slate-50/60 transition-colors">
                   <TableCell className="py-3 max-w-xs font-medium text-slate-900 truncate">
                     <div className="flex items-center gap-2">
-                      <FileQuestion className="h-4 w-4 text-blue-600 shrink-0" />
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <FileQuestion className="h-4 w-4 text-blue-600" />
+                      </div>
                       <span className="truncate">{quest.text}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-700 font-semibold truncate max-w-[120px]">
-                    <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 text-slate-600 border-slate-200">
-                      {quest.subtest}
+                  <TableCell className="py-3">
+                    <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-semibold text-[11px]">
+                      {getNormalizedSubtest(quest.subtest)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-700 font-semibold truncate max-w-[150px]">
-                    {quest.tryout_title}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-black text-xs gap-1 px-2.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Kunci: {quest.correct_answer}</span>
+                  <TableCell className="py-3">
+                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold px-2 py-0.5 text-xs">
+                      {quest.correct_answer}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-slate-500 truncate max-w-[200px]">
-                    {quest.explanation || "Belum ada pembahasan"}
+                  <TableCell className="py-3">
+                    {quest.explanation ? (
+                      <span className="text-xs text-slate-500 line-clamp-1 max-w-[200px]">{quest.explanation}</span>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">Kosong</span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="py-3 text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger render={
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
-                          <MoreHorizontal className="h-4 w-4 text-slate-600" />
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100 rounded-lg">
+                          <MoreHorizontal className="h-4 w-4 text-slate-500" />
                         </Button>
-                      } />
-                      <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
-                        <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleEdit(quest)} className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2">
-                          <Edit className="h-3.5 w-3.5 text-indigo-600" />
-                          <span>Ubah Soal</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 rounded-xl border-slate-200 shadow-sm">
+                        <DropdownMenuLabel className="text-xs text-slate-500">Aksi</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-slate-100" />
+                        <DropdownMenuItem onClick={() => handleEdit(quest)} className="text-xs cursor-pointer gap-2">
+                          <Edit className="h-3.5 w-3.5 text-slate-400" /> Edit Soal
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDelete(quest.id)} className="text-xs font-semibold text-rose-600 cursor-pointer rounded-lg gap-2 focus:bg-rose-50">
-                          <Trash2 className="h-3.5 w-3.5 text-rose-600" />
-                          <span>Hapus Soal</span>
+                        <DropdownMenuItem onClick={() => handleDelete(quest.id)} className="text-xs cursor-pointer text-red-600 gap-2 focus:text-red-700 focus:bg-red-50">
+                          <Trash2 className="h-3.5 w-3.5" /> Hapus
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -421,43 +631,28 @@ export default function AdminQuestionsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingQuestion ? "Ubah Soal" : "Tambah Soal"}</DialogTitle>
+            <DialogTitle>{editingQuestion ? "Edit Soal" : "Tambah Soal Baru"}</DialogTitle>
+            <DialogDescription>
+              Isi formulir di bawah ini untuk mengelola soal secara manual.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Paket Try Out *</Label>
-              {isDemoMode ? (
-                <select
-                  value={formData.tryout_id}
-                  onChange={e => setFormData({ ...formData, tryout_id: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-                >
-                  <option value="t1">Try Out SNBT 2026 - Episode 1</option>
-                </select>
-              ) : (
-                <select
-                  value={formData.tryout_id}
-                  onChange={e => setFormData({ ...formData, tryout_id: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-                >
-                  {tryouts.map(t => (
-                    <option key={t.id} value={t.id}>{t.title}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Subtest (Mata Pelajaran) *</Label>
+              <Label>Subtest / Mapel *</Label>
               <select
                 value={formData.subtest}
                 onChange={e => setFormData({ ...formData, subtest: e.target.value })}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white font-medium"
               >
-                <option value="Penalaran Umum">Penalaran Umum</option>
-                <option value="Pengetahuan Kuantitatif">Pengetahuan Kuantitatif</option>
-                <option value="Literasi B. Indonesia">Literasi B. Indonesia</option>
-                <option value="Literasi B. Inggris">Literasi B. Inggris</option>
-                <option value="Penalaran Matematika">Penalaran Matematika</option>
+                {OFFICIAL_SNBT_SUBTESTS.map((s) => {
+                  const count = questions.filter(q => getNormalizedSubtest(q.subtest) === s.name).length;
+                  const isFull = count >= s.max;
+                  return (
+                    <option key={s.name} value={s.name} disabled={isFull && !editingQuestion}>
+                      {s.category}: {s.name} ({count}/{s.max} Soal {isFull ? "• FULL" : ""})
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="space-y-2">
@@ -521,55 +716,80 @@ export default function AdminQuestionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <GeneratorDialog />
+    </div>
+  );
 
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="max-w-md">
+  function GeneratorDialog() {
+    return (
+      <Dialog open={isGeneratorDialogOpen} onOpenChange={setIsGeneratorDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Bulk Upload Soal UTBK</DialogTitle>
+            <DialogTitle>Generator JSON Soal UTBK</DialogTitle>
             <DialogDescription>
-              Unggah berkas JSON berisi daftar soal untuk dimasukkan sekaligus ke dalam sistem.
+              Ubah teks CSV raw menjadi format JSON yang valid untuk diupload saat membuat Try Out.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Target Paket Try Out *</Label>
-              <select
-                value={uploadTargetTryoutId}
-                onChange={e => setUploadTargetTryoutId(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                {tryouts.map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
+              <Label>Paste teks CSV di sini</Label>
+              <p className="text-[11px] text-slate-500">
+                Format per baris, dipisahkan dengan tanda pipe (|): <br />
+                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
+                  Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
+                </code>
+              </p>
+              <textarea
+                value={rawText}
+                onChange={e => setRawText(e.target.value)}
+                className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label>Berkas JSON Soal *</Label>
-              <Input
-                type="file"
-                accept=".json"
-                onChange={handleBulkUpload}
-                disabled={uploadingBulk}
-                className="rounded-xl file:mr-4 file:py-1 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
-              <p className="text-[11px] text-slate-500 leading-normal pt-1">
-                Berkas harus berformat array JSON dengan struktur keys: <br />
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">text</code>, 
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono"> option_a</code> s.d. 
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono"> option_e</code>, 
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono"> correct_answer</code>, 
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono"> explanation</code>.
-              </p>
-            </div>
+            <Button onClick={handleGenerateJson} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+              Generate JSON
+            </Button>
+
+            {generatedJson && (
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <Label>Hasil JSON</Label>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
+                      Copy JSON
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => {
+                      if (!generatedJson) return;
+                      const blob = new Blob([generatedJson], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "soal_tryout.json";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                      Download JSON
+                    </Button>
+                  </div>
+                </div>
+                <textarea
+                  readOnly
+                  value={generatedJson}
+                  className="w-full h-48 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => { setIsGeneratorDialogOpen(false); setGeneratedJson(""); setRawText(""); }}>
+              Tutup
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    );
+  }
 }

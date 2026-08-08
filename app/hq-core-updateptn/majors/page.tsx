@@ -63,7 +63,7 @@ export default function AdminMajorsPage() {
   });
 
   // Fetch dengan server-side search & pagination
-  const fetchData = useCallback(async (search: string, page: number) => {
+  const fetchData = useCallback(async (search: string = "", page: number = 1) => {
     try {
       setLoading(true);
       const supabase = createClient();
@@ -167,7 +167,16 @@ export default function AdminMajorsPage() {
           setMajors((prev) =>
             prev.map((m) =>
               m.id === editingMajor.id
-                ? { ...m, name: formData.name, university_name: formData.university_id, passing_grade: formData.passing_grade, capacity: formData.capacity }
+                ? {
+                    ...m,
+                    prodi: formData.prodi,
+                    jenjang: formData.jenjang,
+                    kelompok: formData.kelompok,
+                    university_name: formData.university_id,
+                    passing_grade: formData.passing_grade,
+                    capacity: formData.capacity,
+                    name: `${formData.prodi} (${formData.jenjang}) - ${formData.kelompok}`,
+                  }
                 : m
             )
           );
@@ -175,11 +184,13 @@ export default function AdminMajorsPage() {
           setMajors((prev) => [
             {
               id: `mj_${Date.now()}`,
-              name: formData.name,
-              university_id: `u_${Date.now()}`,
+              prodi: formData.prodi,
+              jenjang: formData.jenjang,
+              kelompok: formData.kelompok,
               university_name: formData.university_id,
               passing_grade: formData.passing_grade,
               capacity: formData.capacity,
+              name: `${formData.prodi} (${formData.jenjang}) - ${formData.kelompok}`,
             },
             ...prev,
           ]);
@@ -359,11 +370,9 @@ export default function AdminMajorsPage() {
                   <TableCell className="text-xs text-slate-600 font-medium">{major.capacity} Kursi</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger render={
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
                           <MoreHorizontal className="h-4 w-4 text-slate-600" />
-                        </Button>
-                      } />
+                        </Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
                         <DropdownMenuGroup>
                           <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi Master</DropdownMenuLabel>

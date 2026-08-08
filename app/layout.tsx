@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import SecurityGuard from "@/components/SecurityGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,7 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="scroll-smooth">
-      <body className={`${inter.className} antialiased bg-slate-50 text-slate-900`}>
+      <body className={`${inter.className} antialiased bg-slate-50 text-slate-900 select-none`}>
+        <SecurityGuard />
         {children}
       </body>
     </html>

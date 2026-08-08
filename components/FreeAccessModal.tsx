@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertCircle, Instagram, CheckCircle2, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Share2, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 interface FreeAccessModalProps {
   isOpen: boolean;
@@ -73,24 +73,21 @@ export default function FreeAccessModal({
       // Convert image file to base64 string (fail-safe storage replacement)
       const base64Image = await convertToBase64(file);
 
-      // Save as a pending subscription with tier "FreePromo"
-      // price_paid holds the IG/TT metadata
-      const { error: dbError } = await supabase.from("subscriptions").insert([
+      // Save request to free_access_requests table
+      const { error: dbError } = await supabase.from("free_access_requests").insert([
         {
           user_id: userId,
-          user_name: userName || userEmail.split("@")[0],
-          user_email: userEmail,
-          tier: "FreePromo",
-          status: "pending",
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 Days active time
-          price_paid: `IG: ${usernameIg} | TikTok: ${usernameTt}`,
-          // We can store base64 proof inside price_paid or save it in user_metadata.
+          tryout_id: tryoutId,
+          username_ig: usernameIg,
+          username_tt: usernameTt,
+          proof_url: base64Image, // Menyimpan base64 screenshot secara langsung di text proof_url
+          status: "pending"
         }
       ]);
 
       if (dbError) throw dbError;
 
-      // Save details about which tryout they requested in localStorage so it unlocks automatically on client-side once approved
+      // Save locally as fallback/cache
       localStorage.setItem(`tryout_promo_${tryoutId}`, "pending");
 
       setSuccess(true);

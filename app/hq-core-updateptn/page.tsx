@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { checkAdminAccess } from "@/lib/check-admin";
 import { createClient } from "@/lib/supabase/server";
+import PendingClaimsWidget from "@/components/admin/PendingClaimsWidget";
 import {
   Users,
   UserCheck,
@@ -81,6 +82,41 @@ export default async function AdminDashboardPage() {
     }
   } catch {
     monthlyRevenue = 0;
+  }
+
+  // 5. Fetch pending free access claims
+  let pendingClaims: any[] = [];
+  try {
+    const { data: claimsData } = await supabase
+      .from("free_access_requests")
+      .select("*, tryouts(title)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (claimsData && claimsData.length > 0) {
+      const userIds = [...new Set(claimsData.map((d: any) => d.user_id))];
+      const { data: userData } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", userIds);
+      const userMap: Record<string, string> = {};
+      userData?.forEach((u: any) => {
+        userMap[u.id] = u.email || u.full_name || u.id;
+      });
+      pendingClaims = claimsData.map((item: any) => ({
+        id: item.id,
+        user_id: item.user_id,
+        tryout_id: item.tryout_id,
+        username_ig: item.username_ig || "-",
+        username_tt: item.username_tt || "-",
+        proof_url: item.proof_url || "",
+        created_at: item.created_at,
+        user_email: userMap[item.user_id] || item.user_id,
+        tryout_title: item.tryouts?.title || item.tryout_id,
+      }));
+    }
+  } catch {
+    pendingClaims = [];
   }
 
   const formatRupiah = (amount: number) => {
@@ -353,6 +389,9 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Pending Free Claims Section */}
+      <PendingClaimsWidget initialClaims={pendingClaims} />
     </div>
   );
 }

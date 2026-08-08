@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { use } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -15,12 +14,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
-  GraduationCap,
   Clock,
   Flag,
   ChevronLeft,
   ChevronRight,
-  Send,
   Loader2,
   AlertTriangle,
   FileCheck2,
@@ -28,6 +25,11 @@ import {
   Target,
   BookOpen,
   CheckCircle2,
+  GripVertical,
+  Shuffle,
+  Lock,
+  ArrowRight,
+  BrainCircuit,
 } from "lucide-react";
 
 interface ProdiItem {
@@ -65,20 +67,35 @@ export default function TryoutEnginePage({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(7200);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(0);
+  const [questionStartTime, setQuestionStartTime] = useState<Record<string, number>>({});
+  const [questionTimeSpent, setQuestionTimeSpent] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
 
-  // Target Jurusan Picker state
+  // Per-subtest state
+  const [activeSubtestIndex, setActiveSubtestIndex] = useState<number>(0);
+  const [showSubtestBreak, setShowSubtestBreak] = useState<boolean>(false);
+
+  // Target Jurusan Picker state (4 Prodi & Smart Verdict)
   const [showTargetPicker, setShowTargetPicker] = useState<boolean>(false);
-  const [prodiList, setProdiList] = useState<ProdiItem[]>([]);
+  const [allProdiData, setAllProdiData] = useState<ProdiItem[]>([]); // full local dataset, loaded once
   const [prodiSearch, setProdiSearch] = useState("");
+  const [prodiList, setProdiList] = useState<ProdiItem[]>([]);
+  const [activeTargetSlot, setActiveTargetSlot] = useState<number>(0);
+  const [targets, setTargets] = useState<(ProdiItem | null)[]>([null, null, null, null]);
   const [selectedPtn, setSelectedPtn] = useState("");
   const [selectedProdi, setSelectedProdi] = useState("");
   const [selectedPg, setSelectedPg] = useState<number>(695);
   const [targetConfirmed, setTargetConfirmed] = useState(false);
-  const [accessDenied, setAccessDenied] = useState<{ isDenied: boolean; reason: string; requiresUpgrade: boolean }>({ isDenied: false, reason: "", requiresUpgrade: false });
+  const [accessDenied, setAccessDenied] = useState<{ isDenied: boolean; reason: string; requiresUpgrade: boolean; resultId?: string }>({ isDenied: false, reason: "", requiresUpgrade: false });
+  const [hasStarted, setHasStarted] = useState<boolean>(false);
+
+  // Subtest Picker state
+  const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
+  const [showSubtestPicker, setShowSubtestPicker] = useState<boolean>(false);
+  const [subtestList, setSubtestList] = useState<{name: string, count: number, category: string, duration: number}[]>([]);
 
   // Helper to normalize question objects
   const normalizeQuestions = (data: any[]): QuestionItem[] => {
@@ -104,22 +121,64 @@ export default function TryoutEnginePage({
           return;
         }
 
+        // Pre-populate Pilihan 1 with saved profile target (can be changed by user)
+        const meta = user.user_metadata as Record<string, string> | undefined;
+        const defaultUniv = meta?.target_univ || meta?.target_ptn || "";
+        const defaultProdi = meta?.target_prodi || "";
+
+        if (defaultUniv || defaultProdi) {
+          // Lookup actual passing_grade_est from data_snbt.json
+          let profilePg = 650; // fallback default
+          try {
+            const pgRes = await fetch("/data_snbt.json");
+            if (pgRes.ok) {
+              const pgData: any[] = await pgRes.json();
+              const uNorm = defaultUniv.toUpperCase().trim();
+              const pNorm = defaultProdi.toUpperCase().trim();
+              const match = pgData.find(
+                (x) =>
+                  (x.univ || "").toUpperCase().includes(uNorm) ||
+                  (x.prodi || "").toUpperCase().includes(pNorm)
+              );
+              if (match?.passing_grade_est) {
+                profilePg = Number(match.passing_grade_est);
+              }
+            }
+          } catch {
+            // silently fall back to 650
+          }
+
+          setTargets((prev) => {
+            const copy = [...prev];
+            if (!copy[0]) {
+              copy[0] = {
+                id: "profile-target",
+                univ: defaultUniv || "UNIVERSITAS INDONESIA",
+                prodi: defaultProdi || "S1 Ilmu Komputer",
+                passing_grade_est: profilePg,
+              };
+            }
+            return copy;
+          });
+        }
+
+        const { data: subsData } = await supabase.from("subscriptions").select("tier").eq("user_id", user.id).single();
+        const isPremium = subsData?.tier === "Premium" || subsData?.tier === "Platinum";
+        setIsPremiumUser(isPremium);
+
         // Limit Check (hanya untuk try out asli, bukan latihan subtes)
         if (!tryoutId.startsWith("latihan-")) {
-          const [subsRes, resultsRes] = await Promise.all([
-            supabase.from("subscriptions").select("tier").eq("user_id", user.id).single(),
-            supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId)
-          ]);
+          const { data: resultsData } = await supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId);
 
-          const isPremium = subsRes.data?.tier === "Premium" || subsRes.data?.tier === "Platinum";
-          const attempts = resultsRes.data?.length || 0;
+          const attempts = resultsData?.length || 0;
           const maxAttempts = isPremium ? 3 : 1;
 
           if (attempts >= maxAttempts) {
             setAccessDenied({
               isDenied: true,
               reason: `Kamu sudah mencapai batas pengerjaan Try Out ini (${maxAttempts} kali).`,
-              requiresUpgrade: !isPremium
+              requiresUpgrade: !isPremium,
+              resultId: resultsData?.[0]?.id
             });
             setLoading(false);
             return;
@@ -163,17 +222,22 @@ export default function TryoutEnginePage({
             .order("id");
           dbData = data;
 
-          // If no questions specific to tryoutId, fetch all DB questions
+          // Jika tidak ada soal untuk try-out ini, tampilkan error
           if (!dbData || dbData.length === 0) {
-            const { data: allData } = await supabase.from("questions").select("*");
-            if (allData && allData.length > 0) {
-              dbData = allData;
-            }
+            setAccessDenied({
+              isDenied: true,
+              reason: "Paket try-out ini belum memiliki soal. Silakan hubungi admin untuk melengkapi soal try-out ini terlebih dahulu.",
+              requiresUpgrade: false
+            });
+            setLoading(false);
+            return;
           }
         }
 
         if (dbData && dbData.length > 0) {
-          setQuestions(normalizeQuestions(dbData));
+          const finalQs = normalizeQuestions(dbData);
+          setQuestions(finalQs);
+          extractSubtests(finalQs);
         } else {
           // Fallback to local /40_soal_snbt.json
           try {
@@ -181,7 +245,9 @@ export default function TryoutEnginePage({
             if (res.ok) {
               const localJson = await res.json();
               if (localJson && localJson.length > 0) {
-                setQuestions(normalizeQuestions(localJson));
+                const finalQs = normalizeQuestions(localJson);
+                setQuestions(finalQs);
+                extractSubtests(finalQs);
               } else {
                 setQuestions([]);
               }
@@ -198,7 +264,9 @@ export default function TryoutEnginePage({
           const res = await fetch("/40_soal_snbt.json");
           if (res.ok) {
             const localJson = await res.json();
-            setQuestions(normalizeQuestions(localJson));
+            const finalQs = normalizeQuestions(localJson);
+            setQuestions(finalQs);
+            extractSubtests(finalQs);
           }
         } catch {
           setQuestions([]);
@@ -208,79 +276,210 @@ export default function TryoutEnginePage({
       }
     }
 
+    const extractSubtests = (qs: QuestionItem[]) => {
+      const map = new Map<string, number>();
+      qs.forEach(q => {
+        const sub = q.subtest || "Lainnya";
+        map.set(sub, (map.get(sub) || 0) + 1);
+      });
+      
+      const getCategoryAndDuration = (name: string) => {
+        const n = name.toLowerCase();
+        if (n.includes("penalaran umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 30 };
+        if (n.includes("pemahaman umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 15 };
+        if (n.includes("bacaan dan menulis")) return { category: "Tes Potensi Skolastik (TPS)", duration: 25 };
+        if (n.includes("kuantitatif")) return { category: "Tes Potensi Skolastik (TPS)", duration: 20 };
+        if (n.includes("literasi") && n.includes("indonesia")) return { category: "Tes Literasi", duration: 45 };
+        if (n.includes("literasi") && n.includes("inggris")) return { category: "Tes Literasi", duration: 30 };
+        if (n.includes("penalaran matematika") || n.includes("matematika")) return { category: "Tes Literasi", duration: 30 };
+        return { category: "Lainnya", duration: 0 };
+      };
+
+      const list = Array.from(map.entries()).map(([name, count]) => {
+        const { category, duration } = getCategoryAndDuration(name);
+        return { name, count, category, duration };
+      });
+      
+      // Sort initially by standard order
+      const standardOrder = ["Penalaran Umum", "Pengetahuan dan Pemahaman Umum", "Kemampuan Memahami Bacaan dan Menulis", "Pengetahuan Kuantitatif", "Literasi dalam Bahasa Indonesia", "Literasi dalam Bahasa Inggris", "Penalaran Matematika"];
+      list.sort((a, b) => {
+        const idxA = standardOrder.findIndex(s => a.name.toLowerCase().includes(s.toLowerCase()));
+        const idxB = standardOrder.findIndex(s => b.name.toLowerCase().includes(s.toLowerCase()));
+        return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+      });
+      
+      setSubtestList(list);
+    };
+
     loadQuestions();
   }, [tryoutId]);
 
-  // Fetch Autocomplete Suggestions via Supabase RPC search_kampus_pintar
+  // Load full prodi dataset once (client-side, no RPC limit)
   useEffect(() => {
-    if (prodiSearch.trim().length < 2) {
+    if (allProdiData.length > 0) return;
+    fetch("/data_snbt.json")
+      .then((r) => r.json())
+      .then((data: any[]) => setAllProdiData(data))
+      .catch(() => {});
+  }, []);
+
+  // Client-side full-text search — detects all data, zero network calls
+  useEffect(() => {
+    const q = prodiSearch.trim().toLowerCase();
+    if (q.length < 2) {
       setProdiList([]);
       return;
     }
-
-    const timer = setTimeout(async () => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase.rpc("search_kampus_pintar", {
-          keyword: prodiSearch.trim(),
-        });
-
-        if (!error && data && data.length > 0) {
-          setProdiList(data as ProdiItem[]);
-        } else {
-          // Fallback to local
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const q = prodiSearch.toLowerCase();
-            const filtered = localData.filter((p: any) => 
-              p.univ.toLowerCase().includes(q) || 
-              p.prodi.toLowerCase().includes(q)
-            ).slice(0, 30);
-            setProdiList(filtered);
-          }
-        }
-      } catch (err) {
-        console.error("Error searching prodi:", err);
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [prodiSearch]);
+    const filtered = allProdiData
+      .filter(
+        (p) =>
+          (p.univ || "").toLowerCase().includes(q) ||
+          (p.prodi || "").toLowerCase().includes(q)
+      )
+      .slice(0, 50);
+    setProdiList(filtered);
+  }, [prodiSearch, allProdiData]);
 
   const filteredProdi = prodiList;
 
-  // Show target picker after loading finishes (only once per session)
+  // Smart Verdict Analysis Logic
+  const getSmartVerdict = () => {
+    const activeTargets = targets
+      .map((t, idx) => ({ ...t, slot: idx + 1 }))
+      .filter((t): t is (ProdiItem & { slot: number }) => t !== null && !!t.prodi);
+
+    if (activeTargets.length === 0) {
+      return {
+        status: "EMPTY",
+        badge: "Belum Memilih Target",
+        badgeColor: "bg-slate-100 text-slate-600 border-slate-200",
+        warnings: [],
+        summary: "Pilih minimal 1 target prodi untuk melihat Smart Verdict strategi kamu.",
+      };
+    }
+
+    const warnings: string[] = [];
+    let hasOrderError = false;
+
+    for (let i = 0; i < activeTargets.length - 1; i++) {
+      const current = activeTargets[i];
+      const next = activeTargets[i + 1];
+      const currentPg = Number(current.passing_grade_est || 650);
+      const nextPg = Number(next.passing_grade_est || 650);
+
+      if (nextPg > currentPg) {
+        hasOrderError = true;
+        warnings.push(
+          `Pilihan ${next.slot} (${next.prodi} — PG ${nextPg}) LEBIH TINGGI daripada Pilihan ${current.slot} (${current.prodi} — PG ${currentPg}). Di sistem SNBT, tempatkan prodi terketat/tertinggi di Pilihan 1!`
+        );
+      }
+    }
+
+    if (hasOrderError) {
+      return {
+        status: "BAD_ORDER",
+        badge: "🛑 STRATEGI URUTAN TIDAK IDEAL",
+        badgeColor: "bg-rose-100 text-rose-800 border-rose-300",
+        warnings,
+        summary: "Urutan pilihan jurusan berisiko gugur di sistem SNBT! Dalam aturan resmi SNBT, pilihan diurutkan dari passing grade terketat (berisiko) di Pilihan 1 ke yang lebih aman di pilihan berikutnya.",
+      };
+    }
+
+    const highestPg = Number(activeTargets[0]?.passing_grade_est || 650);
+    if (highestPg >= 710 && activeTargets.length === 1) {
+      return {
+        status: "HIGH_RISK",
+        badge: "🟡 KEKETATAN TINGGI (TAMBAHKAN CADANGAN AMAN)",
+        badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
+        warnings: ["Disarankan menambahkan Pilihan 2, 3, atau 4 dengan passing grade lebih rendah sebagai cadangan aman."],
+        summary: "Pilihan 1 sangat kompetitif. Pertimbangkan untuk melengkapi Pilihan 2 - 4 sebagai cadangan.",
+      };
+    }
+
+    return {
+      status: "IDEAL",
+      badge: "🟢 STRATEGI OPTIMAL & RASIONAL",
+      badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      warnings: [],
+      summary: "Urutan 4 pilihan prodi kamu sudah terstruktur dengan baik! Bergradasi dari yang terketat di Pilihan 1 hingga pilihan yang lebih aman.",
+    };
+  };
+
+  // Show target picker after loading finishes — per-tryout key so each tryout has its own selection
   useEffect(() => {
     if (!loading && !accessDenied.isDenied) {
       if (tryoutId.startsWith("latihan-")) {
         setTargetConfirmed(true);
         setShowTargetPicker(false);
+        setShowSubtestPicker(false);
         return;
       }
 
-      const saved = localStorage.getItem("tryout_target_ptn");
-      if (!saved) {
-        setShowTargetPicker(true);
-      } else {
-        setSelectedPtn(localStorage.getItem("tryout_target_ptn") || "");
-        setSelectedProdi(localStorage.getItem("tryout_target_prodi") || "");
-        setSelectedPg(Number(localStorage.getItem("tryout_target_pg")) || 695);
-        setTargetConfirmed(true);
+      // Key is per-tryoutId so each tryout stores independently
+      const perKey = `tryout_targets_${tryoutId}`;
+      const savedTargetsStr = localStorage.getItem(perKey);
+
+      if (savedTargetsStr) {
+        try {
+          const parsed = JSON.parse(savedTargetsStr);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTargets(parsed);
+            const p1 = parsed.find((t: ProdiItem | null) => t !== null);
+            if (p1) {
+              setSelectedPtn(p1.univ);
+              setSelectedProdi(p1.prodi);
+              setSelectedPg(Number(p1.passing_grade_est || 695));
+            }
+            // Even when targets are saved, show picker so user can review/adjust
+            setShowTargetPicker(true);
+            return;
+          }
+        } catch (e) {
+          console.warn("Failed to parse saved tryout targets:", e);
+        }
       }
+
+      // No saved targets for this tryout → show picker fresh
+      setShowTargetPicker(true);
     }
   }, [loading, accessDenied.isDenied, tryoutId]);
 
   const handleConfirmTarget = () => {
-    if (!selectedPtn || !selectedProdi) return;
-    localStorage.setItem("tryout_target_ptn", selectedPtn);
-    localStorage.setItem("tryout_target_prodi", selectedProdi);
-    localStorage.setItem("tryout_target_pg", String(selectedPg));
+    const validTargets = targets.filter((t) => t !== null && !!t.prodi);
+    if (validTargets.length === 0) return;
+
+    // Save per-tryout key
+    const perKey = `tryout_targets_${tryoutId}`;
+    localStorage.setItem(perKey, JSON.stringify(targets));
+    // Also keep legacy global keys for result page backward compat
+    localStorage.setItem("tryout_targets", JSON.stringify(targets));
+
+    const p1 = targets[0] || validTargets[0];
+    if (p1) {
+      localStorage.setItem("tryout_target_ptn", p1.univ);
+      localStorage.setItem("tryout_target_prodi", p1.prodi);
+      localStorage.setItem("tryout_target_pg", String(p1.passing_grade_est || 695));
+      setSelectedPtn(p1.univ);
+      setSelectedProdi(p1.prodi);
+      setSelectedPg(Number(p1.passing_grade_est || 695));
+    }
+
     setTargetConfirmed(true);
     setShowTargetPicker(false);
+    setShowSubtestPicker(true);
   };
 
   const handleSkipTarget = () => {
+    const defaultTargets: (ProdiItem | null)[] = [
+      { id: "def-1", univ: "UNIVERSITAS INDONESIA", prodi: "S1 Ilmu Komputer", passing_grade_est: 710 },
+      { id: "def-2", univ: "UNIVERSITAS INDONESIA", prodi: "S1 Sistem Informasi", passing_grade_est: 685 },
+      { id: "def-3", univ: "UNIVERSITAS GADJAH MADA", prodi: "S1 Teknologi Informasi", passing_grade_est: 660 },
+      { id: "def-4", univ: "UNIVERSITAS DIPONEGORO", prodi: "S1 Informatika", passing_grade_est: 630 },
+    ];
+    setTargets(defaultTargets);
+    const perKey = `tryout_targets_${tryoutId}`;
+    localStorage.setItem(perKey, JSON.stringify(defaultTargets));
+    localStorage.setItem("tryout_targets", JSON.stringify(defaultTargets));
     localStorage.setItem("tryout_target_ptn", "UNIVERSITAS INDONESIA");
     localStorage.setItem("tryout_target_prodi", "S1 Ilmu Komputer");
     localStorage.setItem("tryout_target_pg", "710");
@@ -289,16 +488,115 @@ export default function TryoutEnginePage({
     setSelectedPg(710);
     setTargetConfirmed(true);
     setShowTargetPicker(false);
+    setShowSubtestPicker(true);
   };
 
-  // Sticky Countdown Timer Effect
+  const handleMoveSubtest = (index: number, direction: "up" | "down") => {
+    if (!isPremiumUser) return;
+    if (direction === "up" && index > 0) {
+      const newList = [...subtestList];
+      [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+      setSubtestList(newList);
+    } else if (direction === "down" && index < subtestList.length - 1) {
+      const newList = [...subtestList];
+      [newList[index + 1], newList[index]] = [newList[index], newList[index + 1]];
+      setSubtestList(newList);
+    }
+  };
+
+  const handleShuffleSubtests = () => {
+    if (!isPremiumUser) return;
+    const shuffled = [...subtestList].sort(() => Math.random() - 0.5);
+    setSubtestList(shuffled);
+  };
+
+  const handleStartTryout = () => {
+    // Sort questions based on the selected subtest order
+    const orderedQuestions: QuestionItem[] = [];
+    subtestList.forEach(sub => {
+      orderedQuestions.push(...questions.filter(q => (q.subtest || "Lainnya") === sub.name));
+    });
+    setQuestions(orderedQuestions);
+    setActiveSubtestIndex(0);
+    setCurrentIndex(0);
+    const firstDuration = subtestList[0]?.duration || 30;
+    setTimeLeftSeconds(firstDuration * 60);
+    setShowSubtestPicker(false);
+    setHasStarted(true);
+  };
+
+  // Per-subtest derived state
+  const currentSubtest = subtestList[activeSubtestIndex];
+  const currentSubtestQuestions = questions.filter(
+    q => (q.subtest || "Lainnya") === currentSubtest?.name
+  );
+  const currentSubtestAnsweredCount = currentSubtestQuestions.filter(q => answers[q.id]).length;
+  const isLastSubtest = activeSubtestIndex === subtestList.length - 1;
+
+  // Per-subtest countdown timer
   useEffect(() => {
-    if (timeLeftSeconds <= 0) return;
+    if (!hasStarted) return;
+    if (showSubtestBreak) return; // pause when on break screen
+    if (timeLeftSeconds <= 0) {
+      // Auto-advance when time runs out → go to break screen
+      if (!isLastSubtest) {
+        setShowSubtestBreak(true);
+      } else {
+        setIsSubmitDialogOpen(true);
+      }
+      return;
+    }
     const timer = setInterval(() => {
       setTimeLeftSeconds((prev) => prev - 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeftSeconds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeftSeconds, showSubtestBreak]);
+
+  const handleNextSubtest = (autoAdvance = false) => {
+    const nextIndex = activeSubtestIndex + 1;
+    if (nextIndex >= subtestList.length) return;
+    // Show break screen first, don't advance yet
+    setIsSubmitDialogOpen(false);
+    setTimeLeftSeconds(0); // pause timer
+    setShowSubtestBreak(true);
+  };
+
+  const handleStartNextSubtest = () => {
+    const nextIndex = activeSubtestIndex + 1;
+    if (nextIndex >= subtestList.length) return;
+    setActiveSubtestIndex(nextIndex);
+    setCurrentIndex(0);
+    const nextDuration = subtestList[nextIndex]?.duration || 30;
+    setTimeLeftSeconds(nextDuration * 60);
+    setShowSubtestBreak(false);
+  };
+
+  const handleFinalSubmit = () => {
+    startTransition(async () => {
+      // Save final question time before submitting
+      if (currentQ && questionStartTime[currentQ.id]) {
+        const timeSpent = Math.floor((Date.now() - questionStartTime[currentQ.id]) / 1000);
+        setQuestionTimeSpent((prev) => ({
+          ...prev,
+          [currentQ.id]: (prev[currentQ.id] || 0) + timeSpent,
+        }));
+      }
+
+      const res = await submitTryoutAction({
+        tryoutId,
+        answers,
+        questionTimeSpent, // Send timing data
+      });
+
+      if (res?.success && res?.resultId) {
+        router.push(`/tryout/result/${res.resultId}`);
+      } else {
+        alert(res?.error || "Gagal mengumpulkan jawaban. Silakan coba lagi.");
+        setIsSubmitDialogOpen(false);
+      }
+    });
+  };
 
   const formatTimer = (secs: number) => {
     const hours = Math.floor(secs / 3600);
@@ -307,7 +605,28 @@ export default function TryoutEnginePage({
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const currentQ = questions[currentIndex];
+  const currentQ = currentSubtestQuestions[currentIndex];
+
+  // Track time spent on each question
+  useEffect(() => {
+    if (!currentQ || !hasStarted || showSubtestBreak) return;
+
+    // Start timing when question is displayed
+    if (!questionStartTime[currentQ.id]) {
+      setQuestionStartTime((prev) => ({ ...prev, [currentQ.id]: Date.now() }));
+    }
+
+    // Save time spent when navigating away from question
+    return () => {
+      if (questionStartTime[currentQ.id]) {
+        const timeSpent = Math.floor((Date.now() - questionStartTime[currentQ.id]) / 1000);
+        setQuestionTimeSpent((prev) => ({
+          ...prev,
+          [currentQ.id]: (prev[currentQ.id] || 0) + timeSpent,
+        }));
+      }
+    };
+  }, [currentIndex, currentQ, hasStarted, showSubtestBreak]);
 
   const handleSelectOption = (value: string) => {
     if (!currentQ) return;
@@ -319,21 +638,8 @@ export default function TryoutEnginePage({
     setFlagged((prev) => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }));
   };
 
-  const handleSubmitTest = () => {
-    startTransition(async () => {
-      const res = await submitTryoutAction({
-        tryoutId,
-        answers,
-      });
 
-      if (res?.success && res?.resultId) {
-        router.push(`/tryout/result/${res.resultId}`);
-      } else {
-        alert(res?.error || "Gagal mengumpulkan jawaban. Silakan coba lagi.");
-        setIsSubmitDialogOpen(false);
-      }
-    });
-  };
+
 
   if (loading) {
     return (
@@ -348,21 +654,26 @@ export default function TryoutEnginePage({
   if (accessDenied.isDenied) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans text-center">
-        <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg">
-          <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+        <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-lg border border-slate-200">
+          <div className="h-16 w-16 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-200">
             <AlertTriangle className="h-8 w-8 text-amber-500" />
           </div>
           <h2 className="text-xl font-extrabold text-slate-900 mb-2">Batas Pengerjaan Habis</h2>
           <p className="text-sm text-slate-500 mb-6">{accessDenied.reason}</p>
           
           <div className="space-y-3">
-            {accessDenied.requiresUpgrade && (
-              <Button className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl gap-2 shadow-sm" onClick={() => router.push("/dashboard/student/modul")}>
-                <Target className="h-4 w-4" />
-                Upgrade ke Premium
+            {accessDenied.resultId && (
+              <Button className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm" onClick={() => router.push(`/tryout/result/${accessDenied.resultId}`)}>
+                Lihat Hasil Try Out
               </Button>
             )}
-            <Button variant="outline" className="w-full h-11 border-slate-200 font-semibold rounded-xl" onClick={() => router.push("/dashboard/student")}>
+            {accessDenied.requiresUpgrade && (
+              <Button className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl gap-2 shadow-sm" onClick={() => router.push("/pricing")}>
+                <Target className="h-4 w-4" />
+                Upgrade ke Premium untuk Coba Lagi
+              </Button>
+            )}
+            <Button variant="outline" className="w-full h-11 border-slate-200 font-semibold rounded-xl text-slate-600 hover:bg-slate-50" onClick={() => router.push("/dashboard/student")}>
               Kembali ke Dashboard
             </Button>
           </div>
@@ -371,106 +682,217 @@ export default function TryoutEnginePage({
     );
   }
 
-  // --- TARGET JURUSAN PICKER SCREEN ---
+  // --- TARGET JURUSAN PICKER SCREEN (4 PRODI & SMART VERDICT) ---
   if (showTargetPicker) {
+    const verdict = getSmartVerdict();
+
     return (
-      <div className="min-h-screen bg-linear-to-br from-blue-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center p-4 font-sans">
-        <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div className="min-h-screen bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 font-sans py-8">
+        <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
           {/* Header */}
-          <div className="bg-linear-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center">
-                <Target className="h-5 w-5 text-white" />
+          <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                <Target className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <span className="text-xs font-semibold text-blue-100 uppercase tracking-wider block">Langkah Penting</span>
-                <h2 className="text-lg font-bold">Pilih PTN Target Kamu</h2>
+                <h2 className="text-base font-extrabold tracking-tight">Pilihan Target Jurusan</h2>
+                <p className="text-xs text-slate-400">Atur urutan 1–4 prodi impian kamu sebelum try out</p>
               </div>
             </div>
-            <p className="text-xs text-blue-100 leading-relaxed">
-              Hasil Try Out akan langsung membandingkan skormu dengan Passing Grade jurusan impianmu secara akurat.
-            </p>
           </div>
 
           {/* Body */}
-          <div className="p-6 space-y-5">
+          <div className="p-5 space-y-5">
+            {/* Search Input for Active Slot */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                Cari PTN atau Jurusan Impian
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
+                  <Search className="h-3.5 w-3.5 text-blue-600" />
+                  Cari & Isi Jurusan Pilihan {activeTargetSlot + 1}:
+                </label>
+                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  Slot Pilihan {activeTargetSlot + 1} Aktif
+                </span>
+              </div>
               <div className="relative">
                 <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <Input
                   value={prodiSearch}
                   onChange={(e) => setProdiSearch(e.target.value)}
-                  placeholder="Ketik cth: Kedokteran UI, Teknik ITB..."
-                  className="pl-10 h-12 rounded-xl text-sm border-slate-300 font-medium"
+                  placeholder="Ketik nama jurusan / PTN (cth: Kedokteran UI, Teknik ITB)..."
+                  className="pl-10 h-11 rounded-2xl text-xs border-slate-200 font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
                 />
               </div>
-              <p className="text-[11px] text-slate-400">Ketik minimal 2 karakter untuk melihat daftar saran PTN & Prodi</p>
-            </div>
 
-            {/* Suggestions list */}
-            {filteredProdi.length > 0 && (
-              <div className="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 rounded-2xl p-2 bg-slate-50">
-                {filteredProdi.map((p) => {
-                  const isSelected = selectedPtn === p.univ && selectedProdi === p.prodi;
-                  return (
+              {/* Autocomplete Suggestions dropdown */}
+              {filteredProdi.length > 0 && (
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-2xl p-2 bg-white shadow-xl animate-in fade-in duration-150 relative z-20">
+                  {filteredProdi.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setSelectedPtn(p.univ);
-                        setSelectedProdi(`${p.jenjang ? `${p.jenjang} ` : ""}${p.prodi}`);
-                        if (p.passing_grade_est) setSelectedPg(Number(p.passing_grade_est));
+                        const selectedItem: ProdiItem = {
+                          id: p.id,
+                          univ: p.univ,
+                          prodi: `${p.jenjang ? `${p.jenjang} ` : ""}${p.prodi}`,
+                          passing_grade_est: Number(p.passing_grade_est || 650),
+                        };
+                        setTargets((prev) => {
+                          const copy = [...prev];
+                          copy[activeTargetSlot] = selectedItem;
+                          // Auto advance to next slot if available and empty
+                          if (activeTargetSlot < 3 && !copy[activeTargetSlot + 1]) {
+                            setActiveTargetSlot(activeTargetSlot + 1);
+                          }
+                          return copy;
+                        });
+                        setProdiSearch("");
+                        setProdiList([]);
                       }}
-                      className={`w-full text-left p-3 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                        isSelected
-                          ? "bg-blue-600 text-white font-bold"
-                          : "hover:bg-slate-200 text-slate-800 bg-white"
-                      }`}
+                      className="w-full text-left p-2.5 rounded-xl text-xs flex items-center justify-between hover:bg-blue-600 hover:text-white transition-colors bg-slate-50/60 group"
                     >
                       <div className="truncate pr-2">
-                        <span className="font-bold block truncate">{p.prodi}</span>
-                        <span className="opacity-80 block text-[11px] truncate">{p.univ}</span>
+                        <span className="font-bold block truncate text-slate-900 group-hover:text-white">{p.prodi}</span>
+                        <span className="text-[11px] block truncate text-slate-500 group-hover:text-blue-100">{p.univ}</span>
                       </div>
                       {p.passing_grade_est && (
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0 ${isSelected ? "bg-white/20 text-white" : "bg-blue-50 text-blue-700"}`}>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 bg-blue-100 text-blue-800 group-hover:bg-white/20 group-hover:text-white">
                           PG ~{p.passing_grade_est}
                         </span>
                       )}
                     </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 4 Compact Choice Slots */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                <span>Daftar 4 Pilihan Kamu</span>
+                <span>Klik slot untuk mengubah</span>
+              </div>
+              <div className="space-y-2">
+                {[0, 1, 2, 3].map((slotIdx) => {
+                  const item = targets[slotIdx];
+                  const isActive = activeTargetSlot === slotIdx;
+                  const slotNum = slotIdx + 1;
+
+                  return (
+                    <div
+                      key={slotIdx}
+                      onClick={() => setActiveTargetSlot(slotIdx)}
+                      className={`cursor-pointer rounded-2xl p-3 border transition-all flex items-center justify-between gap-3 ${
+                        isActive
+                          ? "border-blue-500 bg-blue-50/70 ring-2 ring-blue-500/20 shadow-xs"
+                          : item
+                          ? "border-slate-200 bg-white hover:border-slate-300"
+                          : "border-dashed border-slate-300 bg-slate-50/50 hover:bg-slate-100/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-xs"
+                            : item
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-200 text-slate-500"
+                        }`}>
+                          P{slotNum}
+                        </div>
+
+                        {item ? (
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-extrabold text-slate-900 truncate">{item.prodi}</p>
+                              {slotIdx === 0 && (
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded-md shrink-0">Profil Impian</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 font-medium truncate">{item.univ}</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400">Pilihan {slotNum} belum diisi</p>
+                            <p className="text-[10px] text-slate-400">Klik & cari prodi di atas untuk mengisi</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {item ? (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">
+                            PG {item.passing_grade_est || 650}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTargets((prev) => {
+                                const copy = [...prev];
+                                copy[slotIdx] = null;
+                                return copy;
+                              });
+                            }}
+                            className="text-xs text-slate-400 hover:text-rose-500 font-bold p-1 hover:bg-rose-50 rounded-lg transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
+                          + Pilih
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
               </div>
-            )}
+            </div>
 
-            {/* Selected Summary Card */}
-            {selectedPtn && selectedProdi && (
-              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
-                <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block">Jurusan Terpilih</span>
-                <p className="text-sm font-bold text-slate-900">{selectedProdi}</p>
-                <p className="text-xs text-slate-600">{selectedPtn} • Estimasi PG: <strong className="text-blue-700">{selectedPg}</strong></p>
+            {/* Smart Verdict & Risk Warning Banner */}
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <BrainCircuit className="h-3.5 w-3.5 text-blue-600" />
+                  Smart Verdict Strategi SNBT
+                </span>
+                <Badge variant="outline" className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${verdict.badgeColor}`}>
+                  {verdict.badge}
+                </Badge>
               </div>
-            )}
+
+              {/* Warning Alert Box */}
+              {verdict.warnings.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                    <span>Peringatan Urutan Pilihan:</span>
+                  </div>
+                  <ul className="space-y-1 pl-5 list-disc text-[11px] leading-relaxed">
+                    {verdict.warnings.map((warn, wIdx) => (
+                      <li key={wIdx} className="font-semibold text-rose-900">{warn}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/80 font-medium">
+                {verdict.summary}
+              </p>
+            </div>
 
             {/* Action Buttons */}
-            <div className="space-y-2 pt-2">
+            <div className="pt-2">
               <Button
-                disabled={!selectedPtn || !selectedProdi}
+                disabled={!targets[0] || !targets[0].prodi}
                 onClick={handleConfirmTarget}
-                className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md"
+                className="w-full h-11 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-2xl gap-2 shadow-md transition-all"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>Mulai Try Out dengan Target Ini</span>
-              </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={handleSkipTarget}
-                className="w-full h-10 text-xs text-slate-500 hover:text-slate-900 rounded-xl"
-              >
-                Gunakan Target Default (S1 Ilmu Komputer UI)
+                <span>Simpan Target & Lanjut Ke Try Out</span>
               </Button>
             </div>
           </div>
@@ -479,68 +901,279 @@ export default function TryoutEnginePage({
     );
   }
 
+  // --- SUBTEST PICKER SCREEN ---
+  if (showSubtestPicker) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="p-6 sm:p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-extrabold text-slate-900">Daftar Subtes</h2>
+              <p className="text-sm text-slate-500">
+                {isPremiumUser 
+                  ? "Atur urutan pengerjaan subtes sesuai dengan strategi terbaikmu." 
+                  : "Urutan pengerjaan telah ditetapkan. Upgrade ke Premium untuk bebas memilih urutan subtes."}
+              </p>
+            </div>
+
+            {isPremiumUser && (
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleShuffleSubtests} 
+                  variant="outline" 
+                  className="gap-2 h-9 text-xs font-semibold rounded-xl"
+                >
+                  <Shuffle className="h-4 w-4" />
+                  Acak Urutan
+                </Button>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {subtestList.map((sub, index) => (
+                <div 
+                  key={sub.name} 
+                  className={`flex items-center justify-between p-4 rounded-2xl border ${isPremiumUser ? 'bg-white border-slate-200 hover:border-blue-300 transition-colors' : 'bg-slate-50 border-slate-200'}`}
+                >
+                  <div className="flex items-center gap-4">
+                    {isPremiumUser ? (
+                      <div className="flex flex-col gap-1 items-center justify-center text-slate-400">
+                        <button 
+                          onClick={() => handleMoveSubtest(index, "up")} 
+                          disabled={index === 0}
+                          className="hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4 rotate-90" />
+                        </button>
+                        <GripVertical className="h-4 w-4 opacity-30" />
+                        <button 
+                          onClick={() => handleMoveSubtest(index, "down")} 
+                          disabled={index === subtestList.length - 1}
+                          className="hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4 -rotate-90" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                        <Lock className="h-4 w-4" />
+                      </div>
+                    )}
+                    
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        <h4 className="text-sm font-bold text-slate-900 leading-tight">{sub.name}</h4>
+                        <Badge variant="outline" className="text-[10px] font-semibold px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                          {sub.category}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
+                        {sub.duration > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {sub.duration} menit
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          {sub.count} Soal
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 shrink-0">
+                    Urutan ke-{index + 1}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={handleStartTryout}
+              className="w-full h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md mt-6"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Mulai Try Out Sekarang</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- BREAK / JEDA SCREEN antara subtes ---
+  if (showSubtestBreak) {
+    const finishedSubtest = subtestList[activeSubtestIndex];
+    const nextSubtest = subtestList[activeSubtestIndex + 1];
+    const finishedQs = questions.filter(q => (q.subtest || "Lainnya") === finishedSubtest?.name);
+    const finishedAnswered = finishedQs.filter(q => answers[q.id]).length;
+
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-lg space-y-4">
+
+          {/* Completion card */}
+          <div className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+            {/* Blue header */}
+            <div className="bg-blue-600 px-6 py-5 text-white text-center">
+              <div className="h-14 w-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="h-7 w-7 text-white" />
+              </div>
+              <h2 className="text-xl font-extrabold">Subtes Selesai!</h2>
+              <p className="text-sm text-blue-100 mt-1">{finishedSubtest?.name}</p>
+            </div>
+
+            {/* Stats */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                  <p className="text-2xl font-extrabold text-blue-700">{finishedAnswered}</p>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">Soal Terjawab</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                  <p className="text-2xl font-extrabold text-slate-700">{finishedQs.length - finishedAnswered}</p>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">Soal Dikosongkan</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+                <span>Progress subtes ini</span>
+                <span className="font-bold text-slate-700">{finishedAnswered}/{finishedQs.length}</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  style={{ width: `${finishedQs.length > 0 ? (finishedAnswered / finishedQs.length) * 100 : 0}%` }}
+                />
+              </div>
+
+              <p className="text-xs text-slate-500 text-center bg-blue-50 text-blue-700 p-2.5 rounded-xl border border-blue-100 font-medium">
+                Jawaban subtes ini telah dikunci. Kamu tidak bisa kembali ke subtes sebelumnya.
+              </p>
+            </div>
+          </div>
+
+          {/* Next subtest info card */}
+          {nextSubtest && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Subtes Berikutnya</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">{nextSubtest.name}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{nextSubtest.category}</p>
+                </div>
+                <div className="text-right text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center gap-1 justify-end">
+                    <BookOpen className="h-3 w-3 text-blue-600" />
+                    <span className="font-semibold">{nextSubtest.count} Soal</span>
+                  </div>
+                  <div className="flex items-center gap-1 justify-end">
+                    <Clock className="h-3 w-3 text-blue-600" />
+                    <span className="font-semibold">{nextSubtest.duration} menit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action button */}
+          <Button
+            onClick={handleStartNextSubtest}
+            className="w-full h-13 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-2xl gap-2 shadow-md py-4"
+          >
+            <ArrowRight className="h-5 w-5" />
+            <span>Lanjut ke {nextSubtest?.name || "Subtes Berikutnya"}</span>
+          </Button>
+
+          <p className="text-center text-xs text-slate-400 font-medium pt-1">
+            Kamu bebas istirahat sejenak. Klik lanjut jika sudah siap.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/70 font-sans pb-12">
-      {/* Top Header Navbar with Sticky Timer */}
+      {/* Top Header Navbar */}
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-xs px-4 sm:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image
-            src="/logo.svg"
-            alt="UpdatePTN Logo"
-            width={32}
-            height={32}
-            className="h-8 w-auto object-contain"
-          />
+          <Image src="/logo.svg" alt="UpdatePTN Logo" width={32} height={32} className="h-8 w-auto object-contain" />
           <div>
             <span className="font-extrabold text-sm sm:text-base text-slate-900 block leading-tight">
-              Update<span className="text-blue-600">PTN</span> CBT Engine
+              Update<span className="text-blue-600">PTN</span>
             </span>
             <span className="text-[11px] text-slate-500 font-semibold hidden sm:block">
-              Lembar Ujian SNBT Standard IRT
+              {currentSubtest?.category || "SNBT Standard IRT"} • Subtes {activeSubtestIndex + 1}/{subtestList.length}
             </span>
           </div>
         </div>
 
-        {/* Sticky Timer Display */}
-        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200/80 px-4 py-1.5 rounded-full">
-          <Clock className="h-4 w-4 text-blue-600 animate-pulse" />
-          <span className="font-mono text-sm sm:text-base font-extrabold text-blue-700">
+        {/* Timer per subtes */}
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
+          timeLeftSeconds < 300 
+            ? "bg-red-50 border-red-200" 
+            : "bg-blue-50 border-blue-200/80"
+        }`}>
+          <Clock className={`h-4 w-4 animate-pulse ${timeLeftSeconds < 300 ? "text-red-500" : "text-blue-600"}`} />
+          <span className={`font-mono text-sm sm:text-base font-extrabold ${timeLeftSeconds < 300 ? "text-red-600" : "text-blue-700"}`}>
             {formatTimer(timeLeftSeconds)}
           </span>
         </div>
 
-        {/* Finish & Submit Trigger Modal */}
+        {/* Selesai Subtes / Kumpulkan Button */}
         <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
           <DialogTrigger render={
-            <Button variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl gap-2 h-10 px-4 shadow-sm">
-              <Send className="h-4 w-4" />
-              <span>Selesai & Kumpulkan</span>
+            <Button
+              variant="default"
+              className={`font-bold text-xs sm:text-sm rounded-xl gap-2 h-10 px-4 shadow-sm ${
+                isLastSubtest
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+            >
+              {isLastSubtest ? (
+                <><FileCheck2 className="h-4 w-4" /><span>Selesai &amp; Kumpulkan</span></>
+              ) : (
+                <><ArrowRight className="h-4 w-4" /><span className="hidden sm:inline">Selesai Subtes Ini</span><span className="sm:hidden">Selesai</span></>
+              )}
             </Button>
           } />
+
           <DialogContent className="sm:max-w-md rounded-2xl bg-white p-6">
             <DialogHeader className="space-y-3">
-              <div className="h-12 w-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mx-auto">
-                <AlertTriangle className="h-6 w-6" />
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mx-auto border ${
+                isLastSubtest ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-blue-50 border-blue-200 text-blue-600"
+              }`}>
+                {isLastSubtest ? <FileCheck2 className="h-6 w-6" /> : <ArrowRight className="h-6 w-6" />}
               </div>
               <DialogTitle className="text-center text-xl font-bold text-slate-900">
-                Kumpulkan Jawaban Try Out?
+                {isLastSubtest ? "Kumpulkan Semua Jawaban?" : `Selesai: ${currentSubtest?.name}?`}
               </DialogTitle>
               <DialogDescription className="text-center text-xs text-slate-500 leading-relaxed">
-                Kamu telah menjawab <strong>{Object.keys(answers).length}</strong> dari total <strong>{questions.length}</strong> soal. Pastikan seluruh soal telah diperiksa sebelum mengakhiri sesi.
+                {isLastSubtest
+                  ? `Ini adalah subtes terakhir. Kamu akan mengumpulkan seluruh jawaban dari semua subtes.`
+                  : `Kamu akan melanjutkan ke subtes berikutnya: ${subtestList[activeSubtestIndex + 1]?.name || ""}. Jawaban subtes ini akan dikunci.`
+                }
               </DialogDescription>
             </DialogHeader>
 
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 text-xs text-slate-600 my-2">
               <div className="flex justify-between">
-                <span>Soal Terjawab:</span>
+                <span>Subtes saat ini:</span>
+                <strong className="text-slate-900">{currentSubtest?.name}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Terjawab di subtes ini:</span>
+                <strong className="text-blue-700">{currentSubtestAnsweredCount} / {currentSubtestQuestions.length} Soal</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Total terjawab:</span>
                 <strong className="text-slate-900">{Object.keys(answers).length} Soal</strong>
               </div>
               <div className="flex justify-between">
-                <span>Ditandai Ragu-Ragu:</span>
-                <strong className="text-amber-600">{Object.values(flagged).filter(Boolean).length} Soal</strong>
-              </div>
-              <div className="flex justify-between">
-                <span>Sisa Waktu:</span>
+                <span>Sisa waktu subtes:</span>
                 <strong className="text-blue-600 font-mono">{formatTimer(timeLeftSeconds)}</strong>
               </div>
             </div>
@@ -555,25 +1188,52 @@ export default function TryoutEnginePage({
               </Button>
               <Button
                 disabled={isPending}
-                onClick={handleSubmitTest}
-                className="w-full sm:w-1/2 rounded-xl text-xs font-bold h-11 bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm"
+                onClick={isLastSubtest ? handleFinalSubmit : () => handleNextSubtest()}
+                className={`w-full sm:w-1/2 rounded-xl text-xs font-bold h-11 gap-2 shadow-sm ${
+                  isLastSubtest
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
               >
                 {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Memproses IRT...</span>
-                  </>
+                  <><Loader2 className="h-4 w-4 animate-spin" /><span>Memproses...</span></>
+                ) : isLastSubtest ? (
+                  <><FileCheck2 className="h-4 w-4" /><span>Ya, Kumpulkan</span></>
                 ) : (
-                  <>
-                    <FileCheck2 className="h-4 w-4" />
-                    <span>Ya, Kumpulkan Now</span>
-                  </>
+                  <><ArrowRight className="h-4 w-4" /><span>Lanjut Subtes Berikutnya</span></>
                 )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </header>
+
+      {/* Subtest Progress Bar */}
+      <div className="bg-white border-b border-slate-100 px-4 sm:px-8 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {subtestList.map((sub, idx) => {
+              const subQs = questions.filter(q => (q.subtest || "Lainnya") === sub.name);
+              const subAnswered = subQs.filter(q => answers[q.id]).length;
+              const isDone = idx < activeSubtestIndex;
+              const isActive = idx === activeSubtestIndex;
+              return (
+                <div key={sub.name} className={`flex items-center gap-2 shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  isDone ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
+                  isActive ? "bg-blue-600 border-blue-600 text-white" :
+                  "bg-slate-100 border-slate-200 text-slate-400"
+                }`}>
+                  {isDone && <CheckCircle2 className="h-3 w-3" />}
+                  {isActive && <BookOpen className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{sub.name}</span>
+                  <span className="sm:hidden">{idx + 1}</span>
+                  {isActive && <span className="opacity-75">({subAnswered}/{subQs.length})</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* Main Workspace Layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -582,13 +1242,13 @@ export default function TryoutEnginePage({
           <Card className="bg-white border border-slate-200/80 shadow-xs rounded-2xl p-6 sm:p-8 space-y-6">
             {/* Question Header Status Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200">
-                  Soal Nomor {currentIndex + 1} / {questions.length}
+                  Soal {currentIndex + 1} / {currentSubtestQuestions.length}
                 </Badge>
-                <span className="text-xs font-semibold text-slate-500">
-                  Subtes: <strong className="text-slate-800">{currentQ?.subtest || "Penalaran Umum"}</strong>
-                </span>
+                <Badge variant="outline" className="px-2 py-1 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border-slate-200">
+                  {currentSubtest?.name}
+                </Badge>
               </div>
 
               <Button
@@ -598,7 +1258,7 @@ export default function TryoutEnginePage({
                 className="rounded-xl gap-2 font-semibold text-xs h-9"
               >
                 <Flag className="h-3.5 w-3.5" />
-                <span>{flagged[currentQ?.id] ? "Ragu-Ragu (Tersimpan)" : "Tandai Ragu-Ragu"}</span>
+                <span>{flagged[currentQ?.id] ? "Ragu-Ragu ✓" : "Tandai Ragu-Ragu"}</span>
               </Button>
             </div>
 
@@ -612,7 +1272,6 @@ export default function TryoutEnginePage({
             {/* Options A - E Selector */}
             <div className="space-y-3 pt-2">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pilihan Jawaban:</p>
-              
               <RadioGroup
                 value={answers[currentQ?.id] || ""}
                 onValueChange={handleSelectOption}
@@ -636,11 +1295,7 @@ export default function TryoutEnginePage({
                           : "bg-white border-slate-200 hover:bg-slate-50 text-slate-800"
                       }`}
                     >
-                      <RadioGroupItem
-                        value={opt.key}
-                        id={`opt-${opt.key}`}
-                        className="mt-0.5 border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
+                      <RadioGroupItem value={opt.key} id={`opt-${opt.key}`} className="mt-0.5 border-slate-300 text-blue-600 focus:ring-blue-500" />
                       <div className="flex gap-2">
                         <span className="font-bold text-sm text-blue-600">{opt.key}.</span>
                         <span className="text-sm font-normal leading-relaxed">{opt.text}</span>
@@ -664,7 +1319,7 @@ export default function TryoutEnginePage({
               </Button>
 
               <Button
-                disabled={currentIndex === questions.length - 1}
+                disabled={currentIndex === currentSubtestQuestions.length - 1}
                 onClick={() => setCurrentIndex((prev) => prev + 1)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl gap-2 h-11 px-6"
               >
@@ -675,38 +1330,36 @@ export default function TryoutEnginePage({
           </Card>
         </div>
 
-        {/* Right Sidebar: Question Number Palette Grid */}
+        {/* Right Sidebar: Question Number Palette (current subtest only) */}
         <div className="lg:col-span-4 space-y-6">
           <Card className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 space-y-4 sticky top-20">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">Navigasi Nomor Soal</h3>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Navigasi Soal</h3>
+                <p className="text-[11px] text-slate-400 font-medium">{currentSubtest?.name}</p>
+              </div>
               <Badge variant="outline" className="text-[11px] font-semibold text-slate-500 border-slate-200">
-                {Object.keys(answers).length} / {questions.length} Terjawab
+                {currentSubtestAnsweredCount} / {currentSubtestQuestions.length}
               </Badge>
             </div>
 
-            {/* Palette Grid */}
-            <div className="grid grid-cols-5 gap-2.5">
-              {questions.map((q, idx) => {
+            {/* Palette Grid — only current subtest questions */}
+            <div className="grid grid-cols-5 gap-2">
+              {currentSubtestQuestions.map((q, idx) => {
                 const isCurrent = idx === currentIndex;
                 const isAnswered = Boolean(answers[q.id]);
                 const isFlagged = Boolean(flagged[q.id]);
 
                 let styleClass = "bg-white border-slate-200 text-slate-700 hover:bg-slate-50";
-
-                if (isCurrent) {
-                  styleClass = "ring-2 ring-blue-600 bg-blue-600 text-white font-bold";
-                } else if (isFlagged) {
-                  styleClass = "bg-amber-500 text-white font-bold border-amber-600";
-                } else if (isAnswered) {
-                  styleClass = "bg-blue-50 text-blue-700 border-blue-300 font-bold";
-                }
+                if (isCurrent) styleClass = "ring-2 ring-blue-600 bg-blue-600 text-white font-bold";
+                else if (isFlagged) styleClass = "bg-amber-500 text-white font-bold border-amber-600";
+                else if (isAnswered) styleClass = "bg-blue-50 text-blue-700 border-blue-300 font-bold";
 
                 return (
                   <button
                     key={q.id}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`h-11 rounded-xl text-xs font-semibold flex items-center justify-center border transition-all ${styleClass}`}
+                    className={`h-10 rounded-xl text-xs font-semibold flex items-center justify-center border transition-all ${styleClass}`}
                   >
                     {idx + 1}
                   </button>
@@ -715,23 +1368,38 @@ export default function TryoutEnginePage({
             </div>
 
             {/* Legend */}
-            <div className="pt-4 border-t border-slate-100 space-y-2 text-[11px] text-slate-500 font-medium">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-blue-600 inline-block"></span>
-                <span>Sedang Dikerjakan</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-blue-50 border border-blue-300 inline-block"></span>
-                <span>Sudah Dijawab</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-amber-500 inline-block"></span>
-                <span>Ragu-Ragu</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-white border border-slate-300 inline-block"></span>
-                <span>Belum Dijawab</span>
-              </div>
+            <div className="pt-3 border-t border-slate-100 space-y-1.5 text-[11px] text-slate-500 font-medium">
+              <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-blue-600 inline-block" /><span>Sedang Dikerjakan</span></div>
+              <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-blue-50 border border-blue-300 inline-block" /><span>Sudah Dijawab</span></div>
+              <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-500 inline-block" /><span>Ragu-Ragu</span></div>
+              <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-white border border-slate-300 inline-block" /><span>Belum Dijawab</span></div>
+            </div>
+
+            {/* Subtest list summary */}
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Semua Subtes</p>
+              {subtestList.map((sub, idx) => {
+                const subQs = questions.filter(q => (q.subtest || "Lainnya") === sub.name);
+                const subAnswered = subQs.filter(q => answers[q.id]).length;
+                const isDone = idx < activeSubtestIndex;
+                const isActive = idx === activeSubtestIndex;
+                return (
+                  <div key={sub.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      {isDone
+                        ? <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                        : <div className={`h-2 w-2 rounded-full shrink-0 ${isActive ? "bg-blue-500" : "bg-slate-300"}`} />
+                      }
+                      <span className={`font-medium truncate max-w-[130px] ${isActive ? "text-blue-700 font-bold" : isDone ? "text-emerald-700" : "text-slate-400"}`}>
+                        {sub.name}
+                      </span>
+                    </div>
+                    <span className={`font-semibold ${isDone ? "text-emerald-600" : isActive ? "text-blue-600" : "text-slate-400"}`}>
+                      {subAnswered}/{subQs.length}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>

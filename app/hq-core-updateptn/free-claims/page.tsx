@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { updateFreeClaimAction } from "@/actions/free-claims";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -89,13 +90,18 @@ export default function FreeClaimsPage() {
   const handleAction = async (id: string, action: "approved" | "rejected") => {
     try {
       setProcessingId(id);
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("free_access_requests")
-        .update({ status: action, updated_at: new Date().toISOString() })
-        .eq("id", id);
+      
+      const res = await updateFreeClaimAction(id, action);
+      if (!res.success) {
+        // Fallback to client client
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("free_access_requests")
+          .update({ status: action, updated_at: new Date().toISOString() })
+          .eq("id", id);
 
-      if (error) throw error;
+        if (error) throw new Error(res.error || error.message);
+      }
 
       setClaims((prev) =>
         prev.map((c) => (c.id === id ? { ...c, status: action } : c))

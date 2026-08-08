@@ -105,7 +105,7 @@ export default function JadwalTryOutPage() {
                         )}
                         <div className="flex items-center gap-1 text-xs text-slate-500">
                           <Users className="h-3.5 w-3.5" />
-                          <span>{tryout.participants_count.toLocaleString()}</span>
+                          <span>{(tryout.participants_count ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
 

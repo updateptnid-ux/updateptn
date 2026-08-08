@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 export async function submitTryoutAction(payload: {
   tryoutId: string;
   answers: Record<string, string>; // questionId -> selectedOption ("A" | "B" | "C" | "D" | "E")
+  questionTimeSpent?: Record<string, number>; // questionId -> seconds spent
 }) {
-  const { tryoutId, answers } = payload;
+  const { tryoutId, answers, questionTimeSpent = {} } = payload;
   const supabase = await createClient();
 
   // Get current authenticated user
@@ -27,41 +28,11 @@ export async function submitTryoutAction(payload: {
     .select("id, correct_answer, irt_discrimination, irt_difficulty, subtest")
     .eq("tryout_id", tryoutId);
 
-  if (!questions || questions.length === 0) {
-    // Fallback: Fetch all available questions in database
-    const { data: fallbackQuestions } = await supabase
-      .from("questions")
-      .select("id, correct_answer, irt_discrimination, irt_difficulty, subtest");
-    questions = fallbackQuestions;
-  }
-
+  // Jika tidak ada soal untuk try-out ini, jangan lanjutkan
   if (qError || !questions || questions.length === 0) {
-    // Basic scoring fallback if no questions exist in DB at all
-    const answeredKeys = Object.keys(answers);
-    const totalQuestions = Math.max(answeredKeys.length, 10);
-    const totalCorrect = Math.round(answeredKeys.length * 0.7);
-    const irtScore = Math.round(400 + (totalCorrect / totalQuestions) * 500);
-
-    const { data: resultData } = await supabase
-      .from("results")
-      .insert({
-        user_id: user.id,
-        tryout_id: tryoutId.startsWith("latihan-") ? "11111111-1111-1111-1111-111111111111" : tryoutId,
-        score: irtScore,
-        irt_score: irtScore,
-        total_correct: totalCorrect,
-        total_questions: totalQuestions,
-      })
-      .select("id")
-      .single();
-
-    if (resultData) {
-      return { success: true, resultId: resultData.id };
-    }
-
     return { 
       success: false, 
-      error: "No questions found for this tryout. Please contact admin." 
+      error: "Paket try-out ini belum memiliki soal. Silakan hubungi admin untuk melengkapi soal try-out ini terlebih dahulu." 
     };
   }
 
@@ -69,11 +40,36 @@ export async function submitTryoutAction(payload: {
   let totalQuestions = questions.length;
   let weightedScore = 0;
   let maxPossibleWeight = 0;
+  
+  const subtestScores: Record<string, { correct: number; total: number; weighted: number; maxWeight: number; irt_score: number }> = {};
+
+  // Initialize subtestScores
+  questions.forEach((q) => {
+    const sub = q.subtest || "Lainnya";
+    if (!subtestScores[sub]) {
+      subtestScores[sub] = { correct: 0, total: 0, weighted: 0, maxWeight: 0, irt_score: 0 };
+    }
+    subtestScores[sub].total += 1;
+  });
 
   // Calculate scores with IRT weighting
+  const questionAnalytics: any[] = [];
+  
   questions.forEach((q) => {
     const userAnswer = answers[q.id];
     const isCorrect = userAnswer && userAnswer.toUpperCase() === q.correct_answer.toUpperCase();
+    const sub = q.subtest || "Lainnya";
+    
+    // Store analytics for this question
+    questionAnalytics.push({
+      question_id: q.id,
+      user_answer: userAnswer || null,
+      correct_answer: q.correct_answer,
+      is_correct: isCorrect,
+      time_spent_seconds: questionTimeSpent[q.id] || 0,
+      skipped: !userAnswer,
+      subtest: sub,
+    });
     
     // IRT Parameters (with defaults if not set)
     const discrimination = q.irt_discrimination || 1.5; // Default: medium discrimination
@@ -84,16 +80,26 @@ export async function submitTryoutAction(payload: {
     const weight = 1.0 + (Math.max(difficulty, 0) * 0.3);
     
     maxPossibleWeight += weight;
+    subtestScores[sub].maxWeight += weight;
     
     if (isCorrect) {
       totalCorrect += 1;
       weightedScore += weight;
+      subtestScores[sub].correct += 1;
+      subtestScores[sub].weighted += weight;
     }
   });
 
   // IRT Score Calculation (Scale: 200 - 1000)
   const weightedRatio = weightedScore / Math.max(maxPossibleWeight, 1);
   const irtScore = Math.round(200 + (weightedRatio * 800));
+
+  // Calculate per-subtest IRT Score
+  Object.keys(subtestScores).forEach(sub => {
+    const s = subtestScores[sub];
+    const subRatio = s.weighted / Math.max(s.maxWeight, 1);
+    s.irt_score = Math.round(200 + (subRatio * 800));
+  });
 
   // Simple ability estimate (theta) for future analysis
   const totalWrong = totalQuestions - totalCorrect;
@@ -111,6 +117,8 @@ export async function submitTryoutAction(payload: {
       irt_score: irtScore,
       total_correct: totalCorrect,
       total_questions: totalQuestions,
+      subtest_scores: subtestScores,
+      question_analytics: questionAnalytics, // Store detailed analytics
     })
     .select("id")
     .single();

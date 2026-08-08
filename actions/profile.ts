@@ -19,12 +19,16 @@ export async function updateProfileAction(formData: FormData) {
   const targetUniv = formData.get("targetUniv") as string;
   const targetProdi = formData.get("targetProdi") as string;
   const bio = formData.get("bio") as string;
+  const provinsi = formData.get("provinsi") as string;
 
   if (!fullName?.trim()) {
     return { error: "Nama lengkap tidak boleh kosong." };
   }
 
-  const { error } = await supabase.auth.updateUser({
+  const avatarUrl = formData.get("avatarUrl") as string;
+
+  // 1. Update auth metadata
+  const { error: authError } = await supabase.auth.updateUser({
     data: {
       ...user.user_metadata,
       full_name: fullName.trim(),
@@ -32,19 +36,34 @@ export async function updateProfileAction(formData: FormData) {
       target_univ: targetUniv?.trim() || "",
       target_prodi: targetProdi?.trim() || "",
       bio: bio?.trim() || "",
+      provinsi: provinsi?.trim() || "",
+      avatar_url: avatarUrl?.trim() || "",
       // keep legacy
       target_ptn: targetUniv?.trim() || "",
     },
   });
 
-  if (error) {
-    return { error: error.message };
+  if (authError) {
+    return { error: authError.message };
   }
+
+  // 2. Update profiles table directly agar leaderboard langsung realtime
+  await supabase.from("profiles").upsert({
+    id: user.id,
+    full_name: fullName.trim(),
+    asal_sekolah: asalSekolah?.trim() || "",
+    target_ptn: targetUniv?.trim() || "",
+    target_prodi: targetProdi?.trim() || "",
+    bio: bio?.trim() || "",
+    provinsi: provinsi?.trim() || "",
+  }, { onConflict: "id" });
 
   revalidatePath("/profile");
   revalidatePath("/dashboard/student");
+  revalidatePath("/leaderboard");
   return { success: true };
 }
+
 
 export async function changePasswordAction(formData: FormData) {
   const supabase = await createClient();

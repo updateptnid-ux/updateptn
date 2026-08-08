@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import TryoutTerbaruSection from "@/components/landing/tryout-terbaru-section";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -526,6 +527,9 @@ export default function LandingPage() {
           </StaggerContainer>
         </div>
       </section>
+
+      {/* ---------------- 5b. TRYOUT TERBARU SECTION ---------------- */}
+      <TryoutTerbaruSection />
 
       {/* ---------------- 6. HOW IT WORKS (4-Step Visual Flow) ---------------- */}
       <section id="keunggulan" className="py-20 bg-white border-b border-slate-200/80">

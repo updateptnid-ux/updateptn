@@ -74,12 +74,6 @@ export default function SubtesDetailPage() {
   const [loading, setLoading] = useState(true);
   const [completedModules, setCompletedModules] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (subtesId) {
-      fetchModules();
-    }
-  }, [subtesId]);
-
   const fetchModules = async () => {
     try {
       setLoading(true);
@@ -103,6 +97,12 @@ export default function SubtesDetailPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (subtesId) {
+      fetchModules();
+    }
+  }, [subtesId]);
 
   if (!metadata) {
     return (

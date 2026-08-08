@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
 import {
   Trophy, Medal, Crown, TrendingUp, Users, Loader2,
-  GraduationCap, Flame, Star, RefreshCw
+  GraduationCap, Flame, Star, RefreshCw, MapPin, Building2, Target, Globe
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,9 @@ interface LeaderboardEntry {
   user_id: string;
   full_name: string;
   asal_sekolah?: string;
+  target_ptn?: string;
   target_prodi?: string;
+  provinsi?: string;
   best_score: number;
   total_tryouts: number;
   tryout_title: string;
@@ -30,7 +32,7 @@ interface TryoutOption {
   title: string;
 }
 
-// REMOVED: Mock leaderboard data - now using REAL data from database only
+export type RankScope = "nasional" | "daerah" | "univ" | "prodi";
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return (
@@ -57,13 +59,23 @@ function RankBadge({ rank }: { rank: number }) {
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [rawLeaderboard, setRawLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [tryouts, setTryouts] = useState<TryoutOption[]>([]);
   const [selectedTryout, setSelectedTryout] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // User profile data
+  const [userProvinsi, setUserProvinsi] = useState<string>("");
+  const [userTargetPTN, setUserTargetPTN] = useState<string>("");
+  const [userTargetProdi, setUserTargetProdi] = useState<string>("");
+
+  // Ranking Berjenjang State
+  const [selectedScope, setSelectedScope] = useState<RankScope>("nasional");
+  const [filterDaerah, setFilterDaerah] = useState<string>("ALL");
+  const [filterUniv, setFilterUniv] = useState<string>("ALL");
+  const [filterProdi, setFilterProdi] = useState<string>("ALL");
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,6 +87,26 @@ export default function LeaderboardPage() {
       if (!user) { router.push("/login?redirect=/leaderboard"); return; }
       setCurrentUserId(user.id);
 
+      // Load user profile data for auto-filter
+      // Baca dari auth metadata sebagai fallback (jika kolom provinsi di DB belum ada)
+      const meta = user.user_metadata as Record<string, string>;
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("provinsi, target_ptn, target_prodi")
+        .eq("id", user.id)
+        .single();
+
+      // Prioritas: DB > auth metadata (fallback sebelum migration dijalankan)
+      const resolvedProvinsi = profileData?.provinsi || meta?.provinsi || "";
+      const resolvedPTN = profileData?.target_ptn || meta?.target_ptn || meta?.target_univ || "";
+      const resolvedProdi = profileData?.target_prodi || meta?.target_prodi || "";
+
+      setUserProvinsi(resolvedProvinsi);
+      setUserTargetPTN(resolvedPTN);
+      setUserTargetProdi(resolvedProdi);
+
+
       // Fetch tryouts for filter
       const { data: tryoutsData } = await supabase
         .from("tryouts")
@@ -82,79 +114,59 @@ export default function LeaderboardPage() {
         .order("created_at", { ascending: false });
       if (tryoutsData && tryoutsData.length > 0) setTryouts(tryoutsData);
 
-      // 1. Try to fetch from leaderboard view
-      let query = supabase
-        .from("leaderboard")
-        .select("*")
-        .order("rank", { ascending: true })
-        .limit(100);
+      // Fetch results table directly with join to profiles
+      let resQuery = supabase
+        .from("results")
+        .select("id, user_id, score, irt_score, tryout_id, created_at, profiles(full_name, target_prodi, target_ptn, asal_sekolah, bio, provinsi), tryouts(title)")
+        .order("score", { ascending: false })
+        .limit(200);
 
       if (selectedTryout !== "all") {
-        query = query.eq("tryout_id", selectedTryout);
+        resQuery = resQuery.eq("tryout_id", selectedTryout);
       }
 
-      const { data, error } = await query;
+      const { data: resData } = await resQuery;
 
-      if (!error && data && data.length > 0) {
-        setLeaderboard(data as LeaderboardEntry[]);
-        const myEntry = data.find((e: LeaderboardEntry) => e.user_id === user.id);
-        setMyRank(myEntry || null);
-      } else {
-        // 2. Fallback: Query results table directly with join
-        let resQuery = supabase
-          .from("results")
-          .select("id, user_id, score, irt_score, tryout_id, created_at, profiles(full_name, target_prodi, asal_sekolah), tryouts(title)")
-          .order("score", { ascending: false })
-          .limit(50);
-
-        if (selectedTryout !== "all") {
-          resQuery = resQuery.eq("tryout_id", selectedTryout);
-        }
-
-        const { data: resData } = await resQuery;
-
-        if (resData && resData.length > 0) {
-          // Deduplikasi berdasarkan user_id, ambil skor tertinggi
-          const dedupedMap = new Map<string, any>();
+      if (resData && resData.length > 0) {
+        // Deduplikasi berdasarkan user_id, ambil skor tertinggi
+        const dedupedMap = new Map<string, any>();
+        
+        resData.forEach((item: any) => {
+          const currentScore = Math.round(Number(item.irt_score || item.score || 0));
+          const p = item.profiles || {};
           
-          resData.forEach((item: any) => {
-            const currentScore = Math.round(Number(item.irt_score || item.score || 0));
-            
-            if (!dedupedMap.has(item.user_id)) {
-              dedupedMap.set(item.user_id, {
-                user_id: item.user_id,
-                full_name: item.profiles?.full_name || item.user_name || "Siswa Pejuang PTN",
-                asal_sekolah: item.profiles?.asal_sekolah || "SMA Negeri",
-                target_prodi: item.profiles?.target_prodi || "Ilmu Komputer (UI)",
-                best_score: currentScore,
-                total_tryouts: 1,
-                tryout_title: item.tryouts?.title || "Try Out SNBT 2026",
-                tryout_id: item.tryout_id,
-              });
-            } else {
-              const existing = dedupedMap.get(item.user_id);
-              existing.total_tryouts += 1;
-              if (currentScore > existing.best_score) {
-                existing.best_score = currentScore;
-              }
+          if (!dedupedMap.has(item.user_id)) {
+            dedupedMap.set(item.user_id, {
+              user_id: item.user_id,
+              full_name: p.full_name || item.user_name || "Siswa Pejuang PTN",
+              asal_sekolah: p.asal_sekolah || "SMA Negeri",
+              target_ptn: p.target_ptn || p.target_univ || "UNIVERSITAS INDONESIA",
+              target_prodi: p.target_prodi || "S1 Ilmu Komputer",
+              provinsi: p.provinsi || "",
+              best_score: currentScore,
+              total_tryouts: 1,
+              tryout_title: item.tryouts?.title || "Try Out SNBT 2026",
+              tryout_id: item.tryout_id,
+            });
+          } else {
+            const existing = dedupedMap.get(item.user_id);
+            existing.total_tryouts += 1;
+            if (currentScore > existing.best_score) {
+              existing.best_score = currentScore;
             }
-          });
+          }
+        });
 
-          const sorted = Array.from(dedupedMap.values()).sort((a, b) => b.best_score - a.best_score);
-          
-          const formatted: LeaderboardEntry[] = sorted.map((item, idx) => ({
-            ...item,
-            rank: idx + 1,
-          }));
-          
-          setLeaderboard(formatted);
-          const myEntry = formatted.find((e) => e.user_id === user.id);
-          setMyRank(myEntry || null);
-        } else {
-          // 3. Benar-benar kosong — tidak ada dummy data
-          setLeaderboard([]);
-          setMyRank(null);
-        }
+        const sorted = Array.from(dedupedMap.values()).sort((a, b) => b.best_score - a.best_score);
+        
+        const formatted: LeaderboardEntry[] = sorted.map((item, idx) => ({
+          ...item,
+          rank: idx + 1,
+        }));
+        
+        setRawLeaderboard(formatted);
+      } else {
+        setRawLeaderboard([]);
       }
       setLastUpdated(new Date());
     } catch (error) {
@@ -169,8 +181,42 @@ export default function LeaderboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTryout]);
 
-  const top3 = leaderboard.slice(0, 3);
-  const rest = leaderboard.slice(3);
+  // 34 Provinsi Indonesia (statis, selalu lengkap)
+  const PROVINSI_LIST_LB = [
+    "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta",
+    "Gorontalo", "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur",
+    "Kalimantan Barat", "Kalimantan Selatan", "Kalimantan Tengah",
+    "Kalimantan Timur", "Kalimantan Utara", "Kepulauan Bangka Belitung",
+    "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara",
+    "Nusa Tenggara Barat", "Nusa Tenggara Timur",
+    "Papua", "Papua Barat", "Papua Barat Daya", "Papua Pegunungan",
+    "Papua Selatan", "Papua Tengah",
+    "Riau", "Sulawesi Barat", "Sulawesi Selatan", "Sulawesi Tengah",
+    "Sulawesi Tenggara", "Sulawesi Utara",
+    "Sumatera Barat", "Sumatera Selatan", "Sumatera Utara",
+  ];
+
+  // Apply Berjenjang Scope Filter & Recalculate Ranks
+  const filteredLeaderboard = rawLeaderboard
+    .filter((e) => {
+      if (selectedScope === "daerah") {
+        // Auto-filter by user's provinsi
+        return e.provinsi === userProvinsi;
+      }
+      if (selectedScope === "univ") {
+        // Auto-filter by user's target PTN
+        return (e.target_ptn || "").toLowerCase().includes((userTargetPTN || "").toLowerCase());
+      }
+      if (selectedScope === "prodi") {
+        // Auto-filter by user's target prodi
+        return (e.target_prodi || "").toLowerCase().includes((userTargetProdi || "").toLowerCase());
+      }
+      return true;
+    })
+    .map((e, idx) => ({ ...e, rank: idx + 1 }));
+
+  const myRank = filteredLeaderboard.find((e) => e.user_id === currentUserId) || null;
+  const top3 = filteredLeaderboard.slice(0, 3);
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 py-2">
@@ -192,23 +238,94 @@ export default function LeaderboardPage() {
         </button>
       </div>
 
+      {/* Ranking Berjenjang Scope Selector Tabs */}
+      <div className="space-y-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            Tingkat Skop Ranking Berjenjang
+          </span>
+          <Badge variant="outline" className="text-[10px] font-extrabold text-blue-700 bg-blue-50 border-blue-200">
+            {selectedScope === "nasional" && "Tingkat Nasional"}
+            {selectedScope === "daerah" && `Provinsi: ${userProvinsi || "Belum Diatur"}`}
+            {selectedScope === "univ" && `PTN: ${userTargetPTN || "Belum Diatur"}`}
+            {selectedScope === "prodi" && `Prodi: ${userTargetProdi || "Belum Diatur"}`}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-xl">
+          {[
+            { id: "nasional", label: "Nasional", icon: Globe },
+            { id: "daerah", label: "Daerah", icon: MapPin },
+            { id: "univ", label: "PTN", icon: Building2 },
+            { id: "prodi", label: "Prodi", icon: Target },
+          ].map((sc) => {
+            const Icon = sc.icon;
+            const isSelected = selectedScope === sc.id;
+            return (
+              <button
+                key={sc.id}
+                onClick={() => {
+                  setSelectedScope(sc.id as RankScope);
+                  // Auto-set filter ke data profil user saat klik tab
+                  if (sc.id === "daerah") {
+                    setFilterDaerah(userProvinsi || "ALL");
+                  } else if (sc.id === "univ") {
+                    setFilterUniv(userTargetPTN || "ALL");
+                  } else if (sc.id === "prodi") {
+                    setFilterProdi(userTargetProdi || "ALL");
+                  }
+                }}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-extrabold transition-all ${
+                  isSelected
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{sc.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Info text untuk auto-filter */}
+        {selectedScope !== "nasional" && (
+          <div className="pt-1 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-100">
+            <p className="text-[11px] text-blue-700 font-semibold">
+              {selectedScope === "daerah" && (userProvinsi 
+                ? `Menampilkan peserta dari ${userProvinsi} (provinsi Anda)`
+                : "Lengkapi provinsi di profil untuk melihat ranking daerah"
+              )}
+              {selectedScope === "univ" && (userTargetPTN 
+                ? `Menampilkan peserta yang menargetkan ${userTargetPTN}`
+                : "Lengkapi target PTN di profil untuk melihat ranking PTN"
+              )}
+              {selectedScope === "prodi" && (userTargetProdi 
+                ? `Menampilkan peserta yang menargetkan ${userTargetProdi}`
+                : "Lengkapi target prodi di profil untuk melihat ranking prodi"
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* Filter Tryout */}
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setSelectedTryout("all")}
           className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${
             selectedTryout === "all"
-              ? "bg-blue-600 text-white shadow-sm"
+              ? "bg-slate-900 text-white shadow-sm"
               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
           }`}
         >
-          Semua Try Out
+          Semua Paket TO
         </button>
         {tryouts.map(t => (
           <button key={t.id} onClick={() => setSelectedTryout(t.id)}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all ${
               selectedTryout === t.id
-                ? "bg-blue-600 text-white shadow-sm"
+                ? "bg-slate-900 text-white shadow-sm"
                 : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
@@ -242,7 +359,7 @@ export default function LeaderboardPage() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
         </div>
-      ) : leaderboard.length === 0 ? (
+      ) : filteredLeaderboard.length === 0 ? (
         /* Empty State — Belum ada peserta */
         <Card className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-xs">
           <div className="h-16 w-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto mb-4">
@@ -250,11 +367,11 @@ export default function LeaderboardPage() {
           </div>
           <h3 className="text-base font-extrabold text-slate-700 mb-1">Belum Ada Peserta</h3>
           <p className="text-xs text-slate-400 font-medium max-w-xs mx-auto leading-relaxed">
-            Ranking akan muncul otomatis setelah kamu atau peserta lain menyelesaikan Try Out pertama.
+            Ranking akan muncul otomatis setelah Anda atau peserta lain menyelesaikan Try Out pertama.
           </p>
           <div className="mt-5 p-3 rounded-xl bg-blue-50 border border-blue-100 inline-block">
             <p className="text-[11px] text-blue-700 font-bold">
-              💡 Ikuti Try Out sekarang dan jadilah yang pertama di ranking!
+              Ikuti Try Out sekarang dan jadilah yang pertama di ranking!
             </p>
           </div>
         </Card>
@@ -329,7 +446,7 @@ export default function LeaderboardPage() {
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-slate-400" />
                 <span className="text-xs font-bold text-slate-700">
-                  {leaderboard.length} Peserta
+                  {filteredLeaderboard.length} Peserta
                 </span>
               </div>
               <span className="text-[10px] text-slate-400 font-medium">
@@ -338,7 +455,7 @@ export default function LeaderboardPage() {
             </div>
 
             <div className="divide-y divide-slate-100">
-              {leaderboard.map((entry) => {
+              {filteredLeaderboard.map((entry: LeaderboardEntry) => {
                 const isMe = entry.user_id === currentUserId;
                 const isTop3 = entry.rank <= 3;
                 return (
@@ -373,7 +490,7 @@ export default function LeaderboardPage() {
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         {entry.asal_sekolah && (
                           <span className="text-[10px] text-slate-400 font-medium truncate max-w-32">
-                            🏫 {entry.asal_sekolah}
+                            {entry.asal_sekolah}
                           </span>
                         )}
                         {entry.target_prodi && (

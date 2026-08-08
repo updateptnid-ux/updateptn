@@ -1,0 +1,504 @@
+"use client";
+
+import { useState, useTransition, useEffect, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { updateProfileAction, changePasswordAction } from "@/actions/profile";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  User, School, Target, Lock, CheckCircle2, AlertCircle,
+  Loader2, BookOpen, Search, X, Eye, EyeOff, Save, KeyRound, MapPin,
+} from "lucide-react";
+
+// ─── 34 Provinsi Indonesia ────────────────────────────────────────────────────
+const PROVINSI_LIST = [
+  "Aceh",
+  "Bali",
+  "Banten",
+  "Bengkulu",
+  "DI Yogyakarta",
+  "DKI Jakarta",
+  "Gorontalo",
+  "Jambi",
+  "Jawa Barat",
+  "Jawa Tengah",
+  "Jawa Timur",
+  "Kalimantan Barat",
+  "Kalimantan Selatan",
+  "Kalimantan Tengah",
+  "Kalimantan Timur",
+  "Kalimantan Utara",
+  "Kepulauan Bangka Belitung",
+  "Kepulauan Riau",
+  "Lampung",
+  "Maluku",
+  "Maluku Utara",
+  "Nusa Tenggara Barat",
+  "Nusa Tenggara Timur",
+  "Papua",
+  "Papua Barat",
+  "Papua Barat Daya",
+  "Papua Pegunungan",
+  "Papua Selatan",
+  "Papua Tengah",
+  "Riau",
+  "Sulawesi Barat",
+  "Sulawesi Selatan",
+  "Sulawesi Tengah",
+  "Sulawesi Tenggara",
+  "Sulawesi Utara",
+  "Sumatera Barat",
+  "Sumatera Selatan",
+  "Sumatera Utara",
+];
+import { useRouter } from "next/navigation";
+
+// ─── Univ domain helpers ─────────────────────────────────────────────────────
+const UNIV_DOMAINS: Record<string, string> = {
+  "UNIVERSITAS INDONESIA": "ui.ac.id",
+  "INSTITUT TEKNOLOGI BANDUNG": "itb.ac.id",
+  "UNIVERSITAS GADJAH MADA": "ugm.ac.id",
+  "UNIVERSITAS BRAWIJAYA": "ub.ac.id",
+  "UNIVERSITAS PADJADJARAN": "unpad.ac.id",
+  "UNIVERSITAS DIPONEGORO": "undip.ac.id",
+  "UNIVERSITAS AIRLANGGA": "unair.ac.id",
+  "INSTITUT TEKNOLOGI SEPULUH NOPEMBER": "its.ac.id",
+  "UNIVERSITAS HASANUDDIN": "unhas.ac.id",
+};
+const getUnivDomain = (name?: string) => {
+  if (!name) return null;
+  const n = name.toUpperCase().trim();
+  if (UNIV_DOMAINS[n]) return UNIV_DOMAINS[n];
+  for (const [key, d] of Object.entries(UNIV_DOMAINS)) {
+    if (n.includes(key) || key.includes(n)) return d;
+  }
+  return null;
+};
+const getInitials = (name?: string) => {
+  if (!name) return "??";
+  const clean = name.toUpperCase().replace("UNIVERSITAS ", "").replace("INSTITUT ", "").trim();
+  const words = clean.split(" ");
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return clean.substring(0, 2).toUpperCase();
+};
+
+interface ProdiSuggestion {
+  id: string | number;
+  univ: string;
+  prodi: string;
+  jenjang?: string;
+  kelompok?: string;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+export default function ProfilePage() {
+  const router = useRouter();
+  const supabase = createClient();
+
+  // User metadata state
+  const [userData, setUserData] = useState<Record<string, string>>({});
+  const [email, setEmail] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Form fields
+  const [fullName, setFullName] = useState("");
+  const [asalSekolah, setAsalSekolah] = useState("");
+  const [bio, setBio] = useState("");
+  const [provinsi, setProvinsi] = useState("");
+
+  // Prodi selection - two-step combobox like Cek Peluang
+  const [universities, setUniversities] = useState<string[]>([]);
+  const [selectedUniv, setSelectedUniv] = useState<string>("");
+  const [univSearch, setUnivSearch] = useState<string>("");
+  const [isUnivOpen, setIsUnivOpen] = useState<boolean>(false);
+  
+  const [majors, setMajors] = useState<ProdiSuggestion[]>([]);
+  const [selectedProdiId, setSelectedProdiId] = useState<string>("");
+  const [majorSearch, setMajorSearch] = useState<string>("");
+  const [isMajorOpen, setIsMajorOpen] = useState<boolean>(false);
+
+  const [loadingUnivs, setLoadingUnivs] = useState(false);
+  const [loadingMajors, setLoadingMajors] = useState(false);
+  
+  const univContainerRef = useRef<HTMLDivElement>(null);
+  const majorContainerRef = useRef<HTMLDivElement>(null);
+  const [majorSearch, setMajorSearch] = useState<string>("");
+  const [isMajorOpen, setIsMajorOpen] = useState<boolean>(false);
+
+  const [loadingUnivs, setLoadingUnivs] = useState(false);
+  const [loadingMajors, setLoadingMajors] = useState(false);
+  
+  const univContainerRef = useRef<HTMLDivElement>(null);
+  const majorContainerRef = useRef<HTMLDivElement>(null);
+
+  // Password form
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+
+  // Feedback
+  const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [profilePending, startProfileTransition] = useTransition();
+  const [pwPending, startPwTransition] = useTransition();
+
+  // Load user
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/login?redirect=/profile"); return; }
+
+      const meta = user.user_metadata as Record<string, string>;
+      setUserData(meta);
+      setEmail(user.email || "");
+      setFullName(meta.full_name || "");
+      setAsalSekolah(meta.asal_sekolah || "");
+      setBio(meta.bio || "");
+      setProvinsi(meta.provinsi || "");
+      
+      const univ = meta.target_univ || meta.target_ptn || "";
+      const prodi = meta.target_prodi || "";
+      
+      setSelectedUniv(univ);
+      
+      // Load universities list
+      loadUniversities();
+      
+      // If user has existing prodi data, load majors for that univ
+      if (univ) {
+        loadMajorsForUniv(univ, prodi);
+      }
+      
+      setAuthLoading(false);
+    }
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Dropdown outside click
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (prodiRef.current && !prodiRef.current.contains(e.target as Node)) setShowProdiDropdown(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, []);
+
+  // Autocomplete search
+  useEffect(() => {
+    if (selectedProdi) { setShowProdiDropdown(false); return; }
+    if (prodiQuery.trim().length < 2) { setProdiSuggestions([]); setShowProdiDropdown(false); return; }
+    const t = setTimeout(async () => {
+      setProdiLoading(true);
+      try {
+        const { data, error } = await supabase.rpc("search_kampus_pintar", { keyword: prodiQuery.trim() });
+        if (!error && data?.length > 0) {
+          setProdiSuggestions((data as ProdiSuggestion[]).slice(0, 8));
+          setShowProdiDropdown(true);
+        }
+      } catch { /* silent */ }
+      finally { setProdiLoading(false); }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [prodiQuery, selectedProdi]);
+
+  const handleSelectProdi = (item: ProdiSuggestion) => {
+    setSelectedProdi(item);
+    setProdiQuery(`${item.prodi} — ${item.univ}`);
+    setTargetUnivValue(item.univ);
+    setTargetProdiValue(item.prodi);
+    setShowProdiDropdown(false);
+  };
+
+  const handleClearProdi = () => {
+    setSelectedProdi(null);
+    setProdiQuery("");
+    setTargetUnivValue("");
+    setTargetProdiValue("");
+    setProdiSuggestions([]);
+  };
+
+  // Submit profile
+  const handleProfileSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setProfileMsg(null);
+    const fd = new FormData(e.currentTarget);
+    fd.set("targetUniv", targetUnivValue);
+    fd.set("targetProdi", targetProdiValue);
+    startProfileTransition(async () => {
+      const res = await updateProfileAction(fd);
+      if (res?.error) setProfileMsg({ type: "error", text: res.error });
+      else setProfileMsg({ type: "success", text: "Profil berhasil diperbarui!" });
+    });
+  };
+
+  // Submit password
+  const handlePwSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setPwMsg(null);
+    const fd = new FormData(e.currentTarget);
+    startPwTransition(async () => {
+      const res = await changePasswordAction(fd);
+      if (res?.error) setPwMsg({ type: "error", text: res.error });
+      else {
+        setPwMsg({ type: "success", text: "Kata sandi berhasil diubah!" });
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    });
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  const avatarInitial = (fullName || email || "U").charAt(0).toUpperCase();
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6 py-2">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Avatar className="h-14 w-14 border-2 border-slate-200 rounded-2xl">
+          <AvatarFallback className="bg-blue-600 text-white font-black text-xl rounded-2xl">
+            {avatarInitial}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-xl font-extrabold text-slate-900">{fullName || "Siswa UpdatePTN"}</h1>
+          <p className="text-xs text-slate-500 font-medium">{email}</p>
+          {userData.asal_sekolah && (
+            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+              {userData.asal_sekolah}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── CARD: Edit Profil ───────────────────────────────── */}
+      <Card className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+          <div className="h-8 w-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <User className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-900">Edit Profil</p>
+            <p className="text-[11px] text-slate-500">Data diri, asal sekolah, dan target PTN</p>
+          </div>
+        </div>
+
+        {profileMsg && (
+          <div className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
+            profileMsg.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+              : "bg-rose-50 border border-rose-200 text-rose-700"
+          }`}>
+            {profileMsg.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            {profileMsg.text}
+          </div>
+        )}
+
+        <form onSubmit={handleProfileSubmit} className="space-y-4">
+          {/* Nama */}
+          <div className="space-y-1.5">
+            <Label htmlFor="fullName" className="text-xs font-bold text-slate-700">Nama Lengkap <span className="text-rose-500">*</span></Label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+              <Input id="fullName" name="fullName" value={fullName} onChange={e => setFullName(e.target.value)}
+                placeholder="Nama lengkap kamu" required
+                className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <Label htmlFor="bio" className="text-xs font-bold text-slate-700">Bio Singkat</Label>
+            <textarea
+              id="bio" name="bio" value={bio} onChange={e => setBio(e.target.value)}
+              placeholder="Ceritakan sedikit tentang kamu, ambisi, atau motivasi belajar kamu..."
+              rows={3}
+              className="w-full px-4 py-3 text-sm rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-slate-900 placeholder:text-slate-400 font-medium"
+            />
+          </div>
+
+          {/* Provinsi */}
+          <div className="space-y-1.5">
+            <Label htmlFor="provinsi" className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-blue-600" /> Provinsi <span className="text-rose-500">*</span>
+            </Label>
+            <div className="relative">
+              <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <select
+                id="provinsi"
+                name="provinsi"
+                value={provinsi}
+                onChange={e => setProvinsi(e.target.value)}
+                required
+                className="w-full pl-10 h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none appearance-none cursor-pointer"
+              >
+                <option value="">-- Pilih Provinsi --</option>
+                {PROVINSI_LIST.map(prov => (
+                  <option key={prov} value={prov}>{prov}</option>
+                ))}
+              </select>
+              <div className="absolute right-3.5 top-3.5 pointer-events-none">
+                <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+            {provinsi && (
+              <p className="text-[11px] text-blue-600 font-semibold pl-1">{provinsi}</p>
+            )}
+          </div>
+
+          {/* Asal Sekolah */}
+          <div className="space-y-1.5">
+            <Label htmlFor="asalSekolah" className="text-xs font-bold text-slate-700">Asal Sekolah</Label>
+            <div className="relative">
+              <School className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+              <Input id="asalSekolah" name="asalSekolah" value={asalSekolah} onChange={e => setAsalSekolah(e.target.value)}
+                placeholder="Misal: SMAN 1 Jakarta"
+                className="pl-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+          </div>
+
+          {/* Prodi Impian Autocomplete */}
+          <div className="space-y-1.5" ref={prodiRef}>
+            <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Target className="h-3 w-3 text-blue-600" /> Target Prodi &amp; Universitas Impian
+            </Label>
+            <div className="relative">
+              <div className="relative bg-white rounded-xl border border-slate-200 flex items-center focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                {selectedProdi ? <BookOpen className="absolute left-3.5 h-4 w-4 text-blue-600" /> : <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />}
+                <input
+                  type="text" value={prodiQuery}
+                  onChange={e => { setProdiQuery(e.target.value); if (selectedProdi) { setSelectedProdi(null); setTargetUnivValue(""); setTargetProdiValue(""); } }}
+                  onFocus={() => { if (prodiSuggestions.length > 0 && !selectedProdi) setShowProdiDropdown(true); }}
+                  placeholder="Ketik nama jurusan atau kampus…"
+                  className="w-full pl-10 pr-9 h-11 bg-transparent border-none outline-none text-sm font-medium text-slate-900 placeholder:text-slate-400"
+                />
+                {prodiLoading && <Loader2 className="absolute right-3.5 h-4 w-4 animate-spin text-blue-600" />}
+                {prodiQuery && !prodiLoading && (
+                  <button type="button" onClick={handleClearProdi} className="absolute right-3.5 text-slate-400 hover:text-slate-600 p-1">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {showProdiDropdown && !selectedProdi && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95">
+                  {prodiSuggestions.map(item => {
+                    const domain = getUnivDomain(item.univ);
+                    return (
+                      <button key={item.id} type="button" onClick={() => handleSelectProdi(item)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors flex items-center gap-3 group">
+                        <Avatar className="h-8 w-8 rounded-lg border border-slate-100 shrink-0">
+                          <AvatarImage src={domain ? `https://logo.clearbit.com/${domain}` : undefined} alt={item.univ} />
+                          <AvatarFallback className="bg-blue-600 text-white font-bold text-[10px]">{getInitials(item.univ)}</AvatarFallback>
+                        </Avatar>
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-extrabold text-slate-900 group-hover:text-blue-600 truncate">{item.prodi}</p>
+                          <p className="text-[11px] text-slate-500 font-medium truncate">{item.univ}</p>
+                        </div>
+                        <Badge variant="outline" className="ml-auto shrink-0 text-[10px] font-bold px-1.5 py-0">
+                          {item.jenjang || "S1"}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {selectedProdi && (
+              <p className="text-[11px] text-blue-600 font-semibold pl-1">
+                {selectedProdi.prodi} — {selectedProdi.univ}
+              </p>
+            )}
+            <input type="hidden" name="targetUniv" value={targetUnivValue} />
+            <input type="hidden" name="targetProdi" value={targetProdiValue} />
+          </div>
+
+          <Button type="submit" disabled={profilePending}
+            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2">
+            {profilePending ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Menyimpan...</span></> : <><Save className="h-4 w-4" /><span>Simpan Perubahan</span></>}
+          </Button>
+        </form>
+      </Card>
+
+      {/* ── CARD: Ganti Password ─────────────────────────────── */}
+      <Card className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs space-y-5">
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+          <div className="h-8 w-8 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+            <KeyRound className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-900">Ganti Kata Sandi</p>
+            <p className="text-[11px] text-slate-500">Perbarui kata sandi akun kamu</p>
+          </div>
+        </div>
+
+        {pwMsg && (
+          <div className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
+            pwMsg.type === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+              : "bg-rose-50 border border-rose-200 text-rose-700"
+          }`}>
+            {pwMsg.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            {pwMsg.text}
+          </div>
+        )}
+
+        <form onSubmit={handlePwSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="newPassword" className="text-xs font-bold text-slate-700">Kata Sandi Baru</Label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+              <Input id="newPassword" name="newPassword" type={showNewPw ? "text" : "password"}
+                value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                placeholder="Min. 6 karakter" minLength={6} required
+                className="pl-10 pr-10 h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" />
+              <button type="button" onClick={() => setShowNewPw(v => !v)}
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600">
+                {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="confirmPassword" className="text-xs font-bold text-slate-700">Konfirmasi Kata Sandi Baru</Label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+              <Input id="confirmPassword" name="confirmPassword" type={showConfirmPw ? "text" : "password"}
+                value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Ulangi kata sandi baru" required
+                className={`pl-10 pr-10 h-11 rounded-xl border-slate-200 focus:ring-2 focus:ring-blue-500/20 ${
+                  confirmPassword && confirmPassword !== newPassword
+                    ? "border-rose-400 focus:border-rose-400"
+                    : "focus:border-blue-500"
+                }`} />
+              <button type="button" onClick={() => setShowConfirmPw(v => !v)}
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600">
+                {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {confirmPassword && confirmPassword !== newPassword && (
+              <p className="text-[11px] text-rose-600 font-semibold pl-1">Kata sandi tidak cocok</p>
+            )}
+          </div>
+
+          <Button type="submit" disabled={pwPending || (!!confirmPassword && confirmPassword !== newPassword)}
+            className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl gap-2">
+            {pwPending ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Mengubah...</span></> : <><KeyRound className="h-4 w-4" /><span>Ubah Kata Sandi</span></>}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}

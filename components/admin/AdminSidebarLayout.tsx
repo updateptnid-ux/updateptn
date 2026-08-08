@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
+  Gift,
 } from "lucide-react";
 
 interface MenuItem {
@@ -99,6 +100,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
         { name: "Bank Soal UTBK", href: "/hq-core-updateptn/questions", icon: FileQuestion },
         { name: "Modul Latihan Subtes", href: "/hq-core-updateptn/subtes-modules", icon: FileText },
         { name: "Soal Latihan Subtes", href: "/hq-core-updateptn/practice-questions", icon: FileText },
+        { name: "Klaim Try Out Gratis", href: "/hq-core-updateptn/free-claims", icon: Gift },
         { name: "Paket Try Out IRT", href: "/hq-core-updateptn/tryouts", icon: FileSpreadsheet },
         { name: "Hasil Ujian", href: "/hq-core-updateptn/results", icon: BarChart3 },
         { name: "Live Class", href: "/hq-core-updateptn/live-classes", icon: Video },

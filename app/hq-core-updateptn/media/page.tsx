@@ -214,11 +214,9 @@ export default function AdminMediaPage() {
                   <TableCell className="text-xs text-slate-500">{formatDate(file.uploaded_at)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger render={
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
                           <MoreHorizontal className="h-4 w-4 text-slate-600" />
-                        </Button>
-                      } />
+                        </Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
                         <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi</DropdownMenuLabel>
                         <DropdownMenuSeparator />

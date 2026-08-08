@@ -131,7 +131,11 @@ export default function AdminTryoutsPage() {
         if (error) throw error;
       } else {
         // Create new
-        const { error } = await supabase.from("tryouts").insert([formData]);
+        const { data: newTryout, error } = await supabase
+          .from("tryouts")
+          .insert([formData])
+          .select("id")
+          .single();
 
         if (error) throw error;
       }
@@ -378,7 +382,7 @@ export default function AdminTryoutsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 pt-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
