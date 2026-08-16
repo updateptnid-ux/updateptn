@@ -30,7 +30,7 @@ interface SubRecord {
   id: string;
   user_name: string;
   user_email: string;
-  tier: "Premium" | "Platinum" | "Basic";
+  tier: string;
   status: "active" | "expired" | "pending";
   expires_at: string;
   price_paid: string;
@@ -47,7 +47,7 @@ export default function AdminSubscriptionsPage() {
   const [formData, setFormData] = useState({
     user_name: "",
     user_email: "",
-    tier: "Premium" as "Premium" | "Platinum" | "Basic",
+    tier: "VIP",
     status: "active" as "active" | "expired" | "pending",
     expires_at: "",
     price_paid: "Rp 149.000",
@@ -58,25 +58,52 @@ export default function AdminSubscriptionsPage() {
       id: "s1",
       user_name: "Amanda Zevanya",
       user_email: "amanda.zevanya@gmail.com",
-      tier: "Platinum",
+      tier: "VIP",
       status: "active",
-      expires_at: new Date(Date.now() + 86400000 * 300).toISOString(),
+      expires_at: new Date(Date.now() + 86400000 * 90).toISOString(),
       price_paid: "Rp 249.000",
     },
     {
       id: "s2",
       user_name: "Budi Pratama",
       user_email: "budi.pratama@yahoo.com",
-      tier: "Premium",
+      tier: "Premium SNBT",
       status: "active",
-      expires_at: new Date(Date.now() + 86400000 * 120).toISOString(),
-      price_paid: "Rp 149.000",
+      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      price_paid: "Rp 79.000",
     },
     {
       id: "s3",
       user_name: "Citra Kirana",
       user_email: "citra.kirana@outlook.com",
-      tier: "Basic",
+      tier: "Premium SNBP",
+      status: "active",
+      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      price_paid: "Rp 85.000",
+    },
+    {
+      id: "s4",
+      user_name: "Dimas Anggara",
+      user_email: "dimas.anggara@gmail.com",
+      tier: "Premium Mandiri",
+      status: "active",
+      expires_at: new Date(Date.now() + 86400000 * 90).toISOString(),
+      price_paid: "Rp 160.000",
+    },
+    {
+      id: "s5",
+      user_name: "Eka Putri",
+      user_email: "eka.putri@gmail.com",
+      tier: "Try Out (8x)",
+      status: "active",
+      expires_at: new Date(Date.now() + 86400000 * 180).toISOString(),
+      price_paid: "Rp 379.000",
+    },
+    {
+      id: "s6",
+      user_name: "Farhan Rizky",
+      user_email: "farhan.rizky@gmail.com",
+      tier: "Trial / Gratis",
       status: "expired",
       expires_at: new Date(Date.now() - 86400000 * 5).toISOString(),
       price_paid: "Rp 0",
@@ -114,7 +141,7 @@ export default function AdminSubscriptionsPage() {
     setFormData({
       user_name: "",
       user_email: "",
-      tier: "Premium",
+      tier: "VIP",
       status: "active",
       expires_at: new Date(Date.now() + 86400000 * 30).toISOString().split("T")[0],
       price_paid: "Rp 149.000",
@@ -202,6 +229,29 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
+  const renderTierBadge = (tier: string) => {
+    const t = tier.toLowerCase();
+    if (t.includes("vip")) {
+      return <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-extrabold px-2.5">👑 VIP</Badge>;
+    }
+    if (t.includes("snbt")) {
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-bold px-2.5">SNBT</Badge>;
+    }
+    if (t.includes("snbp")) {
+      return <Badge className="bg-orange-100 text-orange-800 border-orange-200 font-bold px-2.5">SNBP</Badge>;
+    }
+    if (t.includes("mandiri")) {
+      return <Badge className="bg-teal-100 text-teal-800 border-teal-200 font-bold px-2.5">Mandiri</Badge>;
+    }
+    if (t.includes("try out") || t.includes("to")) {
+      return <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-bold px-2.5">Try Out</Badge>;
+    }
+    if (t.includes("trial") || t.includes("gratis") || t.includes("basic")) {
+      return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 font-medium px-2.5">Trial / Gratis</Badge>;
+    }
+    return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold px-2.5">{tier}</Badge>;
+  };
+
   return (
     <div className="space-y-4">
       {isDemoMode && (
@@ -254,15 +304,7 @@ export default function AdminSubscriptionsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={
-                      sub.tier === "Platinum"
-                        ? "bg-purple-100 text-purple-800 border-purple-200"
-                        : sub.tier === "Premium"
-                        ? "bg-blue-100 text-blue-800 border-blue-200"
-                        : "bg-slate-100 text-slate-800 border-slate-200"
-                    }>
-                      {sub.tier}
-                    </Badge>
+                    {renderTierBadge(sub.tier)}
                   </TableCell>
                   <TableCell>
                     {sub.status === "active" ? (
@@ -329,12 +371,15 @@ export default function AdminSubscriptionsPage() {
                 <Label>Paket Tier *</Label>
                 <select
                   value={formData.tier}
-                  onChange={e => setFormData({ ...formData, tier: e.target.value as any })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                  onChange={e => setFormData({ ...formData, tier: e.target.value })}
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white font-medium"
                 >
-                  <option value="Premium">Premium</option>
-                  <option value="Platinum">Platinum</option>
-                  <option value="Basic">Basic</option>
+                  <option value="VIP">VIP (Semua Produk)</option>
+                  <option value="Premium SNBT">Premium SNBT</option>
+                  <option value="Premium SNBP">Premium SNBP</option>
+                  <option value="Premium Mandiri">Premium Mandiri</option>
+                  <option value="Try Out (Paket Satuan)">Try Out (Paket Satuan)</option>
+                  <option value="Trial / Gratis">Trial / Gratis</option>
                 </select>
               </div>
               <div className="space-y-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import TryoutTerbaruSection from "@/components/landing/tryout-terbaru-section";
+import TryoutTerbaruInlineCard from "@/components/landing/tryout-terbaru-section";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -189,6 +189,9 @@ export default function LandingPage() {
               </Link>
             </div>
           </FadeIn>
+
+          {/* Try Out Terbaru — inline card */}
+          <TryoutTerbaruInlineCard />
 
           {/* Trust Metric Bar (PTN Targets & Student Proof) */}
           <FadeIn delay={0.15} className="pt-8 border-t border-slate-200/60 max-w-4xl mx-auto space-y-4">
@@ -527,9 +530,6 @@ export default function LandingPage() {
           </StaggerContainer>
         </div>
       </section>
-
-      {/* ---------------- 5b. TRYOUT TERBARU SECTION ---------------- */}
-      <TryoutTerbaruSection />
 
       {/* ---------------- 6. HOW IT WORKS (4-Step Visual Flow) ---------------- */}
       <section id="keunggulan" className="py-20 bg-white border-b border-slate-200/80">

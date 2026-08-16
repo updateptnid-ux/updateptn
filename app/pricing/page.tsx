@@ -23,6 +23,10 @@ import {
   ArrowLeft,
   Ticket,
   Tag,
+  FileText,
+  Star,
+  Flame,
+  BookOpen,
 } from "lucide-react";
 import { FadeIn, MotionCard, StaggerContainer, StaggerItem } from "@/components/ui/fade-in";
 import { Input } from "@/components/ui/input";
@@ -53,6 +57,8 @@ interface PricingPlan {
   }>;
   buttonText: string;
   buttonVariant?: "default" | "outline";
+  type: "subscription" | "tryout";
+  quantity?: string;
 }
 
 export default function PricingPage() {
@@ -62,6 +68,7 @@ export default function PricingPage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"subscription" | "tryout">("subscription");
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -95,94 +102,435 @@ export default function PricingPage() {
     loadUserData();
   }, []);
 
-  const plans: PricingPlan[] = [
+  // ── SUBSCRIPTION PLANS ────────────────────────────────────────────────
+  const subscriptionPlans: PricingPlan[] = [
+    // Trial / Gratis
     {
-      id: "starter",
-      name: "Starter",
-      subtitle: "Gratis Selamanya",
+      id: "trial",
+      name: "Trial / Gratis",
+      subtitle: "Coba Dulu Tanpa Bayar",
       price: 0,
-      priceDisplay: "Rp 0",
+      priceDisplay: "Gratis",
       duration: "selamanya",
       icon: Shield,
+      type: "subscription",
       features: [
-        { name: "1x Try Out IRT Full Subtes", included: true },
-        { name: "Basic Cek Peluang PTN", included: true },
+        { name: "1x Cek Rasionalisasi SNBP", included: true },
+        { name: "3x Cek Rasionalisasi SNBT", included: true },
+        { name: "1x Cek Rasionalisasi Mandiri", included: true },
         { name: "Akses Direktori Kampus", included: true },
-        { name: "Timer CBT Standard", included: true },
-        { name: "Unlimited Try Out", included: false },
+        { name: "Paket Berlangganan Premium", included: false },
+        { name: "Try Out Tak Terbatas", included: false },
         { name: "Live Class & Replay", included: false },
-        { name: "Modul PDF Premium", included: false },
         { name: "Konsultasi Jurusan", included: false },
       ],
       buttonText: "Mulai Gratis",
       buttonVariant: "outline",
     },
+    // Premium SNBT
     {
-      id: "premium-1-month",
-      name: "Premium 1 Bulan",
-      subtitle: "Persiapan Sprint",
-      price: 99000,
-      priceDisplay: "Rp 99.000",
+      id: "premium-snbt-7hari",
+      name: "Premium SNBT",
+      subtitle: "7 Hari",
+      price: 29000,
+      priceDisplay: "Rp 29.000",
+      duration: "7 hari",
+      badge: "SNBT",
+      badgeColor: "bg-blue-100 text-blue-700 border-blue-200",
+      icon: BookOpen,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
+        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Bank Soal SNBT HOTS", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Cek Rasionalisasi SNBP", included: false },
+        { name: "Cek Rasionalisasi Mandiri", included: false },
+        { name: "Konsultasi Jurusan", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 7 Hari",
+    },
+    {
+      id: "premium-snbt-1bulan",
+      name: "Premium SNBT",
+      subtitle: "1 Bulan",
+      price: 79000,
+      priceDisplay: "Rp 79.000",
+      duration: "1 bulan",
+      badge: "HEMAT",
+      badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      popular: true,
+      icon: BookOpen,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
+        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Bank Soal SNBT HOTS", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Cek Rasionalisasi SNBP", included: false },
+        { name: "Cek Rasionalisasi Mandiri", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 1 Bulan",
+    },
+    {
+      id: "premium-snbt-3bulan",
+      name: "Premium SNBT",
+      subtitle: "3 Bulan",
+      price: 149000,
+      priceDisplay: "Rp 149.000",
+      duration: "3 bulan",
+      badge: "BEST VALUE",
+      badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
+      icon: BookOpen,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
+        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Bank Soal SNBT HOTS", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Cek Rasionalisasi SNBP", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 3 Bulan",
+    },
+    // Premium SNBP
+    {
+      id: "premium-snbp-7hari",
+      name: "Premium SNBP",
+      subtitle: "7 Hari",
+      price: 35000,
+      priceDisplay: "Rp 35.000",
+      duration: "7 hari",
+      badge: "SNBP",
+      badgeColor: "bg-orange-100 text-orange-700 border-orange-200",
+      icon: Star,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
+        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Analisis Nilai Rapor", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Cek Rasionalisasi Mandiri", included: false },
+        { name: "Konsultasi Jurusan", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 7 Hari",
+    },
+    {
+      id: "premium-snbp-1bulan",
+      name: "Premium SNBP",
+      subtitle: "1 Bulan",
+      price: 85000,
+      priceDisplay: "Rp 85.000",
+      duration: "1 bulan",
+      badge: "HEMAT",
+      badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      icon: Star,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
+        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Analisis Nilai Rapor", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Cek Rasionalisasi Mandiri", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 1 Bulan",
+    },
+    {
+      id: "premium-snbp-3bulan",
+      name: "Premium SNBP",
+      subtitle: "3 Bulan",
+      price: 160000,
+      priceDisplay: "Rp 160.000",
+      duration: "3 bulan",
+      badge: "BEST VALUE",
+      badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
+      icon: Star,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
+        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Analisis Nilai Rapor", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 3 Bulan",
+    },
+    // Premium Mandiri
+    {
+      id: "premium-mandiri-7hari",
+      name: "Premium Mandiri",
+      subtitle: "7 Hari",
+      price: 35000,
+      priceDisplay: "Rp 35.000",
+      duration: "7 hari",
+      badge: "MANDIRI",
+      badgeColor: "bg-teal-100 text-teal-700 border-teal-200",
+      icon: Zap,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi Mandiri Tak Terbatas", included: true },
+        { name: "Fokus UI / UGM", included: true },
+        { name: "Cek Skor Mandiri", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Cek Rasionalisasi SNBP", included: false },
+        { name: "Konsultasi Jurusan", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 7 Hari",
+    },
+    {
+      id: "premium-mandiri-1bulan",
+      name: "Premium Mandiri",
+      subtitle: "1 Bulan",
+      price: 85000,
+      priceDisplay: "Rp 85.000",
       duration: "1 bulan",
       badge: "HEMAT",
       badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
       icon: Zap,
+      type: "subscription",
       features: [
-        { name: "Unlimited Try Out IRT Seri 01-20", included: true },
-        { name: "Cek Peluang PTN Presisi", included: true },
-        { name: "Akses Live Class 24/7", included: true },
+        { name: "Cek Rasionalisasi Mandiri Tak Terbatas", included: true },
+        { name: "Fokus UI / UGM", included: true },
+        { name: "Cek Skor Mandiri", included: true },
+        { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Bank Soal HOTS", included: true },
-        { name: "Modul PDF Pembahasan", included: true },
-        { name: "Konsultasi Basic", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Cek Rasionalisasi SNBP", included: false },
         { name: "Priority Support", included: false },
       ],
-      buttonText: "Pilih Paket",
+      buttonText: "Pilih 1 Bulan",
     },
     {
-      id: "premium-3-month",
-      name: "All Access Pass",
-      subtitle: "Paling Populer",
-      price: 199000,
-      priceDisplay: "Rp 199.000",
-      duration: "hingga SNBT",
-      badge: "TERPOPULER",
+      id: "premium-mandiri-3bulan",
+      name: "Premium Mandiri",
+      subtitle: "3 Bulan",
+      price: 160000,
+      priceDisplay: "Rp 160.000",
+      duration: "3 bulan",
+      badge: "BEST VALUE",
+      badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
+      icon: Zap,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi Mandiri Tak Terbatas", included: true },
+        { name: "Fokus UI / UGM", included: true },
+        { name: "Cek Skor Mandiri", included: true },
+        { name: "Timer CBT Standard", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Cek Rasionalisasi SNBT", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 3 Bulan",
+    },
+    // VIP — Semua Produk
+    {
+      id: "vip-1hari",
+      name: "VIP",
+      subtitle: "Akses Semua Produk",
+      price: 15000,
+      priceDisplay: "Rp 15.000",
+      duration: "1 hari",
+      badge: "VIP",
+      badgeColor: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      icon: Crown,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBP, SNBT & Mandiri", included: true },
+        { name: "Semua Materi & Bank Soal", included: true },
+        { name: "Timer CBT Full", included: true },
+        { name: "Akses Direktori Kampus", included: true },
+        { name: "Live Class & Replay", included: false },
+        { name: "Download Rekaman HD", included: false },
+        { name: "Konsultasi Jurusan", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 1 Hari",
+    },
+    {
+      id: "vip-7hari",
+      name: "VIP",
+      subtitle: "Akses Semua Produk",
+      price: 49000,
+      priceDisplay: "Rp 49.000",
+      duration: "7 hari",
+      badge: "VIP",
+      badgeColor: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      icon: Crown,
+      type: "subscription",
+      features: [
+        { name: "Cek Rasionalisasi SNBP, SNBT & Mandiri", included: true },
+        { name: "Semua Materi & Bank Soal", included: true },
+        { name: "Timer CBT Full", included: true },
+        { name: "Akses Direktori Kampus", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Live Class & Replay", included: false },
+        { name: "Konsultasi Jurusan", included: false },
+        { name: "Priority Support", included: false },
+      ],
+      buttonText: "Pilih 7 Hari",
+    },
+    {
+      id: "vip-1bulan",
+      name: "VIP",
+      subtitle: "Akses Semua Produk",
+      price: 149000,
+      priceDisplay: "Rp 149.000",
+      duration: "1 bulan",
+      badge: "POPULER",
       badgeColor: "bg-blue-600 text-white",
       popular: true,
       icon: Crown,
+      type: "subscription",
       features: [
-        { name: "Unlimited Try Out IRT Seri 01-20", included: true },
-        { name: "Cek Peluang PTN Presisi Tanpa Batas", included: true },
-        { name: "Akses Live Class & Replay 24/7", included: true },
+        { name: "Cek Rasionalisasi SNBP, SNBT & Mandiri", included: true },
+        { name: "Semua Materi & Bank Soal", included: true },
+        { name: "Timer CBT Full", included: true },
+        { name: "Akses Direktori Kampus", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Modul PDF Pembahasan Lengkap", included: true },
-        { name: "Bank Soal HOTS Premium", included: true },
-        { name: "Konsultasi Pemilihan Jurusan", included: true },
-        { name: "Priority Support", included: true },
+        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Konsultasi Jurusan", included: true },
+        { name: "Priority Support", included: false },
       ],
-      buttonText: "Pilih Paket Premium",
+      buttonText: "Pilih 1 Bulan",
     },
     {
-      id: "platinum",
-      name: "Platinum VIP",
-      subtitle: "Persiapan Maksimal",
-      price: 349000,
-      priceDisplay: "Rp 349.000",
-      duration: "1 tahun penuh",
+      id: "vip-3bulan",
+      name: "VIP",
+      subtitle: "Akses Semua Produk",
+      price: 249000,
+      priceDisplay: "Rp 249.000",
+      duration: "3 bulan",
       badge: "BEST VALUE",
       badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
-      icon: Sparkles,
+      icon: Crown,
+      type: "subscription",
       features: [
-        { name: "Semua fitur All Access Pass", included: true },
-        { name: "Mentoring 1-on-1 dengan Tutor", included: true },
-        { name: "Analisis Personalized", included: true },
-        { name: "Akses Early Bird Try Out Baru", included: true },
-        { name: "Sertifikat Kelulusan Digital", included: true },
-        { name: "Grup Eksklusif Alumni PTN", included: true },
-        { name: "Garansi Uang Kembali 100%", included: true },
-        { name: "24/7 Priority WhatsApp Support", included: true },
+        { name: "Cek Rasionalisasi SNBP, SNBT & Mandiri", included: true },
+        { name: "Semua Materi & Bank Soal", included: true },
+        { name: "Timer CBT Full", included: true },
+        { name: "Akses Direktori Kampus", included: true },
+        { name: "Download Rekaman HD", included: true },
+        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Konsultasi Pemilihan Jurusan", included: true },
+        { name: "Priority Support 24/7", included: true },
       ],
-      buttonText: "Pilih Platinum VIP",
+      buttonText: "Pilih 3 Bulan",
+    },
+  ];
+
+  // ── TRY OUT PLANS ─────────────────────────────────────────────────────
+  const tryoutPlans: PricingPlan[] = [
+    {
+      id: "to-1x",
+      name: "Paket Satu",
+      subtitle: "Coba Dulu",
+      price: 59000,
+      priceDisplay: "Rp 59.000",
+      duration: "1x Try Out",
+      quantity: "1x",
+      icon: FileText,
+      type: "tryout",
+      features: [
+        { name: "1x Try Out Full Subtes", included: true },
+        { name: "Pembahasan Soal Lengkap", included: true },
+        { name: "Skor & Rangking Nasional", included: true },
+        { name: "Timer CBT IRT", included: true },
+        { name: "Diskon Paket Hemat", included: false },
+        { name: "Akses Statistik Lanjutan", included: false },
+        { name: "Voucher Eksklusif Alumni", included: false },
+        { name: "Priority Grading", included: false },
+      ],
+      buttonText: "Beli 1x Try Out",
+      buttonVariant: "outline",
+    },
+    {
+      id: "to-4x",
+      name: "Paket Hemat",
+      subtitle: "Latihan Rutin",
+      price: 199000,
+      priceDisplay: "Rp 199.000",
+      duration: "4x Try Out",
+      quantity: "4x",
+      badge: "HEMAT",
+      badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      icon: Zap,
+      type: "tryout",
+      features: [
+        { name: "4x Try Out Full Subtes", included: true },
+        { name: "Pembahasan Soal Lengkap", included: true },
+        { name: "Skor & Rangking Nasional", included: true },
+        { name: "Timer CBT IRT", included: true },
+        { name: "Diskon Paket Hemat", included: true },
+        { name: "Akses Statistik Lanjutan", included: true },
+        { name: "Voucher Eksklusif Alumni", included: false },
+        { name: "Priority Grading", included: false },
+      ],
+      buttonText: "Beli 4x Try Out",
+    },
+    {
+      id: "to-8x",
+      name: "Paket Ambiss",
+      subtitle: "Paling Populer",
+      price: 379000,
+      priceDisplay: "Rp 379.000",
+      duration: "8x Try Out",
+      quantity: "8x",
+      badge: "TERPOPULER",
+      badgeColor: "bg-blue-600 text-white",
+      popular: true,
+      icon: Flame,
+      type: "tryout",
+      features: [
+        { name: "8x Try Out Full Subtes", included: true },
+        { name: "Pembahasan Soal Lengkap", included: true },
+        { name: "Skor & Rangking Nasional", included: true },
+        { name: "Timer CBT IRT", included: true },
+        { name: "Diskon Paket Hemat", included: true },
+        { name: "Akses Statistik Lanjutan", included: true },
+        { name: "Voucher Eksklusif Alumni", included: true },
+        { name: "Priority Grading", included: false },
+      ],
+      buttonText: "Beli 8x Try Out",
+    },
+    {
+      id: "to-10x",
+      name: "Paket Super",
+      subtitle: "Persiapan Maksimal",
+      price: 400000,
+      priceDisplay: "Rp 400.000",
+      duration: "10x Try Out",
+      quantity: "10x",
+      badge: "SUPER",
+      badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
+      icon: Sparkles,
+      type: "tryout",
+      features: [
+        { name: "10x Try Out Full Subtes", included: true },
+        { name: "Pembahasan Soal Lengkap", included: true },
+        { name: "Skor & Rangking Nasional", included: true },
+        { name: "Timer CBT IRT", included: true },
+        { name: "Diskon Paket Hemat", included: true },
+        { name: "Akses Statistik Lanjutan", included: true },
+        { name: "Voucher Eksklusif Alumni", included: true },
+        { name: "Priority Grading", included: true },
+      ],
+      buttonText: "Beli 10x Try Out",
     },
   ];
 
@@ -200,19 +548,16 @@ export default function PricingPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("qris");
 
   const handleSelectPlan = async (plan: PricingPlan) => {
-    // Free plan - just register
-    if (plan.id === "starter") {
+    if (plan.id === "trial") {
       router.push("/register");
       return;
     }
 
-    // Require authentication for paid plans
     if (!currentUser) {
       router.push(`/login?redirect=/pricing&plan=${plan.id}`);
       return;
     }
 
-    // Reset voucher state & open checkout modal
     setVoucherInput("");
     setAppliedVoucher(null);
     setVoucherError("");
@@ -310,10 +655,10 @@ export default function PricingPage() {
         user_id: currentUser.id,
         user_name: userProfile?.full_name || currentUser.email?.split("@")[0] || "User",
         user_email: currentUser.email || "",
-        tier: (checkoutPlan.id.includes("platinum") ? "Platinum" : "Premium") as "Platinum" | "Premium" | "Basic",
+        tier: (checkoutPlan.id.startsWith("vip") ? "Platinum" : "Premium") as "Platinum" | "Premium" | "Basic",
         status: "pending" as const,
         price_paid: `Rp ${finalPrice.toLocaleString("id-ID")}`,
-        duration_months: checkoutPlan.id === "premium-1-month" ? 1 : checkoutPlan.id === "premium-3-month" ? 3 : 12,
+        duration_months: checkoutPlan.duration.includes("3 bulan") ? 3 : checkoutPlan.duration.includes("7 hari") ? 0 : 1,
         payment_method: selectedPaymentMethod,
       };
 
@@ -387,7 +732,7 @@ export default function PricingPage() {
           <FadeIn className="space-y-4">
             <Badge variant="outline" className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200/80 inline-flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Pilihan Paket Fleksibel untuk Setiap Kebutuhan</span>
+              <span>Harga Transparan — Tanpa Biaya Tersembunyi</span>
             </Badge>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15]">
@@ -396,7 +741,7 @@ export default function PricingPage() {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Tanpa biaya tersembunyi. Pilih paket yang sesuai dengan timeline persiapan UTBK kamu.
+              Pilih paket berlangganan atau beli Try Out satuan sesuai kebutuhanmu.
             </p>
 
             {/* Show current subscription if exists */}
@@ -412,115 +757,203 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Pricing Cards */}
-      <section className="py-16 md:py-20 bg-slate-50/50">
+      {/* Tab Switcher */}
+      <section className="py-6 bg-white border-b border-slate-200/80 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
-            {plans.map((plan) => {
-              const Icon = plan.icon;
-              return (
-                <StaggerItem key={plan.id}>
-                  <MotionCard className="h-full">
-                    <Card
-                      className={`
-                        p-6 rounded-3xl flex flex-col h-full
-                        ${
-                          plan.popular
-                            ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-4 ring-blue-500/20 scale-105"
-                            : "bg-white border-slate-200/80 shadow-sm hover:shadow-lg transition-shadow"
-                        }
-                      `}
-                    >
-                      {/* Header */}
-                      <div className="space-y-4 pb-6 border-b border-slate-200/20">
-                        <div className="flex items-center justify-between">
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setActiveTab("subscription")}
+              className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
+                activeTab === "subscription"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              📚 Paket Berlangganan
+            </button>
+            <button
+              onClick={() => setActiveTab("tryout")}
+              className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
+                activeTab === "tryout"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              📝 Paket Try Out
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SUBSCRIPTION PLANS */}
+      {activeTab === "subscription" && (
+        <section className="py-16 md:py-20 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+            {[
+              { key: "trial", label: "Trial / Gratis", color: "bg-slate-100 text-slate-700 border-slate-200", plans: subscriptionPlans.filter((p) => p.id === "trial") },
+              { key: "snbt", label: "Premium SNBT", color: "bg-blue-100 text-blue-700 border-blue-200", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-snbt")) },
+              { key: "snbp", label: "Premium SNBP", color: "bg-orange-100 text-orange-700 border-orange-200", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-snbp")) },
+              { key: "mandiri", label: "Premium Mandiri", color: "bg-teal-100 text-teal-700 border-teal-200", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-mandiri")) },
+              { key: "vip", label: "VIP — Semua Produk", color: "bg-yellow-100 text-yellow-700 border-yellow-200", plans: subscriptionPlans.filter((p) => p.id.startsWith("vip")) },
+            ].map((group) => (
+              <div key={group.key} className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <Badge className={`px-3 py-1 text-xs font-bold border ${group.color}`}>{group.label}</Badge>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+                <StaggerContainer
+                  className={`grid gap-6 ${
+                    group.plans.length === 1
+                      ? "grid-cols-1 max-w-sm"
+                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                  }`}
+                  staggerDelay={0.08}
+                >
+                  {group.plans.map((plan) => {
+                    const Icon = plan.icon;
+                    return (
+                      <StaggerItem key={plan.id}>
+                        <MotionCard className="h-full">
+                          <Card className={`p-6 rounded-3xl flex flex-col h-full ${
+                            plan.popular
+                              ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-4 ring-blue-500/20"
+                              : "bg-white border-slate-200/80 shadow-sm hover:shadow-lg transition-shadow"
+                          }`}>
+                            <div className="space-y-4 pb-6 border-b border-slate-200/20">
+                              <div className="flex items-center justify-between">
+                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                                  plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
+                                }`}>
+                                  <Icon className="h-5 w-5" />
+                                </div>
+                                {plan.badge && (
+                                  <Badge className={`text-[10px] font-bold ${plan.badgeColor}`}>{plan.badge}</Badge>
+                                )}
+                              </div>
+                              <div>
+                                <h3 className={`text-xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.name}</h3>
+                                <p className={`text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                              </div>
+                              <div className="flex items-baseline gap-1">
+                                <span className={`text-3xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</span>
+                                <span className={`text-xs font-semibold ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>/ {plan.duration}</span>
+                              </div>
+                            </div>
+                            <ul className="space-y-3 py-6 flex-1">
+                              {plan.features.map((feature, idx) => (
+                                <li key={idx} className="flex items-start gap-2.5">
+                                  {feature.included
+                                    ? <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                    : <X className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                                  <span className={`text-xs leading-relaxed ${
+                                    feature.included
+                                      ? plan.popular ? "text-slate-200" : "text-slate-700"
+                                      : plan.popular ? "text-slate-600" : "text-slate-400"
+                                  }`}>{feature.name}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <Button
+                              onClick={() => handleSelectPlan(plan)}
+                              disabled={processingPlan === plan.id}
+                              className={`w-full h-12 font-bold text-sm rounded-xl gap-2 ${
+                                plan.popular
+                                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
+                                  : plan.buttonVariant === "outline"
+                                  ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                  : "bg-blue-600 hover:bg-blue-700 text-white"
+                              }`}
+                            >
+                              {processingPlan === plan.id
+                                ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Memproses...</span></>
+                                : <><span>{plan.buttonText}</span><ArrowRight className="h-4 w-4" /></>}
+                            </Button>
+                          </Card>
+                        </MotionCard>
+                      </StaggerItem>
+                    );
+                  })}
+                </StaggerContainer>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* TRY OUT PLANS */}
+      {activeTab === "tryout" && (
+        <section className="py-16 md:py-20 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <FadeIn className="text-center space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Paket Try Out — Beli Satuan</h2>
+              <p className="text-sm text-slate-500 max-w-xl mx-auto">
+                Tidak perlu berlangganan. Beli Try Out sesuai kebutuhan dan kerjakan kapan saja.
+              </p>
+            </FadeIn>
+            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
+              {tryoutPlans.map((plan) => {
+                const Icon = plan.icon;
+                return (
+                  <StaggerItem key={plan.id}>
+                    <MotionCard className="h-full">
+                      <Card className={`p-6 rounded-3xl flex flex-col h-full ${
+                        plan.popular
+                          ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-4 ring-blue-500/20 scale-105"
+                          : "bg-white border-slate-200/80 shadow-sm hover:shadow-lg transition-shadow"
+                      }`}>
+                        <div className="flex items-center justify-between mb-4">
                           <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
                             plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
                           }`}>
                             <Icon className="h-5 w-5" />
                           </div>
-                          {plan.badge && (
-                            <Badge className={`text-[10px] font-bold ${plan.badgeColor}`}>
-                              {plan.badge}
-                            </Badge>
-                          )}
+                          {plan.badge && <Badge className={`text-[10px] font-bold ${plan.badgeColor}`}>{plan.badge}</Badge>}
                         </div>
-
-                        <div>
-                          <h3 className={`text-xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>
-                            {plan.name}
-                          </h3>
-                          <p className={`text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>
-                            {plan.subtitle}
-                          </p>
-                        </div>
-
-                        <div className="flex items-baseline gap-1">
-                          <span className={`text-4xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>
-                            {plan.priceDisplay}
-                          </span>
-                          <span className={`text-xs font-semibold ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>
-                            / {plan.duration}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Features */}
-                      <ul className="space-y-3 py-6 flex-1">
-                        {plan.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-start gap-2.5">
-                            {feature.included ? (
-                              <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${
-                                plan.popular ? "text-blue-400" : "text-emerald-600"
-                              }`} />
-                            ) : (
-                              <X className={`h-4 w-4 shrink-0 mt-0.5 ${
-                                plan.popular ? "text-slate-600" : "text-slate-300"
-                              }`} />
-                            )}
-                            <span className={`text-xs leading-relaxed ${
-                              feature.included
-                                ? plan.popular ? "text-slate-200" : "text-slate-700"
-                                : plan.popular ? "text-slate-600" : "text-slate-400"
-                            }`}>
-                              {feature.name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* CTA Button */}
-                      <Button
-                        onClick={() => handleSelectPlan(plan)}
-                        disabled={processingPlan === plan.id}
-                        className={`w-full h-12 font-bold text-sm rounded-xl gap-2 ${
-                          plan.popular
-                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
-                            : plan.buttonVariant === "outline"
-                            ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                            : "bg-blue-600 hover:bg-blue-700 text-white"
-                        }`}
-                      >
-                        {processingPlan === plan.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Memproses...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>{plan.buttonText}</span>
-                            <ArrowRight className="h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
-                    </Card>
-                  </MotionCard>
-                </StaggerItem>
-              );
-            })}
-          </StaggerContainer>
-        </div>
-      </section>
+                        <div className={`text-5xl font-black mb-1 ${plan.popular ? "text-blue-400" : "text-blue-600"}`}>{plan.quantity}</div>
+                        <p className={`text-xs mb-1 ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>Try Out</p>
+                        <h3 className={`text-lg font-black mb-1 ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.name}</h3>
+                        <p className={`text-xs mb-4 ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                        <div className={`text-2xl font-black pb-4 border-b ${
+                          plan.popular ? "text-white border-slate-800" : "text-slate-900 border-slate-100"
+                        }`}>{plan.priceDisplay}</div>
+                        <ul className="space-y-3 py-5 flex-1">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5">
+                              {feature.included
+                                ? <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                : <X className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                              <span className={`text-xs leading-relaxed ${
+                                feature.included
+                                  ? plan.popular ? "text-slate-200" : "text-slate-700"
+                                  : plan.popular ? "text-slate-600" : "text-slate-400"
+                              }`}>{feature.name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <Button
+                          onClick={() => handleSelectPlan(plan)}
+                          disabled={processingPlan === plan.id}
+                          className={`w-full h-12 font-bold text-sm rounded-xl gap-2 ${
+                            plan.popular
+                              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
+                              : plan.buttonVariant === "outline"
+                              ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                              : "bg-blue-600 hover:bg-blue-700 text-white"
+                          }`}
+                        >
+                          {processingPlan === plan.id
+                            ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Memproses...</span></>
+                            : <><span>{plan.buttonText}</span><ArrowRight className="h-4 w-4" /></>}
+                        </Button>
+                      </Card>
+                    </MotionCard>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          </div>
+        </section>
+      )}
 
       {/* Trust Signals */}
       <section className="py-16 bg-white border-t border-slate-200/80">

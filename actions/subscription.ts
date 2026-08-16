@@ -6,7 +6,7 @@ export interface SubscriptionData {
   user_id: string;
   user_name: string;
   user_email: string;
-  tier: "Premium" | "Platinum" | "Basic";
+  tier: string;
   status: "active" | "expired" | "pending";
   price_paid: string;
   duration_months: number;
@@ -140,7 +140,8 @@ export async function hasPremiumAccess(userId: string) {
     const subscription = result.data;
     return (
       subscription.status === "active" &&
-      (subscription.tier === "Premium" || subscription.tier === "Platinum") &&
+      subscription.tier !== "Trial / Gratis" &&
+      subscription.tier !== "Basic" &&
       new Date(subscription.expires_at) > new Date()
     );
   } catch (error) {
