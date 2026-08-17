@@ -1,34 +1,52 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-export async function loginAction(formData: FormData) {
-  const email = formData.get("email") as string;
+export async function loginAction(prevState: any, formData: FormData) {
+  const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
 
   if (!email || !password) {
     return { error: "Email dan kata sandi wajib diisi." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    const supabase = await createClient();
 
-  if (error) {
-    return { error: error.message };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
+        return { error: "Email atau kata sandi tidak cocok." };
+      } else if (msg.includes("email not confirmed")) {
+        return { error: "Email belum dikonfirmasi." };
+      }
+      return { error: error.message };
+    }
+
+    if (!data.session) {
+      return { error: "Gagal membuat sesi." };
+    }
+
+    // Return success dengan redirect URL (client-side redirect)
+    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+    const redirectUrl = ADMIN_EMAILS.includes(email.toLowerCase())
+      ? "/hq-core-updateptn"
+      : "/dashboard/student";
+
+    return { 
+      success: true, 
+      redirectUrl,
+      message: "Login berhasil!" 
+    };
+  } catch (err: any) {
+    return { error: "Terjadi kesalahan. Silakan coba lagi." };
   }
-
-  // Auto redirect admin ke dashboard admin
-  const ADMIN_EMAILS = ["updateptnid@gmail.com"];
-  if (ADMIN_EMAILS.includes(email.toLowerCase())) {
-    redirect("/hq-core-updateptn");
-  }
-
-  // User biasa ke dashboard student
-  redirect("/dashboard/student");
 }
 
 export async function registerAction(formData: FormData) {
@@ -44,23 +62,35 @@ export async function registerAction(formData: FormData) {
     return { error: "Nama lengkap, email, dan kata sandi wajib diisi." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        asal_sekolah: asalSekolah || "",
-        target_univ: targetUniv || "",
-        target_prodi: targetProdi || "",
-        target_ptn: targetPtn,
-      },
-    },
-  });
+  try {
+    const supabase = await createClient();
 
-  if (error) {
-    return { error: error.message };
+    const signUpPromise = supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          asal_sekolah: asalSekolah || "",
+          target_univ: targetUniv || "",
+          target_prodi: targetProdi || "",
+          target_ptn: targetPtn,
+        },
+      },
+    });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Koneksi ke server timeout. Silakan periksa jaringan internet Anda.")), 8000)
+    );
+
+    const { error } = (await Promise.race([signUpPromise, timeoutPromise])) as any;
+
+    if (error) {
+      return { error: error.message };
+    }
+  } catch (err: any) {
+    console.error("Register auth error:", err);
+    return { error: err.message || "Terjadi kesalahan saat pendaftaran." };
   }
 
   redirect("/dashboard/student");
