@@ -143,7 +143,8 @@ export default function DirektoriProdiPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch Autocomplete Suggestions via Supabase RPC search_kampus_pintar
+  // Fetch Autocomplete Suggestions — JSON lokal sebagai primary source (data verified)
+  // Supabase RPC hanya sebagai fallback jika JSON gagal
   useEffect(() => {
     if (selectedProdi) {
       setShowDropdown(false);
@@ -159,26 +160,36 @@ export default function DirektoriProdiPage() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase.rpc("search_kampus_pintar", {
-          keyword: searchQuery.trim(),
-        });
-
         let results: ProdiRecord[] = [];
+        const q = searchQuery.toLowerCase().trim();
 
-        if (!error && data && data.length > 0) {
-          results = data as ProdiRecord[];
-        } else {
-          // Fallback to local /data_snbt.json search
+        // PRIMARY: local data_snbt.json (verified, always up-to-date)
+        try {
           const res = await fetch("/data_snbt.json");
           if (res.ok) {
             const localData: ProdiRecord[] = await res.json();
-            const q = searchQuery.toLowerCase().trim();
             results = localData.filter((item) =>
               `${item.univ} ${item.prodi} ${item.jenjang || ""} ${item.kelompok || ""}`
                 .toLowerCase()
                 .includes(q)
             );
+          }
+        } catch {
+          // JSON gagal → coba Supabase RPC
+        }
+
+        // FALLBACK: Supabase RPC jika JSON tidak menghasilkan data
+        if (results.length === 0) {
+          try {
+            const supabase = createClient();
+            const { data, error } = await supabase.rpc("search_kampus_pintar", {
+              keyword: searchQuery.trim(),
+            });
+            if (!error && data && data.length > 0) {
+              results = data as ProdiRecord[];
+            }
+          } catch {
+            // Supabase juga gagal — biarkan kosong
           }
         }
 
@@ -438,8 +449,12 @@ export default function DirektoriProdiPage() {
             <div className="grid grid-cols-2 gap-2.5 md:gap-4">
               {/* Passing Grade Box */}
               <div className="bg-slate-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 space-y-0.5">
-                <p className="text-[10px] md:text-[11px] font-bold uppercase text-blue-600 tracking-wider">Passing Grade</p>
-                <p className="text-lg md:text-xl font-extrabold text-slate-900">{selectedProdi.passing_grade_est || 680}</p>
+                <p className="text-[10px] md:text-[11px] font-bold uppercase text-blue-600 tracking-wider">Passing Grade Est.</p>
+                <p className="text-lg md:text-xl font-extrabold text-slate-900">
+                  {selectedProdi.passing_grade_est
+                    ? Number(selectedProdi.passing_grade_est).toLocaleString("id-ID")
+                    : "-"}
+                </p>
                 <p className="text-[10px] text-slate-500 font-semibold">Skor UTBK SNBT</p>
               </div>
 

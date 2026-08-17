@@ -152,15 +152,28 @@ export default function CekPeluangPage() {
     loadUniversities();
   }, []);
 
-  // 2. Fetch ALL Majors when selected University changes
+  // 2. Fetch majors — JSON lokal sebagai primary source (passing_grade_est verified)
   useEffect(() => {
     if (!selectedUniv) return;
 
     async function loadMajorsForUniv() {
       try {
         setLoadingMajors(true);
-        const supabase = createClient();
 
+        // PRIMARY: local data_snbt.json — data verified & selalu sinkron
+        const res = await fetch("/data_snbt.json");
+        if (res.ok) {
+          const localData = await res.json();
+          const filtered = localData.filter((item: any) => item.univ === selectedUniv);
+          if (filtered.length > 0) {
+            setMajors(filtered);
+            setSelectedProdiId(String(filtered[0].id));
+            return;
+          }
+        }
+
+        // FALLBACK: Supabase jika JSON tidak ada data untuk universitas ini
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("prodi_reference")
           .select("id, univ, prodi, jenjang, kelompok, passing_grade_est")
@@ -172,24 +185,14 @@ export default function CekPeluangPage() {
           setMajors(data as ProdiReferenceItem[]);
           setSelectedProdiId(String(data[0].id));
         } else {
-          // Fallback to local /data_snbt.json
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.univ === selectedUniv);
-            if (filtered.length > 0) {
-              setMajors(filtered);
-              setSelectedProdiId(String(filtered[0].id));
-            } else {
-              const sample = [
-                { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
-                { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
-                { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
-              ];
-              setMajors(sample);
-              setSelectedProdiId("1");
-            }
-          }
+          // Last resort sample data
+          const sample = [
+            { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
+            { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
+            { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
+          ];
+          setMajors(sample);
+          setSelectedProdiId("1");
         }
       } catch (err) {
         console.error("Error loading majors:", err);
@@ -276,30 +279,30 @@ export default function CekPeluangPage() {
         <Badge variant="outline" className="px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 inline-block">
           Rasionalisasi Algoritma PTN
         </Badge>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-blue-900">
           Cek Peluang Kelulusan PTN
         </h1>
-        <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto">
+        <p className="text-blue-400 text-sm sm:text-base max-w-xl mx-auto">
           Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian secara presisi.
         </p>
       </div>
 
       {/* Input Form Card */}
-      <div className="border border-slate-200 shadow-md rounded-2xl bg-white p-6 sm:p-8" style={{ overflow: "visible" }}>
+      <div className="border border-blue-100 shadow-md rounded-2xl bg-white p-6 sm:p-8" style={{ overflow: "visible" }}>
         {loadingUnivs ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
-            <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-            <p className="text-xs font-semibold text-slate-500">Memuat Database 4.900+ PTN & Jurusan...</p>
+            <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            <p className="text-xs font-semibold text-blue-400">Memuat Database 4.900+ PTN & Jurusan...</p>
           </div>
         ) : (
           <form onSubmit={handleAnalyze} className="space-y-6" style={{ overflow: "visible" }}>
             {/* Skor UTBK Input Section */}
-            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">
+                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-blue-700 block mb-1">
                   Skor IRT UTBK / Try Out Kamu
                 </Label>
-                <p className="text-xs text-slate-400">Masukkan total skor hasil Try Out atau latihan subtes</p>
+                <p className="text-xs text-blue-400">Masukkan total skor hasil Try Out atau latihan subtes</p>
               </div>
               <div className="w-full sm:w-48">
                 <Input
@@ -313,7 +316,7 @@ export default function CekPeluangPage() {
                     setScore(val === "" ? "" : Number(val));
                   }}
                   required
-                  className="h-12 rounded-xl text-lg font-black text-blue-600 bg-white border-slate-300 text-center"
+                  className="h-12 rounded-xl text-lg font-black text-blue-700 bg-white border-blue-200 text-center focus:border-blue-500"
                 />
               </div>
             </div>
@@ -322,38 +325,38 @@ export default function CekPeluangPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ overflow: "visible" }}>
               {/* PTN Selection Combobox */}
               <div className="space-y-2" ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 100 : 1 }}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center justify-between">
                   <span>1. Perguruan Tinggi Negeri (PTN)</span>
-                  <span className="text-[11px] font-normal text-slate-400">{universities.length} PTN</span>
+                  <span className="text-[11px] font-normal text-blue-400">{universities.length} PTN</span>
                 </Label>
 
                 <button
                   type="button"
                   onClick={() => { setIsUnivOpen(!isUnivOpen); setIsMajorOpen(false); }}
-                  className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs"
+                  className="w-full h-13 px-4 bg-white border border-blue-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors shadow-xs"
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
+                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
                     <span className="truncate">{selectedUniv || "Pilih PTN Target"}</span>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-4 w-4 text-blue-400 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isUnivOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
                     <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={univSearch}
                         onChange={(e) => setUnivSearch(e.target.value)}
                         placeholder="Ketik nama PTN (cth: UI, ITB, UGM)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400 flex-shrink-0">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
                       <span>Daftar Kampus Negeri</span>
                       <span>{filteredUnivs.length} ditemukan</span>
                     </div>
@@ -371,8 +374,8 @@ export default function CekPeluangPage() {
                             }}
                             className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                               selectedUniv === univName
-                                ? "bg-blue-600 text-white"
-                                : "text-slate-800 hover:bg-slate-100"
+                                ? "bg-blue-700 text-white"
+                                : "text-slate-800 hover:bg-blue-50"
                             }`}
                           >
                             <span className="truncate">{univName}</span>
@@ -380,7 +383,7 @@ export default function CekPeluangPage() {
                           </button>
                         ))
                       ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        <div className="p-4 text-center text-xs text-blue-400 font-medium">
                           PTN "{univSearch}" tidak ditemukan
                         </div>
                       )}
@@ -391,43 +394,43 @@ export default function CekPeluangPage() {
 
               {/* Major Selection Combobox */}
               <div className="space-y-2" ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 100 : 1 }}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center justify-between">
                   <span>2. Program Studi (Jurusan)</span>
-                  {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
+                  {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}
                 </Label>
 
                 <button
                   type="button"
                   disabled={loadingMajors || majors.length === 0}
                   onClick={() => { setIsMajorOpen(!isMajorOpen); setIsUnivOpen(false); }}
-                  className="w-full h-13 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors shadow-xs disabled:opacity-50"
+                  className="w-full h-13 px-4 bg-white border border-blue-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors shadow-xs disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <BookOpen className="h-5 w-5 text-blue-600 shrink-0" />
+                    <BookOpen className="h-5 w-5 text-blue-500 shrink-0" />
                     <span className="truncate">
                       {selectedProdiObj
                         ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
                         : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
                     </span>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-4 w-4 text-blue-400 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isMajorOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
                     <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
                       <input
                         type="text"
                         value={majorSearch}
                         onChange={(e) => setMajorSearch(e.target.value)}
                         placeholder="Ketik jurusan (cth: Kedokteran, Informatika)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-slate-400 flex-shrink-0">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
                       <span>Jurusan di {selectedUniv}</span>
                       <span>{filteredMajors.length} prodi</span>
                     </div>
@@ -448,8 +451,8 @@ export default function CekPeluangPage() {
                               }}
                               className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                                 isSelected
-                                  ? "bg-blue-600 text-white"
-                                  : "text-slate-800 hover:bg-slate-100"
+                                  ? "bg-blue-700 text-white"
+                                  : "text-slate-800 hover:bg-blue-50"
                               }`}
                             >
                               <span className="truncate">{label}</span>
@@ -458,7 +461,7 @@ export default function CekPeluangPage() {
                           );
                         })
                       ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                        <div className="p-4 text-center text-xs text-blue-400 font-medium">
                           Jurusan "{majorSearch}" tidak ditemukan
                         </div>
                       )}
@@ -471,7 +474,7 @@ export default function CekPeluangPage() {
             <Button
               type="submit"
               disabled={isPending || !selectedProdiId}
-              className="w-full h-13 text-base font-extrabold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
+              className="w-full h-13 text-base font-extrabold bg-blue-700 hover:bg-blue-800 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
             >
               {isPending ? (
                 <>
@@ -491,10 +494,10 @@ export default function CekPeluangPage() {
 
       {/* PREDICTION RESULT DISPLAY CARD */}
       {result && (
-        <Card className="border border-blue-200 shadow-md rounded-2xl overflow-hidden bg-white p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <Card className="border border-blue-100 shadow-md rounded-2xl overflow-hidden bg-white p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-50 pb-4">
             <div>
-              <span className="text-xs text-slate-400 font-semibold">Hasil Analisis Rasionalisasi:</span>
+              <span className="text-xs text-blue-400 font-semibold">Hasil Analisis Rasionalisasi:</span>
               <h3 className="text-xl font-extrabold text-slate-900">
                 {result.majorName} • {result.universityName}
               </h3>
@@ -506,12 +509,12 @@ export default function CekPeluangPage() {
               </Badge>
             )}
             {result.status === "BERSAING" && (
-              <Badge className="bg-blue-600 text-white font-bold text-xs px-3.5 py-1">
+              <Badge className="bg-blue-700 text-white font-bold text-xs px-3.5 py-1">
                 MODERAT (BERSAING)
               </Badge>
             )}
             {result.status === "RENTAN" && (
-              <Badge className="bg-amber-600 text-white font-bold text-xs px-3.5 py-1">
+              <Badge className="bg-amber-500 text-white font-bold text-xs px-3.5 py-1">
                 BERISIKO (RENTAN)
               </Badge>
             )}
@@ -520,32 +523,32 @@ export default function CekPeluangPage() {
           {/* Probability Percentage Bar */}
           <div className="space-y-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-xs font-bold text-slate-500">Estimasi Peluang Lulus</span>
-              <span className="text-3xl font-black text-blue-600">{result.percentage}%</span>
+              <span className="text-xs font-bold text-blue-500">Estimasi Peluang Lulus</span>
+              <span className="text-3xl font-black text-blue-700">{result.percentage}%</span>
             </div>
-            <Progress value={result.percentage} className="h-3 bg-slate-100 rounded-full" />
+            <Progress value={result.percentage} className="h-3 bg-blue-50 rounded-full" />
           </div>
 
           {/* Score Comparison Grid */}
-          <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+          <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
             <div>
-              <span className="text-xs text-slate-400 block font-medium">Skor Kamu</span>
+              <span className="text-xs text-blue-400 block font-medium">Skor Kamu</span>
               <span className="text-xl font-extrabold text-slate-900">{result.score}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-400 block font-medium">Passing Grade</span>
+              <span className="text-xs text-blue-400 block font-medium">Passing Grade</span>
               <span className="text-xl font-extrabold text-slate-900">{result.passingGrade}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-400 block font-medium">Selisih Poin</span>
-              <span className={`text-xl font-extrabold ${result.diff >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              <span className="text-xs text-blue-400 block font-medium">Selisih Poin</span>
+              <span className={`text-xl font-extrabold ${result.diff >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
                 {result.diff >= 0 ? `+${result.diff.toFixed(1)}` : result.diff.toFixed(1)}
               </span>
             </div>
           </div>
 
           {/* Recommendation Box */}
-          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-3">
+          <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-3">
             <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
               {result.recommendation}
