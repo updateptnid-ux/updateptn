@@ -133,7 +133,7 @@ export default function ModulPage() {
               <p className="text-slate-500 text-sm">Admin akan segera menambahkan modul pembelajaran</p>
             </div>
           ) : (
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.08}>
+            <StaggerContainer className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" staggerDelay={0.08}>
             {filteredModuls.map((modul) => (
               <StaggerItem key={modul.id}>
                 <MotionCard className="h-full rounded-2xl">
@@ -192,30 +192,32 @@ export default function ModulPage() {
                     </div>
 
                     {/* Content */}
-                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <Badge variant="outline" className="text-[10px] font-bold bg-slate-50 text-slate-700 border-slate-200">
+                    <div className="p-3 md:p-5 flex-1 flex flex-col justify-between space-y-2 md:space-y-4">
+                      <div className="space-y-1.5 md:space-y-2">
+                        <Badge variant="outline" className="text-[9px] md:text-[10px] font-bold bg-slate-50 text-slate-700 border-slate-200 px-1.5 py-0.5">
                           {modul.category}
                         </Badge>
-                        <h3 className="text-base font-extrabold text-slate-900 leading-snug line-clamp-2">
+                        <h3 className="text-sm md:text-base font-extrabold text-slate-900 leading-tight line-clamp-2">
                           {modul.title}
                         </h3>
 
                         {/* Stats */}
-                        <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
+                        <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-xs font-semibold text-slate-600">
                           {modul.type === "video" ? (
                             <div className="flex items-center gap-1">
-                              <Eye className="h-3.5 w-3.5 text-slate-400" />
-                              <span>{modul.views?.toLocaleString() || 0} views</span>
+                              <Eye className="h-3 w-3 md:h-3.5 md:w-3.5 text-slate-400" />
+                              <span className="hidden sm:inline">{modul.views?.toLocaleString() || 0} views</span>
+                              <span className="sm:hidden">{modul.views?.toLocaleString() || 0}</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <Download className="h-3.5 w-3.5 text-slate-400" />
-                              <span>{modul.downloads?.toLocaleString() || 0} downloads</span>
+                              <Download className="h-3 w-3 md:h-3.5 md:w-3.5 text-slate-400" />
+                              <span className="hidden sm:inline">{modul.downloads?.toLocaleString() || 0} downloads</span>
+                              <span className="sm:hidden">{modul.downloads?.toLocaleString() || 0}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1">
-                            <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                            <Star className="h-3 w-3 md:h-3.5 md:w-3.5 text-amber-500 fill-amber-500" />
                             <span>{modul.rating?.toFixed(1) || "5.0"}</span>
                           </div>
                         </div>
@@ -226,10 +228,19 @@ export default function ModulPage() {
                         modul.is_premium && userTier === "Basic" ? (
                           <Link href="/pricing" className="block">
                             <Button
-                              className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-400 hover:bg-blue-500 text-white"
+                              className="w-full h-8 md:h-10 font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 shadow-sm transition-all bg-blue-400 hover:bg-blue-500 text-white text-[10px] md:text-sm"
                             >
-                              <Lock className="h-4 w-4" />
-                              <span>Unlock Premium</span>
+                              <Lock className="h-3 w-3 md:h-4 md:w-4" />
+                              <span>Unlock</span>
+                            </Button>
+                          </Link>
+                        ) : modul.type === "video" ? (
+                          <Link href={`/dashboard/student/modul/video/${modul.id}`} className="block">
+                            <Button
+                              className="w-full h-8 md:h-10 font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white text-[10px] md:text-sm"
+                            >
+                              <PlayCircle className="h-3 w-3 md:h-4 md:w-4" />
+                              <span>Tonton</span>
                             </Button>
                           </Link>
                         ) : (
@@ -240,28 +251,19 @@ export default function ModulPage() {
                             className="block"
                           >
                             <Button
-                              className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white"
+                              className="w-full h-8 md:h-10 font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 shadow-sm transition-all bg-blue-500 hover:bg-blue-600 text-white text-[10px] md:text-sm"
                             >
-                              {modul.type === "video" ? (
-                                <>
-                                  <PlayCircle className="h-4 w-4" />
-                                  <span>Tonton Sekarang</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Download className="h-4 w-4" />
-                                  <span>Download PDF</span>
-                                </>
-                              )}
+                              <Download className="h-3 w-3 md:h-4 md:w-4" />
+                              <span>Download</span>
                             </Button>
                           </a>
                         )
                       ) : (
                         <Button
                           disabled
-                          className="w-full h-10 font-bold rounded-xl gap-2 shadow-sm bg-slate-300 text-slate-500 cursor-not-allowed"
+                          className="w-full h-8 md:h-10 font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 shadow-sm bg-slate-300 text-slate-500 cursor-not-allowed text-[10px] md:text-sm"
                         >
-                          <FileText className="h-4 w-4" />
+                          <FileText className="h-3 w-3 md:h-4 md:w-4" />
                           <span>URL Tidak Valid</span>
                         </Button>
                       )}

@@ -57,8 +57,9 @@ interface PricingPlan {
   }>;
   buttonText: string;
   buttonVariant?: "default" | "outline";
-  type: "subscription" | "tryout";
+  type: "subscription" | "bimbel" | "tryout";
   quantity?: string;
+  pertemuan?: string;
 }
 
 export default function PricingPage() {
@@ -68,7 +69,8 @@ export default function PricingPage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"subscription" | "tryout">("subscription");
+  const [activeTab, setActiveTab] = useState<"subscription" | "bimbel" | "tryout">("subscription");
+  const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -121,7 +123,7 @@ export default function PricingPage() {
         { name: "Akses Direktori Kampus", included: true },
         { name: "Paket Berlangganan Premium", included: false },
         { name: "Try Out Tak Terbatas", included: false },
-        { name: "Live Class & Replay", included: false },
+        { name: "Live Class & Materi Replay", included: false },
         { name: "Konsultasi Jurusan", included: false },
       ],
       buttonText: "Mulai Gratis",
@@ -141,7 +143,7 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
-        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBT Lengkap", included: true },
         { name: "Bank Soal SNBT HOTS", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Cek Rasionalisasi SNBP", included: false },
@@ -165,7 +167,7 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
-        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBT Lengkap", included: true },
         { name: "Bank Soal SNBT HOTS", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
@@ -188,11 +190,11 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBT Tak Terbatas", included: true },
-        { name: "Akses Materi SNBT Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBT Lengkap", included: true },
         { name: "Bank Soal SNBT HOTS", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Live Class & Materi Replay 24/7", included: true },
         { name: "Cek Rasionalisasi SNBP", included: false },
         { name: "Priority Support", included: false },
       ],
@@ -212,7 +214,7 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
-        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBP Lengkap", included: true },
         { name: "Analisis Nilai Rapor", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Cek Rasionalisasi SNBT", included: false },
@@ -235,7 +237,7 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
-        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBP Lengkap", included: true },
         { name: "Analisis Nilai Rapor", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
@@ -258,11 +260,11 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBP Tak Terbatas", included: true },
-        { name: "Akses Materi SNBP Lengkap", included: true },
+        { name: "Modul Belajar:\nAkses Materi SNBP Lengkap", included: true },
         { name: "Analisis Nilai Rapor", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Live Class:\nMateri & Replay 24/7", included: true },
         { name: "Cek Rasionalisasi SNBT", included: false },
         { name: "Priority Support", included: false },
       ],
@@ -332,7 +334,7 @@ export default function PricingPage() {
         { name: "Cek Skor Mandiri", included: true },
         { name: "Timer CBT Standard", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Live Class:\nMateri & Replay 24/7", included: true },
         { name: "Cek Rasionalisasi SNBT", included: false },
         { name: "Priority Support", included: false },
       ],
@@ -352,10 +354,10 @@ export default function PricingPage() {
       type: "subscription",
       features: [
         { name: "Cek Rasionalisasi SNBP, SNBT & Mandiri", included: true },
-        { name: "Semua Materi & Bank Soal", included: true },
+        { name: "Modul Belajar:\nSemua Materi & Bank Soal", included: true },
         { name: "Timer CBT Full", included: true },
         { name: "Akses Direktori Kampus", included: true },
-        { name: "Live Class & Replay", included: false },
+        { name: "Live Class & Materi Replay", included: false },
         { name: "Download Rekaman HD", included: false },
         { name: "Konsultasi Jurusan", included: false },
         { name: "Priority Support", included: false },
@@ -379,7 +381,7 @@ export default function PricingPage() {
         { name: "Timer CBT Full", included: true },
         { name: "Akses Direktori Kampus", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay", included: false },
+        { name: "Live Class & Materi Replay", included: false },
         { name: "Konsultasi Jurusan", included: false },
         { name: "Priority Support", included: false },
       ],
@@ -403,7 +405,7 @@ export default function PricingPage() {
         { name: "Timer CBT Full", included: true },
         { name: "Akses Direktori Kampus", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Live Class & Materi Replay 24/7", included: true },
         { name: "Konsultasi Jurusan", included: true },
         { name: "Priority Support", included: false },
       ],
@@ -426,7 +428,7 @@ export default function PricingPage() {
         { name: "Timer CBT Full", included: true },
         { name: "Akses Direktori Kampus", included: true },
         { name: "Download Rekaman HD", included: true },
-        { name: "Live Class & Replay 24/7", included: true },
+        { name: "Live Class & Materi Replay 24/7", included: true },
         { name: "Konsultasi Pemilihan Jurusan", included: true },
         { name: "Priority Support 24/7", included: true },
       ],
@@ -531,6 +533,97 @@ export default function PricingPage() {
         { name: "Priority Grading", included: true },
       ],
       buttonText: "Beli 10x Try Out",
+    },
+  ];
+
+  // ── PAKET BIMBEL 2027 ──────────────────────────────────────────────────
+  const bimbelPlans: PricingPlan[] = [
+    {
+      id: "bimbel-hemat",
+      name: "Paket Hemat",
+      subtitle: "Bimbel 2027",
+      price: 175000,
+      priceDisplay: "Rp 175.000",
+      duration: "bulan",
+      pertemuan: "4x Pertemuan",
+      icon: Users,
+      type: "bimbel",
+      features: [
+        { name: "4x Pertemuan Interaktif", included: true },
+        { name: "2x TO & Pembahasan IRT", included: true },
+        { name: "Mentoring Grup Eksklusif", included: true },
+        { name: "Akses Rekaman Kelas", included: true },
+        { name: "Seminar Motivasi", included: false },
+        { name: "Sesi Private 1-on-1", included: false },
+      ],
+      buttonText: "Pilih Paket Hemat",
+      buttonVariant: "outline",
+    },
+    {
+      id: "bimbel-eksklusif",
+      name: "Paket Eksklusif",
+      subtitle: "Bimbel 2027",
+      price: 325000,
+      priceDisplay: "Rp 325.000",
+      duration: "bulan",
+      pertemuan: "12x Pertemuan",
+      badge: "POPULER",
+      badgeColor: "bg-blue-600 text-white",
+      popular: true,
+      icon: Star,
+      type: "bimbel",
+      features: [
+        { name: "12x Pertemuan Interaktif", included: true },
+        { name: "4x TO & Pembahasan IRT", included: true },
+        { name: "Seminar Motivasi & Strategy", included: true },
+        { name: "Ranking Nasional Presisi", included: true },
+        { name: "Mentoring Grup Eksklusif", included: true },
+        { name: "Sesi Private 1-on-1", included: false },
+      ],
+      buttonText: "Pilih Paket Eksklusif",
+    },
+    {
+      id: "bimbel-intensif",
+      name: "Premium Intensif",
+      subtitle: "Bimbel 2027",
+      price: 1035000,
+      priceDisplay: "Rp 1.035.000",
+      duration: "3 bulan",
+      pertemuan: "36x Pertemuan",
+      badge: "PREMIUM",
+      badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
+      icon: Crown,
+      type: "bimbel",
+      features: [
+        { name: "36x Pertemuan Intensive", included: true },
+        { name: "3x Sesi Private 1-on-1", included: true },
+        { name: "12x TO IRT & Analisis IRT", included: true },
+        { name: "Full Support 24/7", included: true },
+        { name: "Seminar Motivasi & Strategy", included: true },
+        { name: "Garansi Pembahasan Modul", included: true },
+      ],
+      buttonText: "Pilih Premium Intensif",
+    },
+    {
+      id: "bimbel-mandiri",
+      name: "Bimbel Mandiri",
+      subtitle: "Fokus UI / UGM",
+      price: 150000,
+      priceDisplay: "Rp 150.000",
+      duration: "bulan",
+      pertemuan: "8x Pertemuan",
+      badge: "MANDIRI",
+      badgeColor: "bg-teal-100 text-teal-700 border-teal-200",
+      icon: Zap,
+      type: "bimbel",
+      features: [
+        { name: "8x Pertemuan Spesifik Ujian Mandiri", included: true },
+        { name: "Fokus Soal UI / UGM / ITB", included: true },
+        { name: "Cek Skor & Peluang Mandiri", included: true },
+        { name: "Bank Soal Simak UI & Utul UGM", included: true },
+        { name: "Mentoring Latihan Mandiri", included: true },
+      ],
+      buttonText: "Pilih Bimbel Mandiri",
     },
   ];
 
@@ -727,7 +820,7 @@ export default function PricingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-b from-blue-50/50 via-white to-white border-b border-slate-200/80">
+      <section className="py-16 md:py-24 bg-blue-50 border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <FadeIn className="space-y-4">
             <Badge variant="outline" className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200/80 inline-flex items-center gap-2">
@@ -760,26 +853,36 @@ export default function PricingPage() {
       {/* Tab Switcher */}
       <section className="py-6 bg-white border-b border-slate-200/80 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={() => setActiveTab("subscription")}
-              className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
+              className={`px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all ${
                 activeTab === "subscription"
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              📚 Paket Berlangganan
+              Paket Berlangganan & VIP
+            </button>
+            <button
+              onClick={() => setActiveTab("bimbel")}
+              className={`px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all ${
+                activeTab === "bimbel"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Paket Bimbel 2027
             </button>
             <button
               onClick={() => setActiveTab("tryout")}
-              className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
+              className={`px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all ${
                 activeTab === "tryout"
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              📝 Paket Try Out
+              Paket Try Out
             </button>
           </div>
         </div>
@@ -805,69 +908,89 @@ export default function PricingPage() {
                   className={`grid gap-6 ${
                     group.plans.length === 1
                       ? "grid-cols-1 max-w-sm"
-                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                      : "grid-cols-2 lg:grid-cols-3"
                   }`}
                   staggerDelay={0.08}
                 >
                   {group.plans.map((plan) => {
                     const Icon = plan.icon;
+                    const isExpanded = expandedPlan === plan.id;
                     return (
                       <StaggerItem key={plan.id}>
                         <MotionCard className="h-full">
-                          <Card className={`p-6 rounded-3xl flex flex-col h-full ${
+                          <Card className={`p-3 md:p-4 rounded-lg flex flex-col ${
                             plan.popular
-                              ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-4 ring-blue-500/20"
-                              : "bg-white border-slate-200/80 shadow-sm hover:shadow-lg transition-shadow"
+                              ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-2 ring-blue-500/20"
+                              : "bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                           }`}>
-                            <div className="space-y-4 pb-6 border-b border-slate-200/20">
+                            {/* Header - Always Visible */}
+                            <div className="space-y-2 pb-2 border-b border-slate-200/20">
                               <div className="flex items-center justify-between">
-                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                                <div className={`h-7 w-7 md:h-9 md:w-9 rounded-lg flex items-center justify-center ${
                                   plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
                                 }`}>
-                                  <Icon className="h-5 w-5" />
+                                  <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                 </div>
                                 {plan.badge && (
-                                  <Badge className={`text-[10px] font-bold ${plan.badgeColor}`}>{plan.badge}</Badge>
+                                  <Badge className={`text-[9px] md:text-[10px] font-bold ${plan.badgeColor} px-1.5 py-0.5`}>{plan.badge}</Badge>
                                 )}
                               </div>
                               <div>
-                                <h3 className={`text-xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.name}</h3>
-                                <p className={`text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                                <h3 className={`text-sm md:text-base font-black ${plan.popular ? "text-white" : "text-slate-900"} line-clamp-1`}>{plan.name}</h3>
+                                <p className={`text-[10px] md:text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
                               </div>
                               <div className="flex items-baseline gap-1">
-                                <span className={`text-3xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</span>
-                                <span className={`text-xs font-semibold ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>/ {plan.duration}</span>
+                                <span className={`text-base md:text-2xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</span>
+                                <span className={`text-[9px] md:text-xs font-semibold ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>/ {plan.duration}</span>
                               </div>
                             </div>
-                            <ul className="space-y-3 py-6 flex-1">
-                              {plan.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-start gap-2.5">
-                                  {feature.included
-                                    ? <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
-                                    : <X className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
-                                  <span className={`text-xs leading-relaxed ${
-                                    feature.included
-                                      ? plan.popular ? "text-slate-200" : "text-slate-700"
-                                      : plan.popular ? "text-slate-600" : "text-slate-400"
-                                  }`}>{feature.name}</span>
-                                </li>
-                              ))}
-                            </ul>
-                            <Button
-                              onClick={() => handleSelectPlan(plan)}
-                              disabled={processingPlan === plan.id}
-                              className={`w-full h-12 font-bold text-sm rounded-xl gap-2 ${
-                                plan.popular
-                                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
-                                  : plan.buttonVariant === "outline"
-                                  ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                                  : "bg-blue-600 hover:bg-blue-700 text-white"
-                              }`}
-                            >
-                              {processingPlan === plan.id
-                                ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Memproses...</span></>
-                                : <><span>{plan.buttonText}</span><ArrowRight className="h-4 w-4" /></>}
-                            </Button>
+
+                            {/* Features - Collapsible */}
+                            {isExpanded && (
+                              <ul className="space-y-2 py-3 border-b border-slate-200/20">
+                                {plan.features.slice(0, 4).map((feature, idx) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    {feature.included
+                                      ? <CheckCircle2 className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                      : <X className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                                    <span className={`text-xs md:text-sm leading-[1.6] ${
+                                      feature.included
+                                        ? plan.popular ? "text-slate-200 font-medium" : "text-slate-700 font-medium"
+                                        : plan.popular ? "text-slate-600" : "text-slate-400"
+                                    }`}>{feature.name}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="space-y-1.5 pt-2">
+                              <Button
+                                onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                                variant="ghost"
+                                className={`w-full h-8 text-[10px] md:text-xs font-semibold ${
+                                  plan.popular ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                }`}
+                              >
+                                {isExpanded ? "Sembunyikan Detail" : "Lihat Detail Fitur"}
+                              </Button>
+                              
+                              <Button
+                                onClick={() => handleSelectPlan(plan)}
+                                disabled={processingPlan === plan.id}
+                                className={`w-full h-9 md:h-10 font-bold text-xs md:text-sm rounded-lg touch-manipulation ${
+                                  plan.popular
+                                    ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/25"
+                                    : plan.buttonVariant === "outline"
+                                    ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                                    : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white"
+                                }`}
+                              >
+                                {processingPlan === plan.id
+                                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Memproses...</span></>
+                                  : <span>{plan.buttonText}</span>}
+                              </Button>
+                            </div>
                           </Card>
                         </MotionCard>
                       </StaggerItem>
@@ -876,6 +999,108 @@ export default function PricingPage() {
                 </StaggerContainer>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* PAKET BIMBEL 2027 */}
+      {activeTab === "bimbel" && (
+        <section className="py-16 md:py-20 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <FadeIn className="text-center space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Perbandingan Paket Bimbel 2027</h2>
+              <p className="text-sm text-slate-500 max-w-xl mx-auto">
+                Program bimbingan belajar intensif dengan jumlah pertemuan, Try Out, dan pendampingan mentor.
+              </p>
+            </FadeIn>
+
+            <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6" staggerDelay={0.1}>
+              {bimbelPlans.map((plan) => {
+                const Icon = plan.icon;
+                const isExpanded = expandedPlan === plan.id;
+                return (
+                  <StaggerItem key={plan.id}>
+                    <MotionCard className="h-full">
+                      <Card className={`p-3 md:p-4 rounded-lg flex flex-col ${
+                        plan.popular
+                          ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-2 ring-blue-500/20"
+                          : "bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                      }`}>
+                        {/* Header */}
+                        <div className="space-y-2 pb-2 border-b border-slate-200/20">
+                          <div className="flex items-center justify-between">
+                            <div className={`h-7 w-7 md:h-9 md:w-9 rounded-lg flex items-center justify-center ${
+                              plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
+                            }`}>
+                              <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                            </div>
+                            {plan.badge && <Badge className={`text-[9px] md:text-[10px] font-bold ${plan.badgeColor} px-1.5 py-0.5`}>{plan.badge}</Badge>}
+                          </div>
+                          <div>
+                            <h3 className={`text-sm md:text-base font-black ${plan.popular ? "text-white" : "text-slate-900"} line-clamp-1`}>{plan.name}</h3>
+                            <p className={`text-[10px] md:text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                          </div>
+                          <Badge variant="outline" className={`text-[9px] md:text-[10px] font-semibold ${plan.popular ? "border-blue-500/40 bg-blue-500/10 text-blue-300" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
+                            {plan.pertemuan}
+                          </Badge>
+                          <div className="flex items-baseline gap-1">
+                            <span className={`text-base md:text-2xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</span>
+                            <span className={`text-[9px] md:text-xs font-semibold ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>/ {plan.duration}</span>
+                          </div>
+                        </div>
+
+                        {/* Features - Collapsible */}
+                        {isExpanded && (
+                          <ul className="space-y-2 py-3 border-b border-slate-200/20">
+                            {plan.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                {feature.included
+                                  ? <CheckCircle2 className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                  : <X className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                                <span className={`text-xs md:text-sm leading-[1.6] ${
+                                  feature.included
+                                    ? plan.popular ? "text-slate-200 font-medium" : "text-slate-700 font-medium"
+                                    : plan.popular ? "text-slate-600" : "text-slate-400"
+                                }`}>{feature.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="space-y-1.5 pt-2">
+                          <Button
+                            onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                            variant="ghost"
+                            className={`w-full h-8 text-[10px] md:text-xs font-semibold ${
+                              plan.popular ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                            }`}
+                          >
+                            {isExpanded ? "Sembunyikan Detail" : "Lihat Detail Fitur"}
+                          </Button>
+                          
+                          <Button
+                            onClick={() => handleSelectPlan(plan)}
+                            disabled={processingPlan === plan.id}
+                            className={`w-full h-9 md:h-10 font-bold text-xs md:text-sm rounded-lg touch-manipulation ${
+                              plan.popular
+                                ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/25"
+                                : plan.buttonVariant === "outline"
+                                ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white"
+                            }`}
+                          >
+                            {processingPlan === plan.id
+                              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Memproses...</span></>
+                              : <span>{plan.buttonText}</span>}
+                          </Button>
+                        </div>
+                      </Card>
+                    </MotionCard>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
           </div>
         </section>
       )}
@@ -890,61 +1115,83 @@ export default function PricingPage() {
                 Tidak perlu berlangganan. Beli Try Out sesuai kebutuhan dan kerjakan kapan saja.
               </p>
             </FadeIn>
-            <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
+            <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6" staggerDelay={0.1}>
               {tryoutPlans.map((plan) => {
                 const Icon = plan.icon;
+                const isExpanded = expandedPlan === plan.id;
                 return (
                   <StaggerItem key={plan.id}>
                     <MotionCard className="h-full">
-                      <Card className={`p-6 rounded-3xl flex flex-col h-full ${
+                      <Card className={`p-3 md:p-4 rounded-lg flex flex-col ${
                         plan.popular
-                          ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-4 ring-blue-500/20 scale-105"
-                          : "bg-white border-slate-200/80 shadow-sm hover:shadow-lg transition-shadow"
+                          ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-2 ring-blue-500/20"
+                          : "bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                       }`}>
-                        <div className="flex items-center justify-between mb-4">
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                            plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
-                          }`}>
-                            <Icon className="h-5 w-5" />
+                        {/* Header */}
+                        <div className="space-y-2 pb-2 border-b border-slate-200/20">
+                          <div className="flex items-center justify-between">
+                            <div className={`h-7 w-7 md:h-9 md:w-9 rounded-lg flex items-center justify-center ${
+                              plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
+                            }`}>
+                              <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                            </div>
+                            {plan.badge && <Badge className={`text-[9px] md:text-[10px] font-bold ${plan.badgeColor} px-1.5 py-0.5`}>{plan.badge}</Badge>}
                           </div>
-                          {plan.badge && <Badge className={`text-[10px] font-bold ${plan.badgeColor}`}>{plan.badge}</Badge>}
+                          <div className={`text-2xl md:text-4xl font-black ${plan.popular ? "text-blue-400" : "text-blue-600"}`}>{plan.quantity}</div>
+                          <p className={`text-[10px] md:text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>Try Out</p>
+                          <div>
+                            <h3 className={`text-sm md:text-base font-black ${plan.popular ? "text-white" : "text-slate-900"} line-clamp-1`}>{plan.name}</h3>
+                            <p className={`text-[10px] md:text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                          </div>
+                          <div className={`text-base md:text-2xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</div>
                         </div>
-                        <div className={`text-5xl font-black mb-1 ${plan.popular ? "text-blue-400" : "text-blue-600"}`}>{plan.quantity}</div>
-                        <p className={`text-xs mb-1 ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>Try Out</p>
-                        <h3 className={`text-lg font-black mb-1 ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.name}</h3>
-                        <p className={`text-xs mb-4 ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
-                        <div className={`text-2xl font-black pb-4 border-b ${
-                          plan.popular ? "text-white border-slate-800" : "text-slate-900 border-slate-100"
-                        }`}>{plan.priceDisplay}</div>
-                        <ul className="space-y-3 py-5 flex-1">
-                          {plan.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2.5">
-                              {feature.included
-                                ? <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
-                                : <X className={`h-4 w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
-                              <span className={`text-xs leading-relaxed ${
-                                feature.included
-                                  ? plan.popular ? "text-slate-200" : "text-slate-700"
-                                  : plan.popular ? "text-slate-600" : "text-slate-400"
-                              }`}>{feature.name}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <Button
-                          onClick={() => handleSelectPlan(plan)}
-                          disabled={processingPlan === plan.id}
-                          className={`w-full h-12 font-bold text-sm rounded-xl gap-2 ${
-                            plan.popular
-                              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25"
-                              : plan.buttonVariant === "outline"
-                              ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                              : "bg-blue-600 hover:bg-blue-700 text-white"
-                          }`}
-                        >
-                          {processingPlan === plan.id
-                            ? <><Loader2 className="h-4 w-4 animate-spin" /><span>Memproses...</span></>
-                            : <><span>{plan.buttonText}</span><ArrowRight className="h-4 w-4" /></>}
-                        </Button>
+
+                        {/* Features - Collapsible */}
+                        {isExpanded && (
+                          <ul className="space-y-2 py-3 border-b border-slate-200/20">
+                            {plan.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                {feature.included
+                                  ? <CheckCircle2 className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                  : <X className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                                <span className={`text-xs md:text-sm leading-[1.6] ${
+                                  feature.included
+                                    ? plan.popular ? "text-slate-200 font-medium" : "text-slate-700 font-medium"
+                                    : plan.popular ? "text-slate-600" : "text-slate-400"
+                                }`}>{feature.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="space-y-1.5 pt-2">
+                          <Button
+                            onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                            variant="ghost"
+                            className={`w-full h-8 text-[10px] md:text-xs font-semibold ${
+                              plan.popular ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                            }`}
+                          >
+                            {isExpanded ? "Sembunyikan Detail" : "Lihat Detail Fitur"}
+                          </Button>
+                          
+                          <Button
+                            onClick={() => handleSelectPlan(plan)}
+                            disabled={processingPlan === plan.id}
+                            className={`w-full h-9 md:h-10 font-bold text-xs md:text-sm rounded-lg touch-manipulation ${
+                              plan.popular
+                                ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/25"
+                                : plan.buttonVariant === "outline"
+                                ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white"
+                            }`}
+                          >
+                            {processingPlan === plan.id
+                              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Memproses...</span></>
+                              : <span>{plan.buttonText}</span>}
+                          </Button>
+                        </div>
                       </Card>
                     </MotionCard>
                   </StaggerItem>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -75,7 +75,7 @@ interface ProdiSuggestion {
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Prodi Impian Autocomplete
   const [prodiQuery, setProdiQuery] = useState("");
@@ -154,19 +154,56 @@ export default function RegisterPage() {
     setShowProdiDropdown(false);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
-    formData.set("targetUniv", targetUnivValue);
-    formData.set("targetProdi", targetProdiValue);
+    setIsLoading(true);
 
-    startTransition(async () => {
-      const result = await registerAction(formData);
-      if (result?.error) {
-        setError(result.error);
+    const formData = new FormData(e.currentTarget);
+    const fullName = (formData.get("fullName") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim();
+    const password = formData.get("password") as string;
+    const asalSekolah = (formData.get("asalSekolah") as string)?.trim();
+
+    if (!fullName || !email || !password) {
+      setError("Nama lengkap, email, dan kata sandi wajib diisi.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { data, error: signUpErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            asal_sekolah: asalSekolah || "",
+            target_univ: targetUnivValue || "",
+            target_prodi: targetProdiValue || "",
+            target_ptn: targetUnivValue || "",
+          },
+        },
+      });
+
+      if (signUpErr) {
+        setError(signUpErr.message);
+        setIsLoading(false);
+        return;
       }
-    });
+
+      // Check if session exists or if email confirmation is required
+      if (data.session) {
+        window.location.href = "/dashboard/student";
+      } else {
+        alert("Pendaftaran berhasil! Silakan periksa inbox email kamu untuk konfirmasi, lalu klik Masuk.");
+        window.location.href = "/login";
+      }
+    } catch (err: any) {
+      setError(err?.message || "Terjadi kesalahan saat pendaftaran.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -406,10 +443,10 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isLoading}
                 className="w-full h-11 font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-2 mt-2"
               >
-                {isPending ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Mendaftarkan Akun...</span>

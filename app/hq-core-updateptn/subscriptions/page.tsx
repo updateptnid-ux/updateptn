@@ -67,34 +67,34 @@ export default function AdminSubscriptionsPage() {
       id: "s2",
       user_name: "Budi Pratama",
       user_email: "budi.pratama@yahoo.com",
+      tier: "Bimbel 2027 (Paket Eksklusif)",
+      status: "active",
+      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      price_paid: "Rp 325.000",
+    },
+    {
+      id: "s3",
+      user_name: "Citra Kirana",
+      user_email: "citra.kirana@outlook.com",
+      tier: "Bimbel 2027 (Premium Intensif)",
+      status: "active",
+      expires_at: new Date(Date.now() + 86400000 * 90).toISOString(),
+      price_paid: "Rp 1.035.000",
+    },
+    {
+      id: "s4",
+      user_name: "Dimas Anggara",
+      user_email: "dimas.anggara@gmail.com",
       tier: "Premium SNBT",
       status: "active",
       expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
       price_paid: "Rp 79.000",
     },
     {
-      id: "s3",
-      user_name: "Citra Kirana",
-      user_email: "citra.kirana@outlook.com",
-      tier: "Premium SNBP",
-      status: "active",
-      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
-      price_paid: "Rp 85.000",
-    },
-    {
-      id: "s4",
-      user_name: "Dimas Anggara",
-      user_email: "dimas.anggara@gmail.com",
-      tier: "Premium Mandiri",
-      status: "active",
-      expires_at: new Date(Date.now() + 86400000 * 90).toISOString(),
-      price_paid: "Rp 160.000",
-    },
-    {
       id: "s5",
       user_name: "Eka Putri",
       user_email: "eka.putri@gmail.com",
-      tier: "Try Out (8x)",
+      tier: "Try Out (8x Paket Ambiss)",
       status: "active",
       expires_at: new Date(Date.now() + 86400000 * 180).toISOString(),
       price_paid: "Rp 379.000",
@@ -232,7 +232,10 @@ export default function AdminSubscriptionsPage() {
   const renderTierBadge = (tier: string) => {
     const t = tier.toLowerCase();
     if (t.includes("vip")) {
-      return <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-extrabold px-2.5">👑 VIP</Badge>;
+      return <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-extrabold px-2.5">VIP</Badge>;
+    }
+    if (t.includes("bimbel")) {
+      return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-extrabold px-2.5">Bimbel 2027</Badge>;
     }
     if (t.includes("snbt")) {
       return <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-bold px-2.5">SNBT</Badge>;
@@ -249,7 +252,7 @@ export default function AdminSubscriptionsPage() {
     if (t.includes("trial") || t.includes("gratis") || t.includes("basic")) {
       return <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 font-medium px-2.5">Trial / Gratis</Badge>;
     }
-    return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold px-2.5">{tier}</Badge>;
+    return <Badge className="bg-slate-100 text-slate-800 border-slate-200 font-bold px-2.5">{tier}</Badge>;
   };
 
   return (
@@ -375,10 +378,14 @@ export default function AdminSubscriptionsPage() {
                   className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white font-medium"
                 >
                   <option value="VIP">VIP (Semua Produk)</option>
+                  <option value="Bimbel 2027 (Paket Hemat)">Bimbel 2027 (Paket Hemat)</option>
+                  <option value="Bimbel 2027 (Paket Eksklusif)">Bimbel 2027 (Paket Eksklusif)</option>
+                  <option value="Bimbel 2027 (Premium Intensif)">Bimbel 2027 (Premium Intensif)</option>
+                  <option value="Bimbel 2027 (Bimbel Mandiri)">Bimbel 2027 (Bimbel Mandiri)</option>
                   <option value="Premium SNBT">Premium SNBT</option>
                   <option value="Premium SNBP">Premium SNBP</option>
                   <option value="Premium Mandiri">Premium Mandiri</option>
-                  <option value="Try Out (Paket Satuan)">Try Out (Paket Satuan)</option>
+                  <option value="Try Out Satuan">Try Out (Paket Satuan)</option>
                   <option value="Trial / Gratis">Trial / Gratis</option>
                 </select>
               </div>

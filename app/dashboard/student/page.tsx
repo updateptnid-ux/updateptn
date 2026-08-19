@@ -1,26 +1,25 @@
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
 import StudentTryoutList from "@/components/StudentTryoutList";
 import {
   GraduationCap,
-  Clock,
   FileText,
-  CheckCircle2,
-  PlayCircle,
-  BarChart3,
   Target,
-  Zap,
   TrendingUp,
   Award,
 } from "lucide-react";
+
+// Force dynamic rendering and disable caching
+// TODO: Move to ISR dengan revalidate setelah testing selesai
+// export const revalidate = 60; // Cache 60 seconds
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient();
@@ -28,43 +27,54 @@ export default async function StudentDashboardPage() {
   // 1. Fetch user session
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  // 2. Fetch Tryouts from DB
-  const { data: tryoutsData } = await supabase
-    .from("tryouts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  // If there's an error fetching user or no user found
+  if (userError || !user) {
+    console.error("Error fetching user:", userError);
+    return (
+      <div className="max-w-6xl mx-auto space-y-8 p-6">
+        <div className="p-6 text-center bg-white rounded-lg shadow">
+          <p className="text-slate-600 mb-4">Sesi tidak valid. Silakan login kembali.</p>
+          <a href="/login" className="text-blue-600 hover:underline font-semibold">
+            Kembali ke Login
+          </a>
+        </div>
+      </div>
+    );
+  }
 
-  // 3. Fetch past results for user
-  let userResultsCount = 0;
-  let lastResult = null;
-  let activeSubscription = null;
-
-  if (user) {
-    const { data: resultsData } = await supabase
+  // 2. Parallel data fetching untuk performa optimal
+  const [
+    { data: tryoutsData },
+    { data: resultsData },
+    { data: subData }
+  ] = await Promise.all([
+    supabase
+      .from("tryouts")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    
+    supabase
       .from("results")
       .select("*, tryouts(title)")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (resultsData && resultsData.length > 0) {
-      userResultsCount = resultsData.length;
-      lastResult = resultsData[0];
-    }
-
-    // Fetch latest user subscription
-    const { data: subData } = await supabase
+      .order("created_at", { ascending: false }),
+    
+    supabase
       .from("subscriptions")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+  ]);
 
-    if (subData && subData.length > 0) {
-      activeSubscription = subData[0];
-    }
-  }
+  // 3. Process results
+  const userResultsCount = resultsData?.length || 0;
+  const lastResult = resultsData?.[0] || null;
+  const activeSubscription = subData?.[0] || null;
 
   // Use real tryouts from database only
   const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
@@ -72,6 +82,7 @@ export default async function StudentDashboardPage() {
   const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
   const targetUniv = user?.user_metadata?.target_univ as string | undefined;
   const targetProdi = user?.user_metadata?.target_prodi as string | undefined;
+  
   // Build a display label for the target
   const targetLabel =
     targetProdi && targetUniv
@@ -79,122 +90,152 @@ export default async function StudentDashboardPage() {
       : targetUniv || targetProdi || null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header Banner */}
-      <MotionCard className="rounded-2xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-xl hover:shadow-blue-500/5 transition-all">
-          <div className="space-y-1.5">
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-semibold mb-1">
-              Portal Pejuang UTBK
-            </Badge>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Selamat Datang, {user?.user_metadata?.full_name || "Siswa UpdatePTN"}! 👋
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Pantau perkembangan skor IRT dan ikuti simulasi Try Out UTBK terbaru.
-            </p>
-            {asalSekolah && (
-              <p className="text-xs text-slate-400 font-medium flex items-center gap-1 pt-0.5">
-                <span>🏫</span>
-                <span>{asalSekolah}</span>
+    <div className="w-full min-h-screen bg-slate-50">
+      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-3 md:space-y-4">
+        {/* Header Banner - Compact */}
+        <MotionCard className="rounded-lg md:rounded-xl">
+          <div className="flex flex-col gap-3 bg-white p-3 md:p-4 rounded-lg md:rounded-xl border border-slate-200">
+            <div className="space-y-1">
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 font-semibold w-fit">
+                Portal UTBK
+              </Badge>
+              <h1 className="text-base md:text-xl font-bold text-slate-900">
+                Halo, {user?.user_metadata?.full_name || "Siswa"}! 👋
+              </h1>
+              <p className="text-xs md:text-sm text-slate-500">
+                Pantau skor dan ikuti Try Out UTBK
               </p>
-            )}
-          </div>
-
-          <Link href="/dashboard/student/cek-peluang">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2 shadow-xs shrink-0 hover:scale-105 active:scale-95 transition-all">
-              <Target className="h-4 w-4" />
-              <span>Cek Peluang PTN</span>
-            </Button>
-          </Link>
-        </div>
-      </MotionCard>
-
-      {/* Minimalist Stat Cards Waterfall Grid */}
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-3 gap-6" staggerDelay={0.08}>
-        {/* Stat 1 */}
-        <StaggerItem>
-          <MotionCard className="h-full rounded-2xl">
-            <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-2 h-full">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total TO Diikuti</span>
-                <div className="h-9 w-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <FileText className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-3xl font-extrabold text-slate-900">{userResultsCount}</p>
-              <p className="text-xs text-slate-500 font-medium">Selesai diuji sistem IRT</p>
-            </Card>
-          </MotionCard>
-        </StaggerItem>
-
-        {/* Stat 2 */}
-        <StaggerItem>
-          <MotionCard className="h-full rounded-2xl">
-            <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-2 h-full">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Skor Terakhir</span>
-                <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Award className="h-5 w-5" />
-                </div>
-              </div>
-              <p className="text-3xl font-extrabold text-slate-900">
-                {lastResult ? Math.round(Number(lastResult.score)) : "—"}
-              </p>
-              <p className="text-xs text-slate-500 font-medium">
-                {lastResult ? "Skor Pembobotan IRT" : "Belum ada tryout"}
-              </p>
-            </Card>
-          </MotionCard>
-        </StaggerItem>
-
-        {/* Stat 3 */}
-        <StaggerItem>
-          <MotionCard className="h-full rounded-2xl">
-            <Card className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-xs space-y-2 h-full">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Target Utama</span>
-                {targetUniv ? (
-                  <Avatar className="h-9 w-9 rounded-xl border border-slate-200">
-                    <AvatarImage
-                      src={getUnivLogoUrl(targetUniv) ?? undefined}
-                      alt={targetUniv}
-                      className="object-contain p-0.5"
-                    />
-                    <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold text-xs rounded-xl">
-                      {getUnivInitials(targetUniv)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <GraduationCap className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
-              {targetLabel ? (
-                <>
-                  <p className="text-base font-extrabold text-slate-900 leading-snug line-clamp-2">{targetLabel}</p>
-                  <p className="text-xs text-blue-600 font-semibold flex items-center gap-1">
-                    <Target className="h-3.5 w-3.5" />
-                    <span>Prodi Impian Kamu</span>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-slate-400 italic">Belum diset</p>
-                  <Link href="/direktori-prodi" className="text-xs text-blue-600 font-bold hover:underline flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    <span>Cari Prodi Impian →</span>
-                  </Link>
-                </>
+              {asalSekolah && (
+                <p className="text-[10px] md:text-xs text-slate-400 flex items-center gap-1">
+                  <span>🏫</span>
+                  <span>{asalSekolah}</span>
+                </p>
               )}
+            </div>
+
+            <Link href="/dashboard/student/cek-peluang" className="w-full">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-8 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
+                <Target className="h-3 w-3 md:h-4 md:w-4" />
+                <span>Cek Peluang PTN</span>
+              </Button>
+            </Link>
+          </div>
+        </MotionCard>
+
+        {/* Stat Cards - Compact Grid */}
+        <StaggerContainer className="grid grid-cols-3 gap-2 md:gap-3" staggerDelay={0.08}>
+          {/* Stat 1 - Compact */}
+          <StaggerItem>
+            <MotionCard className="h-full rounded-lg md:rounded-xl">
+              <Card className="bg-white border border-slate-200 p-2.5 md:p-4 rounded-lg md:rounded-xl space-y-1 md:space-y-2 h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-400">Total TO</span>
+                  <div className="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <FileText className="h-3 w-3 md:h-4 md:w-4" />
+                  </div>
+                </div>
+                <p className="text-xl md:text-2xl font-bold text-slate-900">{userResultsCount}</p>
+                <p className="text-[9px] md:text-[10px] text-slate-500 font-medium">Diikuti</p>
+              </Card>
+            </MotionCard>
+          </StaggerItem>
+
+          {/* Stat 2 - Compact */}
+          <StaggerItem>
+            <MotionCard className="h-full rounded-lg md:rounded-xl">
+              <Card className="bg-white border border-slate-200 p-2.5 md:p-4 rounded-lg md:rounded-xl space-y-1 md:space-y-2 h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-400">Skor</span>
+                  <div className="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <Award className="h-3 w-3 md:h-4 md:w-4" />
+                  </div>
+                </div>
+                <p className="text-xl md:text-2xl font-bold text-slate-900">
+                  {lastResult ? Math.round(Number(lastResult.score)) : "—"}
+                </p>
+                <p className="text-[9px] md:text-[10px] text-slate-500 font-medium">
+                  {lastResult ? "IRT" : "Belum ada"}
+                </p>
+              </Card>
+            </MotionCard>
+          </StaggerItem>
+
+          {/* Stat 3 - Compact */}
+          <StaggerItem>
+            <MotionCard className="h-full rounded-lg md:rounded-xl">
+              <Card className="bg-white border border-slate-200 p-2.5 md:p-4 rounded-lg md:rounded-xl space-y-1 md:space-y-2 h-full">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-400">Target</span>
+                  {targetUniv ? (
+                    <Avatar className="h-6 w-6 md:h-8 md:w-8 rounded-lg border border-slate-200 shrink-0">
+                      <AvatarImage
+                        src={getUnivLogoUrl(targetUniv) ?? undefined}
+                        alt={targetUniv}
+                        className="object-contain p-0.5"
+                      />
+                      <AvatarFallback className="bg-blue-50 text-blue-600 font-bold text-[10px] rounded-lg">
+                        {getUnivInitials(targetUniv)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="h-6 w-6 md:h-8 md:w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <GraduationCap className="h-3 w-3 md:h-4 md:w-4" />
+                    </div>
+                  )}
+                </div>
+                {targetLabel ? (
+                  <>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-900 leading-tight line-clamp-2">{targetLabel}</p>
+                    <p className="text-[9px] md:text-[10px] text-blue-600 font-semibold flex items-center gap-0.5">
+                      <Target className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                      <span>Impian</span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] md:text-xs font-semibold text-slate-400 italic">Belum diset</p>
+                    <Link href="/direktori-prodi" className="text-[9px] md:text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-0.5">
+                      <TrendingUp className="h-2.5 w-2.5" />
+                      <span>Cari →</span>
+                    </Link>
+                  </>
+                )}
+              </Card>
+            </MotionCard>
+          </StaggerItem>
+        </StaggerContainer>
+
+        {/* Active Subscription Info */}
+        {activeSubscription && (
+          <MotionCard className="rounded-lg md:rounded-xl">
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 p-3 md:p-4 rounded-lg">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-green-600 text-white flex items-center justify-center shrink-0">
+                    {activeSubscription.tier === 'gold' ? '👑' : '⭐'}
+                  </div>
+                  <div>
+                    <p className="text-xs md:text-sm font-bold text-green-900 capitalize">
+                      Paket {activeSubscription.tier}
+                    </p>
+                    <p className="text-[10px] md:text-xs text-green-700">
+                      Aktif hingga {new Date(activeSubscription.expires_at).toLocaleDateString('id-ID', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-green-600 text-white border-0 text-[10px] md:text-xs font-bold">
+                  AKTIF
+                </Badge>
+              </div>
             </Card>
           </MotionCard>
-        </StaggerItem>
-      </StaggerContainer>
+        )}
 
-      {/* Available Try Outs Component List */}
-      {user && (
+        {/* Try Outs List - Compact */}
         <StudentTryoutList
           tryouts={activeTryouts}
           userId={user.id}
@@ -202,7 +243,7 @@ export default async function StudentDashboardPage() {
           userEmail={user.email || ""}
           initialSubscription={activeSubscription}
         />
-      )}
+      </div>
     </div>
   );
 }

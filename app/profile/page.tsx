@@ -799,7 +799,7 @@ export default function ProfilePage() {
 
       {/* ── CARD: Status Langganan / Upgrade Premium ───────────────── */}
       {isPremium ? (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 md:p-6 shadow-xs">
+        <Card className="bg-blue-50 border border-blue-200 rounded-2xl p-5 md:p-6 shadow-xs">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
               <Sparkles className="h-5 w-5 text-amber-300" />
@@ -818,7 +818,7 @@ export default function ProfilePage() {
           </div>
         </Card>
       ) : (
-        <Card className="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border border-blue-800/60 rounded-2xl p-5 md:p-6 shadow-lg text-white">
+        <Card className="bg-blue-900 border border-blue-800/60 rounded-2xl p-5 md:p-6 shadow-lg text-white">
           <div className="flex items-center gap-2 border-b border-white/10 pb-4 mb-4">
             <div className="h-8 w-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
               <Sparkles className="h-4 w-4 text-amber-300" />

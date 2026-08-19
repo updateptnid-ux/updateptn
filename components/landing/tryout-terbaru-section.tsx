@@ -26,21 +26,28 @@ export default function TryoutTerbaruInlineCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const fetchTryout = async () => {
+      const supabase = createClient();
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    supabase
-      .from("tryouts")
-      .select(SAFE_COLUMNS)
-      .gte("scheduled_date", cutoff)
-      .order("scheduled_date", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data, error }) => {
+      try {
+        const { data, error } = await supabase
+          .from("tryouts")
+          .select(SAFE_COLUMNS)
+          .gte("scheduled_date", cutoff)
+          .order("scheduled_date", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
         if (!error && data) setTryout(data as PublicTryoutItem);
-      })
-      .catch(() => null)
-      .finally(() => setLoading(false));
+      } catch (err) {
+        // ignore error
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTryout();
   }, []);
 
   if (loading) {
@@ -75,12 +82,12 @@ export default function TryoutTerbaruInlineCard() {
         <div className="relative rounded-2xl border border-blue-200/70 bg-white shadow-md shadow-blue-500/8 overflow-hidden transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-500/15 group-hover:-translate-y-0.5">
 
           {/* Top gradient stripe */}
-          <div className="h-[3px] w-full bg-gradient-to-r from-blue-500 to-indigo-500" />
+          <div className="h-[3px] w-full bg-blue-500" />
 
           <div className="px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
 
             {/* Icon */}
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow shadow-blue-500/25 shrink-0">
+            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center shadow shadow-blue-500/25 shrink-0">
               <Flame className="h-[18px] w-[18px] text-white" />
             </div>
 

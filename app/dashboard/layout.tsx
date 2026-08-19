@@ -14,6 +14,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Target,
+  CalendarDays,
   Video,
   LogOut,
   Menu,
@@ -21,6 +22,7 @@ import {
   BookOpen,
   Trophy,
   UserCircle2,
+  ShoppingCart,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -38,9 +40,19 @@ export default function DashboardLayout({
       icon: LayoutDashboard,
     },
     {
+      name: "Kalender",
+      href: "/dashboard/student/kalender",
+      icon: CalendarDays,
+    },
+    {
       name: "Latihan Per Subtes",
       href: "/dashboard/student/latihan-subtes",
       icon: BookOpen,
+    },
+    {
+      name: "Beli Paket",
+      href: "/pricing",
+      icon: ShoppingCart,
     },
     {
       name: "Modul Belajar",

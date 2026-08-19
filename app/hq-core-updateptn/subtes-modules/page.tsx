@@ -41,11 +41,15 @@ interface SubtesModule {
 }
 
 const subtesCategories = [
-  { value: "penalaran-umum", label: "Penalaran Umum" },
-  { value: "pengetahuan-kuantitatif", label: "Pengetahuan Kuantitatif" },
+  // TES POTENSI SKOLASTIK (TPS)
+  { value: "penalaran-umum", label: "Penalaran Umum (PU)" },
+  { value: "pengetahuan-pemahaman-umum", label: "Pengetahuan & Pemahaman Umum (PPU)" },
+  { value: "pemahaman-bacaan-menulis", label: "Pemahaman Bacaan & Menulis (PBM)" },
+  { value: "pengetahuan-kuantitatif", label: "Pengetahuan Kuantitatif (PK)" },
+  // TES LITERASI
   { value: "literasi-indonesia", label: "Literasi B. Indonesia" },
   { value: "literasi-inggris", label: "Literasi B. Inggris" },
-  { value: "penalaran-matematika", label: "Penalaran Matematika" },
+  { value: "penalaran-matematika", label: "Penalaran Matematika (PM)" },
 ];
 
 export default function SubtesModulesPage() {

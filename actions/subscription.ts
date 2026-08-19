@@ -63,14 +63,31 @@ export async function createSubscription(data: SubscriptionData) {
 export async function getUserSubscription(userId: string) {
   try {
     const supabase = await createClient();
+    const now = new Date().toISOString();
 
+    // First, auto-update any expired subscriptions to "expired" status
+    await supabase
+      .from("subscriptions")
+      .update({ status: "expired", updated_at: now })
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .lt("expires_at", now);
+
+    // Then, auto-update any subscriptions that should be active (not yet expired)
+    await supabase
+      .from("subscriptions")
+      .update({ status: "active", updated_at: now })
+      .eq("user_id", userId)
+      .eq("status", "expired")
+      .gt("expires_at", now);
+
+    // Fetch the most recent active subscription
     const { data, error } = await supabase
       .from("subscriptions")
       .select("*")
       .eq("user_id", userId)
-      .eq("status", "active")
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
+      .gt("expires_at", now)
+      .order("expires_at", { ascending: false })
       .limit(1)
       .single();
 
@@ -203,10 +220,14 @@ export async function extendSubscription(
     const baseDate = currentExpiry > now ? currentExpiry : now;
     baseDate.setMonth(baseDate.getMonth() + additionalMonths);
 
+    // Determine status based on new expiry date
+    const newStatus = baseDate > now ? "active" : "expired";
+
     const { data, error } = await supabase
       .from("subscriptions")
       .update({
         expires_at: baseDate.toISOString(),
+        status: newStatus,
         updated_at: new Date().toISOString(),
       })
       .eq("id", subscriptionId)

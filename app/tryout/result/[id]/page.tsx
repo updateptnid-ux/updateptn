@@ -165,7 +165,7 @@ export default function TryoutResultPage() {
   if (score < 500) {
     performanceBadge = { label: "Perlu Peningkatan – Tingkatkan Latihan", color: "bg-rose-50 text-rose-700 border-rose-200" };
   } else if (score < 650) {
-    performanceBadge = { label: "Cukup Baik – Peluang Sedang", color: "bg-amber-50 text-amber-700 border-amber-200" };
+    performanceBadge = { label: "Cukup Baik – Peluang Sedang", color: "bg-blue-50 text-blue-700 border-blue-200" };
   }
 
   // --- Target Jurusan Analysis ---
@@ -192,13 +192,13 @@ export default function TryoutResultPage() {
   } else {
     chancePercent = Math.max(20, Math.round(60 + diff * 1.2));
     chanceStatus = "PERLU DITINGKATKAN";
-    chanceBadgeStyle = "bg-amber-50 text-amber-700 border-amber-200";
-    chanceIcon = <TrendingDown className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />;
+    chanceBadgeStyle = "bg-blue-50 text-blue-700 border-blue-200";
+    chanceIcon = <TrendingDown className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />;
     recommendationText = `Skor kamu (${score}) masih berjarak ${Math.abs(diff)} poin di bawah estimasi passing grade (${targetPg}) untuk ${targetProdi}. Fokus latihan intensif di subtes Kuantitatif & Penalaran Matematika untuk menutup gap ini.`;
   }
 
   const progressBarColor =
-    diff >= 20 ? "text-emerald-600" : diff >= 0 ? "text-blue-600" : "text-amber-600";
+    diff >= 20 ? "text-emerald-600" : diff >= 0 ? "text-blue-600" : "text-blue-500";
 
   // --- Subtest Breakdown & AI Logic ---
   const subtestScores = result.subtest_scores || {};
@@ -360,12 +360,12 @@ export default function TryoutResultPage() {
               <div className="space-y-6">
                 {/* Highlight Leaning / Gap Banner */}
                 {topLeaning && (
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg flex items-start gap-4 border border-slate-800 relative overflow-hidden">
+                  <div className="p-5 rounded-2xl bg-blue-800 text-white shadow-lg flex items-start gap-4 border border-blue-700 relative overflow-hidden">
                     <div className="h-10 w-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/10 mt-0.5">
                       {topLeaning.chancePct >= 60 ? (
-                        <Sparkles className="h-5 w-5 text-amber-300" />
+                        <Sparkles className="h-5 w-5 text-blue-200" />
                       ) : (
-                        <BrainCircuit className="h-5 w-5 text-blue-400" />
+                        <BrainCircuit className="h-5 w-5 text-blue-300" />
                       )}
                     </div>
                     <div className="space-y-1">
@@ -374,21 +374,21 @@ export default function TryoutResultPage() {
                       </span>
                       {topLeaning.chancePct >= 60 ? (
                         <>
-                          <p className="text-xs font-medium text-slate-300">
+                          <p className="text-xs font-medium text-blue-100">
                             Skor IRT kamu (<strong className="text-white font-bold">{score}</strong>) paling condong aman & berpeluang diterima pada:
                           </p>
-                          <p className="text-sm font-black text-amber-300 pt-0.5">
+                          <p className="text-sm font-black text-white pt-0.5">
                             Pilihan {topLeaning.slotNum}: {topLeaning.prodi} — {topLeaning.univ} (Peluang {topLeaning.chancePct}%)
                           </p>
                         </>
                       ) : (
                         <>
-                          <p className="text-xs font-medium text-slate-300 leading-relaxed">
+                          <p className="text-xs font-medium text-blue-100 leading-relaxed">
                             Skor IRT kamu (<strong className="text-white font-bold">{score}</strong>) saat ini masih di bawah estimasi passing grade seluruh prodi pilihan. Pilihan dengan gap terdekat:
                           </p>
-                          <p className="text-sm font-black text-blue-300 pt-0.5">
+                          <p className="text-sm font-black text-white pt-0.5">
                             Pilihan {topLeaning.slotNum}: {topLeaning.prodi} — {topLeaning.univ}{" "}
-                            <span className="text-xs font-extrabold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 ml-1">
+                            <span className="text-xs font-extrabold text-blue-200 bg-blue-400/20 px-2 py-0.5 rounded-md border border-blue-400/30 ml-1">
                               Selisih {topLeaning.diff} poin • Peluang {topLeaning.chancePct}%
                             </span>
                           </p>
@@ -411,7 +411,7 @@ export default function TryoutResultPage() {
                           isLeaningTarget
                             ? choice.chancePct >= 60
                               ? "bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs"
-                              : "bg-amber-50/60 border-amber-300 ring-2 ring-amber-500/20 shadow-xs"
+                              : "bg-blue-50/40 border-blue-200 ring-2 ring-blue-400/20 shadow-xs"
                             : "bg-white border-slate-200"
                         }`}
                       >
@@ -422,9 +422,9 @@ export default function TryoutResultPage() {
                             </span>
                             {isLeaningTarget && (
                               <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                                choice.chancePct >= 60 ? "text-blue-700 bg-blue-100" : "text-amber-800 bg-amber-100"
+                                choice.chancePct >= 60 ? "text-blue-700 bg-blue-100" : "text-blue-600 bg-blue-50"
                               }`}>
-                                <Sparkles className="h-3 w-3 text-amber-500" />
+                                <Sparkles className="h-3 w-3 text-blue-500" />
                                 {choice.chancePct >= 60 ? "Condong Ke Sini" : "Gap Terdekat"}
                               </span>
                             )}
@@ -519,8 +519,8 @@ export default function TryoutResultPage() {
         {hasSubtestData && (
           <Card className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5">
             <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
-              <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-indigo-600" />
+              <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Rincian Skor Per Subtes</h3>
@@ -534,8 +534,8 @@ export default function TryoutResultPage() {
                 const pct = (s.correct / Math.max(s.total, 1)) * 100;
                 let colorClass = "bg-blue-500";
                 if (pct >= 80) colorClass = "bg-emerald-500";
-                else if (pct < 50) colorClass = "bg-rose-500";
-                else if (pct < 70) colorClass = "bg-amber-500";
+                else if (pct < 50) colorClass = "bg-blue-300";
+                else if (pct < 70) colorClass = "bg-blue-400";
 
                 return (
                   <div key={sub} className="space-y-1.5">
@@ -561,7 +561,7 @@ export default function TryoutResultPage() {
 
         {/* AI Prediction Card */}
         {hasSubtestData && (
-          <Card className="bg-gradient-to-br from-indigo-600 to-blue-700 shadow-lg rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden border-0">
+          <Card className="bg-blue-700 shadow-lg rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden border-0">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
             
             <div className="flex items-start gap-4 relative z-10">
@@ -571,10 +571,10 @@ export default function TryoutResultPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-amber-300" />
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-100">Smart Analysis AI</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-blue-100">Smart Analysis AI</h3>
                 </div>
                 <h4 className="text-lg font-extrabold leading-tight">Fokus Belajar Selanjutnya</h4>
-                <p className="text-sm text-indigo-100/90 leading-relaxed pt-1">
+                <p className="text-sm text-blue-100/90 leading-relaxed pt-1">
                   Berdasarkan pemodelan respons butir soal (IRT) yang kamu kerjakan, kelemahan utamamu saat ini ada pada materi <strong className="text-white underline decoration-amber-400 decoration-2 underline-offset-2">{worstSubtestName}</strong>. 
                   Jika kamu ingin mengejar ketertinggalan passing grade di {targetProdi} {targetPtn}, sangat disarankan untuk memperbanyak latihan pada subtes ini sebelum mencoba Try Out berikutnya.
                 </p>
@@ -592,13 +592,13 @@ export default function TryoutResultPage() {
               className="w-full flex items-center justify-between hover:bg-slate-50 -m-2 p-2 rounded-xl transition-colors"
             >
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
-                  <Filter className="h-5 w-5 text-purple-600" />
+                <div className="h-9 w-9 rounded-xl bg-blue-800 border border-blue-700 flex items-center justify-center">
+                  <Filter className="h-5 w-5 text-white" />
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-slate-900">Analisis Detail Per Soal</h3>
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-bold">
+                    <Badge variant="outline" className="bg-blue-900 text-white border-blue-800 text-[10px] font-bold">
                       Premium
                     </Badge>
                   </div>
@@ -665,7 +665,7 @@ export default function TryoutResultPage() {
                     onClick={() => setFilterType("slowest")}
                     className={`p-3 rounded-xl border-2 transition-all text-xs font-bold flex flex-col items-center gap-1.5 ${
                       filterType === "slowest"
-                        ? "border-purple-500 bg-purple-50 text-purple-700"
+                        ? "border-blue-800 bg-blue-900 text-white"
                         : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                     }`}
                   >
@@ -706,7 +706,7 @@ export default function TryoutResultPage() {
                             Menampilkan {filtered.length} soal
                           </span>
                           {filterType === "slowest" && (
-                            <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-md">
+                            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
                               Evaluasi Time Management
                             </span>
                           )}
@@ -805,14 +805,14 @@ export default function TryoutResultPage() {
 
                 {/* Time Management Summary for "slowest" filter */}
                 {filterType === "slowest" && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
+                  <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200">
                     <div className="flex items-start gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-                        <BrainCircuit className="h-5 w-5 text-purple-600" />
+                      <div className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                        <BrainCircuit className="h-5 w-5 text-blue-700" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-purple-900">Tips Time Management SNBT</h4>
-                        <p className="text-[11px] text-purple-800 leading-relaxed">
+                        <h4 className="text-xs font-bold text-blue-900">Tips Time Management SNBT</h4>
+                        <p className="text-[11px] text-blue-800 leading-relaxed">
                           Dalam ujian SNBT, setiap subtes memiliki durasi terbatas. Soal yang memakan waktu &gt;3 menit sebaiknya di-skip dulu dan dikerjakan di akhir waktu. Prioritaskan soal yang bisa diselesaikan dengan cepat untuk maksimalkan skor.
                         </p>
                       </div>
@@ -826,7 +826,7 @@ export default function TryoutResultPage() {
 
         {/* Non-Premium Teaser */}
         {!isPremium && (
-          <Card className="bg-gradient-to-br from-purple-600 to-indigo-600 border-0 shadow-lg rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden">
+          <Card className="bg-blue-800 border-0 shadow-lg rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
             
             <div className="flex items-start gap-4 relative z-10">
@@ -836,14 +836,14 @@ export default function TryoutResultPage() {
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-amber-300" />
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-purple-100">Fitur Premium</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-blue-100">Fitur Premium</h3>
                 </div>
                 <h4 className="text-lg font-extrabold leading-tight">Analisis Detail Per Soal</h4>
-                <p className="text-sm text-purple-100/90 leading-relaxed pt-1">
+                <p className="text-sm text-blue-100/90 leading-relaxed pt-1">
                   Upgrade ke Premium untuk mendapatkan analisis mendalam per soal: filter soal yang dijawab salah, soal yang dilewati, dan soal terlama dikerjakan. Evaluasi time management dan strategi pengerjaan kamu!
                 </p>
                 <Link href="/pricing" className="inline-block mt-3">
-                  <Button className="bg-white text-purple-600 hover:bg-purple-50 font-bold rounded-xl h-10 px-6 shadow-md">
+                  <Button className="bg-white text-blue-800 hover:bg-blue-50 font-bold rounded-xl h-10 px-6 shadow-md">
                     <Target className="h-4 w-4 mr-2" />
                     Upgrade ke Premium
                   </Button>

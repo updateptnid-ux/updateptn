@@ -71,8 +71,91 @@
 @layer base {
   * {
     @apply border-border;
+    /* Prevent iOS double-tap zoom delay */
+    touch-action: manipulation;
   }
+  
   body {
     @apply bg-background text-foreground font-sans;
+    /* Prevent horizontal scroll */
+    overflow-x: hidden;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* iOS smooth momentum scrolling */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* iOS Safe Area Support (iPhone notch/Dynamic Island) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-y {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Font fallback for Android & iOS */
+  .font-sans {
+    font-family: 
+      var(--font-inter),
+      -apple-system,        /* iOS San Francisco */
+      BlinkMacSystemFont,   /* macOS */
+      'Roboto',             /* Android */
+      'Noto Sans',          /* Android fallback */
+      'Segoe UI',           /* Windows */
+      sans-serif;
+  }
+  
+  /* Smooth scrolling for containers */
+  .scroll-smooth-ios {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+  }
+  
+  /* Prevent iOS zoom on input focus (use with font-size: 16px) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px; /* Critical for iOS */
+  }
+  
+  /* Touch-friendly buttons */
+  button,
+  [role="button"],
+  a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Remove default iOS button styling */
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
   }
 }

@@ -143,7 +143,7 @@ export default function SubtesDetailPage() {
 
       {/* Header Card */}
       <MotionCard className="rounded-2xl">
-        <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-8 rounded-2xl border-0 shadow-xl">
+        <Card className="bg-blue-700 text-white p-8 rounded-2xl border-0 shadow-xl">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
               <IconComponent className="h-8 w-8" />

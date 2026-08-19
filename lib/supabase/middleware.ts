@@ -1,144 +1,75 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Pass current pathname via request header for Server Layouts
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-pathname", pathname);
-
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: requestHeaders,
+    request,
+  });
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => {
+          request.cookies.set(name, value);
+        });
+        supabaseResponse = NextResponse.next({
+          request,
+        });
+        cookiesToSet.forEach(({ name, value, options }) => {
+          supabaseResponse.cookies.set(name, value, options);
+        });
+      },
     },
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request: {
-              headers: requestHeaders,
-            },
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Extract user session from Supabase
+  // Refresh session
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ========================================================
-  // 1. OBSCURE ADMIN ROUTE PROTECTION (/hq-core-updateptn/*)
-  // ========================================================
+  // Admin route protection (TETAP AKTIF)
   if (pathname.startsWith("/hq-core-updateptn")) {
-    const isAdminLoginRoute = pathname === "/hq-core-updateptn/login";
-
-    let isAdmin = false;
-    if (user) {
-      try {
-        // Bypass RLS using Service Role Key if present in environment
-        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const dbClient = serviceRoleKey
-          ? createSupabaseClient(
-              process.env.NEXT_PUBLIC_SUPABASE_URL!,
-              serviceRoleKey,
-              { auth: { persistSession: false } }
-            )
-          : supabase;
-
-        // Query profiles table for the user's role
-        const { data: profile, error } = await dbClient
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!error && profile && profile.role === "admin") {
-          isAdmin = true;
-        }
-      } catch (err) {
-        console.error("Middleware DB profile fetch error:", err);
+    if (pathname === "/hq-core-updateptn/login") {
+      if (user) {
+        return NextResponse.redirect(new URL("/hq-core-updateptn", request.url));
       }
-
-      // Fallback: Check user metadata or admin email
-      if (!isAdmin) {
-        const userMetaRole =
-          user.user_metadata?.role ||
-          user.app_metadata?.role ||
-          (user.email === "admin@updateptn.id" || user.email === "updateptnid@gmail.com" ? "admin" : null);
-
-        if (userMetaRole === "admin") {
-          isAdmin = true;
-        }
-      }
-    }
-
-    // Case A: User visiting /hq-core-updateptn/login
-    if (isAdminLoginRoute) {
-      if (user && isAdmin) {
-        // If already logged in as admin, redirect to /hq-core-updateptn
-        const url = request.nextUrl.clone();
-        url.pathname = "/hq-core-updateptn";
-        return NextResponse.redirect(url);
-      }
-      // Unauthenticated or non-admin users are allowed to view the admin login page
       return supabaseResponse;
     }
 
-    // Case B: User visiting any other /hq-core-updateptn/* route
+    // Check if admin
+    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+    const isAdmin = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
     if (!user || !isAdmin) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/hq-core-updateptn/login";
-      if (!user) {
-        url.searchParams.set("redirect", pathname);
-      }
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/hq-core-updateptn/login", request.url));
     }
   }
 
-  // ========================================================
-  // 2. STRICT PROTECTION FOR INTERNAL ROUTES
-  // Protect: /direktori-prodi, /dashboard, /tryout
-  // ========================================================
+  // Student & Protected Route Protection
   if (
     pathname.startsWith("/direktori-prodi") ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/tryout")
   ) {
     if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      const url = new URL("/login", request.url);
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
   }
 
-  // ========================================================
-  // 3. AUTH PAGES REDIRECT IF ALREADY LOGGED IN
-  // ========================================================
+  // Redirect if already logged in
   if (pathname === "/login" || pathname === "/register") {
     if (user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard/student";
-      return NextResponse.redirect(url);
+      return NextResponse.redirect(new URL("/dashboard/student", request.url));
     }
   }
 

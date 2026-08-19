@@ -687,18 +687,16 @@ export default function TryoutEnginePage({
     const verdict = getSmartVerdict();
 
     return (
-      <div className="min-h-screen bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 font-sans py-8">
-        <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+      <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-4 font-sans py-8">
+        <div className="w-full max-w-xl bg-white rounded-2xl shadow-sm overflow-hidden border border-blue-100">
           {/* Header */}
-          <div className="bg-slate-900 px-6 py-5 text-white flex items-center justify-between border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                <Target className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <h2 className="text-base font-extrabold tracking-tight">Pilihan Target Jurusan</h2>
-                <p className="text-xs text-slate-400">Atur urutan 1–4 prodi impian kamu sebelum try out</p>
-              </div>
+          <div className="px-6 py-4 border-b border-blue-100 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+              <Target className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold text-blue-900 tracking-tight">Pilihan Target Jurusan</h2>
+              <p className="text-xs text-blue-400">Atur urutan 1–4 prodi impian kamu sebelum try out</p>
             </div>
           </div>
 
@@ -707,8 +705,8 @@ export default function TryoutEnginePage({
             {/* Search Input for Active Slot */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
-                  <Search className="h-3.5 w-3.5 text-blue-600" />
+                <label className="text-xs font-bold text-blue-700 flex items-center gap-1.5">
+                  <Search className="h-3.5 w-3.5" />
                   Cari & Isi Jurusan Pilihan {activeTargetSlot + 1}:
                 </label>
                 <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
@@ -716,18 +714,18 @@ export default function TryoutEnginePage({
                 </span>
               </div>
               <div className="relative">
-                <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <Search className="h-4 w-4 text-blue-300 absolute left-3.5 top-3.5" />
                 <Input
                   value={prodiSearch}
                   onChange={(e) => setProdiSearch(e.target.value)}
                   placeholder="Ketik nama jurusan / PTN (cth: Kedokteran UI, Teknik ITB)..."
-                  className="pl-10 h-11 rounded-2xl text-xs border-slate-200 font-medium bg-slate-50 focus:bg-white transition-all shadow-xs"
+                  className="pl-10 h-11 rounded-xl text-xs border-blue-200 font-medium bg-blue-50 focus:bg-white transition-all"
                 />
               </div>
 
               {/* Autocomplete Suggestions dropdown */}
               {filteredProdi.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-2xl p-2 bg-white shadow-xl animate-in fade-in duration-150 relative z-20">
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-blue-100 rounded-xl p-2 bg-white shadow-md animate-in fade-in duration-150 relative z-20">
                   {filteredProdi.map((p) => (
                     <button
                       key={p.id}
@@ -742,7 +740,6 @@ export default function TryoutEnginePage({
                         setTargets((prev) => {
                           const copy = [...prev];
                           copy[activeTargetSlot] = selectedItem;
-                          // Auto advance to next slot if available and empty
                           if (activeTargetSlot < 3 && !copy[activeTargetSlot + 1]) {
                             setActiveTargetSlot(activeTargetSlot + 1);
                           }
@@ -751,14 +748,14 @@ export default function TryoutEnginePage({
                         setProdiSearch("");
                         setProdiList([]);
                       }}
-                      className="w-full text-left p-2.5 rounded-xl text-xs flex items-center justify-between hover:bg-blue-600 hover:text-white transition-colors bg-slate-50/60 group"
+                      className="w-full text-left p-2.5 rounded-lg text-xs flex items-center justify-between hover:bg-blue-700 hover:text-white transition-colors group"
                     >
                       <div className="truncate pr-2">
                         <span className="font-bold block truncate text-slate-900 group-hover:text-white">{p.prodi}</span>
                         <span className="text-[11px] block truncate text-slate-500 group-hover:text-blue-100">{p.univ}</span>
                       </div>
                       {p.passing_grade_est && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 bg-blue-100 text-blue-800 group-hover:bg-white/20 group-hover:text-white">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 bg-blue-100 text-blue-700 group-hover:bg-white/20 group-hover:text-white">
                           PG ~{p.passing_grade_est}
                         </span>
                       )}
@@ -768,9 +765,9 @@ export default function TryoutEnginePage({
               )}
             </div>
 
-            {/* 4 Compact Choice Slots */}
+            {/* 4 Choice Slots */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-blue-400 uppercase tracking-wider px-1">
                 <span>Daftar 4 Pilihan Kamu</span>
                 <span>Klik slot untuk mengubah</span>
               </div>
@@ -784,21 +781,21 @@ export default function TryoutEnginePage({
                     <div
                       key={slotIdx}
                       onClick={() => setActiveTargetSlot(slotIdx)}
-                      className={`cursor-pointer rounded-2xl p-3 border transition-all flex items-center justify-between gap-3 ${
+                      className={`cursor-pointer rounded-xl p-3 border transition-all flex items-center justify-between gap-3 ${
                         isActive
-                          ? "border-blue-500 bg-blue-50/70 ring-2 ring-blue-500/20 shadow-xs"
+                          ? "border-blue-400 bg-blue-50 ring-1 ring-blue-400/30"
                           : item
-                          ? "border-slate-200 bg-white hover:border-slate-300"
-                          : "border-dashed border-slate-300 bg-slate-50/50 hover:bg-slate-100/50"
+                          ? "border-blue-100 bg-white hover:border-blue-200"
+                          : "border-dashed border-blue-200 bg-blue-50/40 hover:bg-blue-50"
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs ${
+                        <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 font-extrabold text-xs ${
                           isActive
-                            ? "bg-blue-600 text-white shadow-xs"
+                            ? "bg-blue-600 text-white"
                             : item
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-200 text-slate-500"
+                            ? "bg-blue-700 text-white"
+                            : "bg-blue-100 text-blue-400"
                         }`}>
                           P{slotNum}
                         </div>
@@ -808,22 +805,22 @@ export default function TryoutEnginePage({
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-extrabold text-slate-900 truncate">{item.prodi}</p>
                               {slotIdx === 0 && (
-                                <span className="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded-md shrink-0">Profil Impian</span>
+                                <span className="text-[9px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded shrink-0">Profil Impian</span>
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-500 font-medium truncate">{item.univ}</p>
+                            <p className="text-[11px] text-blue-400 font-medium truncate">{item.univ}</p>
                           </div>
                         ) : (
                           <div>
-                            <p className="text-xs font-semibold text-slate-400">Pilihan {slotNum} belum diisi</p>
-                            <p className="text-[10px] text-slate-400">Klik & cari prodi di atas untuk mengisi</p>
+                            <p className="text-xs font-semibold text-blue-300">Pilihan {slotNum} belum diisi</p>
+                            <p className="text-[10px] text-blue-300">Klik & cari prodi di atas untuk mengisi</p>
                           </div>
                         )}
                       </div>
 
                       {item ? (
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
                             PG {item.passing_grade_est || 650}
                           </span>
                           <button
@@ -836,13 +833,13 @@ export default function TryoutEnginePage({
                                 return copy;
                               });
                             }}
-                            className="text-xs text-slate-400 hover:text-rose-500 font-bold p-1 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="text-xs text-blue-300 hover:text-blue-600 font-bold p-1 hover:bg-blue-50 rounded-lg transition-colors"
                           >
                             ×
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
+                        <span className="text-[10px] font-bold text-blue-400 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-lg shrink-0">
                           + Pilih
                         </span>
                       )}
@@ -852,49 +849,36 @@ export default function TryoutEnginePage({
               </div>
             </div>
 
-            {/* Smart Verdict & Risk Warning Banner */}
-            <div className="space-y-2.5 pt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <BrainCircuit className="h-3.5 w-3.5 text-blue-600" />
-                  Smart Verdict Strategi SNBT
-                </span>
-                <Badge variant="outline" className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${verdict.badgeColor}`}>
-                  {verdict.badge}
-                </Badge>
-              </div>
-
-              {/* Warning Alert Box */}
-              {verdict.warnings.length > 0 && (
-                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-xs">
-                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-                    <span>Peringatan Urutan Pilihan:</span>
-                  </div>
-                  <ul className="space-y-1 pl-5 list-disc text-[11px] leading-relaxed">
-                    {verdict.warnings.map((warn, wIdx) => (
-                      <li key={wIdx} className="font-semibold text-rose-900">{warn}</li>
-                    ))}
-                  </ul>
+            {/* Smart Verdict */}
+            {verdict.warnings.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-blue-700">
+                  <AlertTriangle className="h-4 w-4 text-blue-500 shrink-0" />
+                  <span>Peringatan Urutan Pilihan:</span>
                 </div>
-              )}
+                <ul className="space-y-1 pl-5 list-disc text-[11px] leading-relaxed text-blue-700">
+                  {verdict.warnings.map((warn, wIdx) => (
+                    <li key={wIdx} className="font-semibold">{warn}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-              <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/80 font-medium">
+            {verdict.summary && (
+              <p className="text-[11px] text-blue-500 leading-relaxed font-medium px-1">
                 {verdict.summary}
               </p>
-            </div>
+            )}
 
-            {/* Action Buttons */}
-            <div className="pt-2">
-              <Button
-                disabled={!targets[0] || !targets[0].prodi}
-                onClick={handleConfirmTarget}
-                className="w-full h-11 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-2xl gap-2 shadow-md transition-all"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Simpan Target & Lanjut Ke Try Out</span>
-              </Button>
-            </div>
+            {/* Action Button */}
+            <Button
+              disabled={!targets[0] || !targets[0].prodi}
+              onClick={handleConfirmTarget}
+              className="w-full h-11 text-xs font-bold bg-blue-700 hover:bg-blue-800 text-white rounded-xl gap-2 shadow-sm transition-all"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Simpan Target & Lanjut Ke Try Out</span>
+            </Button>
           </div>
         </div>
       </div>

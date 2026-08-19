@@ -139,56 +139,58 @@ export default async function LiveClassPage() {
                 <p className="text-sm text-slate-500">Belum ada jadwal Live Class mendatang.</p>
               </Card>
             ) : (
-              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.08}>
+              <StaggerContainer className="grid grid-cols-2 gap-3 md:gap-6" staggerDelay={0.08}>
                 {upcomingClasses.map((item) => (
                   <StaggerItem key={item.id}>
                     <MotionCard className="h-full rounded-2xl">
                       <Card className="border border-slate-200/80 shadow-xs rounded-2xl flex flex-col justify-between overflow-hidden bg-white/90 backdrop-blur-md h-full">
-                        <CardHeader className="space-y-3 p-6">
-                          <div className="flex items-center justify-between">
+                        <CardHeader className="space-y-2 p-3 md:p-6">
+                          <div className="flex items-center justify-between gap-1">
                             {item.status === "ongoing" ? (
-                              <Badge className="bg-rose-600 text-white font-bold text-xs gap-1.5 animate-pulse">
-                                <Radio className="h-3.5 w-3.5" />
-                                <span>SEDANG BERLANGSUNG</span>
+                              <Badge className="bg-rose-600 text-white font-bold text-[9px] md:text-xs gap-1 animate-pulse px-1.5 py-0.5">
+                                <Radio className="h-2.5 w-2.5 md:h-3.5 md:w-3.5" />
+                                <span className="hidden sm:inline">SEDANG BERLANGSUNG</span>
+                                <span className="sm:hidden">LIVE</span>
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
-                                JADWAL MENDATANG
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 text-[9px] md:text-xs font-semibold px-1.5 py-0.5">
+                                <span className="hidden sm:inline">JADWAL MENDATANG</span>
+                                <span className="sm:hidden">MENDATANG</span>
                               </Badge>
                             )}
 
-                            <Badge variant="outline" className="text-[11px] font-medium text-slate-500 border-slate-200">
-                              Zoom Meeting
+                            <Badge variant="outline" className="text-[8px] md:text-[11px] font-medium text-slate-500 border-slate-200 px-1.5 py-0.5">
+                              Zoom
                             </Badge>
                           </div>
 
-                          <CardTitle className="text-xl font-bold leading-snug text-slate-900">
+                          <CardTitle className="text-sm md:text-xl font-bold leading-tight text-slate-900 line-clamp-2">
                             {item.title}
                           </CardTitle>
 
-                          <div className="space-y-1.5 pt-1 text-xs text-slate-500">
-                            <div className="flex items-center gap-2">
-                              <User className="h-3.5 w-3.5 text-blue-600" />
-                              <span className="font-semibold text-slate-900">{item.mentor_name}</span>
+                          <div className="space-y-1 pt-1 text-[10px] md:text-xs text-slate-500">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-600 shrink-0" />
+                              <span className="font-semibold text-slate-900 truncate">{item.mentor_name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3.5 w-3.5 text-indigo-500" />
-                              <span>{formatDate(item.scheduled_at)} WIB</span>
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5 text-indigo-500 shrink-0" />
+                              <span className="truncate">{formatDate(item.scheduled_at)} WIB</span>
                             </div>
                           </div>
                         </CardHeader>
 
-                        <CardFooter className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                        <CardFooter className="p-2 md:p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col gap-1.5 md:gap-2">
                           {item.meeting_url && (
                             <a
                               href={item.meeting_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full sm:flex-1"
+                              className="w-full"
                             >
-                              <Button className="w-full font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 text-xs h-10 shadow-xs transition-all hover:scale-[1.01]">
-                                <ExternalLink className="h-4 w-4" />
-                                <span>Join Sesi Live</span>
+                              <Button className="w-full font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg md:rounded-xl gap-1.5 text-[10px] md:text-xs h-8 md:h-10 shadow-xs transition-all hover:scale-[1.01]">
+                                <ExternalLink className="h-3 w-3 md:h-4 md:w-4" />
+                                <span>Join Live</span>
                               </Button>
                             </a>
                           )}
@@ -198,11 +200,11 @@ export default async function LiveClassPage() {
                               href={item.material_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full sm:flex-1"
+                              className="w-full"
                             >
-                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-xl gap-2 text-xs h-10 text-slate-700 hover:bg-slate-100">
-                                <Download className="h-4 w-4" />
-                                <span>Download Modul PDF</span>
+                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-lg md:rounded-xl gap-1.5 text-[10px] md:text-xs h-8 md:h-10 text-slate-700 hover:bg-slate-100">
+                                <Download className="h-3 w-3 md:h-4 md:w-4" />
+                                <span>Modul PDF</span>
                               </Button>
                             </a>
                           )}
@@ -222,47 +224,48 @@ export default async function LiveClassPage() {
                 <p className="text-sm text-slate-500">Belum ada rekaman kelas yang tersedia.</p>
               </Card>
             ) : (
-              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6" staggerDelay={0.08}>
+              <StaggerContainer className="grid grid-cols-2 gap-3 md:gap-6" staggerDelay={0.08}>
                 {completedClasses.map((item) => (
                   <StaggerItem key={item.id}>
                     <MotionCard className="h-full rounded-2xl">
                       <Card className="border border-slate-200/80 rounded-2xl flex flex-col justify-between overflow-hidden bg-white/90 backdrop-blur-md h-full shadow-xs">
-                        <CardHeader className="space-y-3 p-6">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold">
-                              REKAMAN HD SELESAI
+                        <CardHeader className="space-y-2 p-3 md:p-6">
+                          <div className="flex items-center justify-between gap-1">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] md:text-xs font-semibold px-1.5 py-0.5">
+                              <span className="hidden sm:inline">REKAMAN HD SELESAI</span>
+                              <span className="sm:hidden">REPLAY</span>
                             </Badge>
-                            <Badge variant="outline" className="text-[11px] text-slate-500 border-slate-200">
-                              24/7 Access
+                            <Badge variant="outline" className="text-[8px] md:text-[11px] text-slate-500 border-slate-200 px-1.5 py-0.5">
+                              24/7
                             </Badge>
                           </div>
 
-                          <CardTitle className="text-xl font-bold leading-snug text-slate-900">
+                          <CardTitle className="text-sm md:text-xl font-bold leading-tight text-slate-900 line-clamp-2">
                             {item.title}
                           </CardTitle>
 
-                          <div className="space-y-1.5 pt-1 text-xs text-slate-500">
-                            <div className="flex items-center gap-2">
-                              <User className="h-3.5 w-3.5 text-blue-600" />
-                              <span className="font-semibold text-slate-900">{item.mentor_name}</span>
+                          <div className="space-y-1 pt-1 text-[10px] md:text-xs text-slate-500">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-600 shrink-0" />
+                              <span className="font-semibold text-slate-900 truncate">{item.mentor_name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                              <span>Selesai pada: {formatDate(item.scheduled_at)}</span>
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 md:h-3.5 md:w-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">Selesai: {formatDate(item.scheduled_at)}</span>
                             </div>
                           </div>
                         </CardHeader>
 
-                        <CardFooter className="p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
+                        <CardFooter className="p-2 md:p-4 bg-slate-50/70 border-t border-slate-100 flex flex-col gap-1.5 md:gap-2">
                           {item.replay_url && (
                             <a
                               href={item.replay_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full sm:flex-1"
+                              className="w-full"
                             >
-                              <Button className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-2 text-xs h-10 shadow-xs transition-all hover:scale-[1.01]">
-                                <PlayCircle className="h-4 w-4" />
+                              <Button className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg md:rounded-xl gap-1.5 text-[10px] md:text-xs h-8 md:h-10 shadow-xs transition-all hover:scale-[1.01]">
+                                <PlayCircle className="h-3 w-3 md:h-4 md:w-4" />
                                 <span>Tonton Replay</span>
                               </Button>
                             </a>
@@ -273,10 +276,10 @@ export default async function LiveClassPage() {
                               href={item.material_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full sm:flex-1"
+                              className="w-full"
                             >
-                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-xl gap-2 text-xs h-10 text-slate-700 hover:bg-slate-100">
-                                <Download className="h-4 w-4" />
+                              <Button variant="outline" className="w-full font-semibold border-slate-200 rounded-lg md:rounded-xl gap-1.5 text-[10px] md:text-xs h-8 md:h-10 text-slate-700 hover:bg-slate-100">
+                                <Download className="h-3 w-3 md:h-4 md:w-4" />
                                 <span>Modul PDF</span>
                               </Button>
                             </a>

@@ -190,7 +190,7 @@ export default function PracticePage() {
       <div className="min-h-screen bg-slate-50 p-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
-          <Card className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <Card className="p-6 bg-blue-700 text-white">
             <h1 className="text-2xl font-bold mb-2">Hasil Latihan</h1>
             <p className="text-blue-100">{module.title}</p>
           </Card>

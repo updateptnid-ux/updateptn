@@ -33,11 +33,39 @@ export async function loginAction(prevState: any, formData: FormData) {
       return { error: "Gagal membuat sesi." };
     }
 
-    // Return success dengan redirect URL (client-side redirect)
+    // Tentukan redirect berdasarkan role user
     const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    const redirectUrl = ADMIN_EMAILS.includes(email.toLowerCase())
-      ? "/hq-core-updateptn"
-      : "/dashboard/student";
+
+    let redirectUrl = "/dashboard/student"; // default: siswa
+
+    if (ADMIN_EMAILS.includes(email.toLowerCase())) {
+      // Admin → HQ Core
+      redirectUrl = "/hq-core-updateptn";
+    } else {
+      // Cek apakah user ada di tabel mentors
+      // Pakai service_role (bypass RLS) atau anon key langsung — bukan SSR cookie client
+      try {
+        const { createClient: createDirectClient } = await import("@supabase/supabase-js");
+        const bypassClient = createDirectClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          { auth: { persistSession: false } }
+        );
+
+        const { data: mentorRecord } = await bypassClient
+          .from("mentors")
+          .select("id, status")
+          .eq("email", email.toLowerCase())
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (mentorRecord) {
+          redirectUrl = "/mentor";
+        }
+      } catch {
+        // Gagal query mentors — tetap ke student dashboard
+      }
+    }
 
     return { 
       success: true, 

@@ -214,7 +214,7 @@ export default function LandingPage() {
                   className="group relative"
                   title={univ.name}
                 >
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-white border border-slate-200/80 shadow-sm flex items-center justify-center p-2 hover:border-blue-300 hover:shadow-md transition-all grayscale hover:grayscale-0">
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-2 hover:border-blue-500/40 hover:shadow-md hover:scale-105 transition-all">
                     <Image
                       src={univ.logo}
                       alt={`Logo ${univ.name}`}
@@ -618,7 +618,7 @@ export default function LandingPage() {
           </FadeIn>
 
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch" staggerDelay={0.1}>
-            {/* Free Starter Tier */}
+            {/* Free Trial Tier */}
             <StaggerItem>
               <MotionCard className="h-full rounded-3xl">
                 <Card className="bg-white border border-slate-200/80 shadow-xs p-8 rounded-3xl flex flex-col justify-between space-y-6 h-full">
@@ -627,9 +627,9 @@ export default function LandingPage() {
                       <Badge variant="outline" className="text-xs font-bold border-slate-200 text-slate-600">
                         PAKET STARTER
                       </Badge>
-                      <h3 className="text-2xl font-black text-slate-900">Gratis</h3>
+                      <h3 className="text-2xl font-black text-slate-900">Trial / Gratis</h3>
                       <p className="text-xs text-slate-500">
-                        Cocok untuk mencoba dan menguji kemampuan awal kamu secara cepat.
+                        Cocok untuk mencoba dan menguji kemampuan awal kamu secara gratis.
                       </p>
                     </div>
 
@@ -641,38 +641,40 @@ export default function LandingPage() {
                     <ul className="space-y-3 text-xs text-slate-700 pt-2 border-t border-slate-100">
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>1x Try Out IRT Full Subtes TPS & Literasi</span>
+                        <span>Gratis 1x Cek Rasionalisasi SNBP</span>
                       </li>
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span>Basic Cek Peluang PTN</span>
+                        <span>Gratis 3x Cek Rasionalisasi SNBT</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>Gratis 1x Cek Rasionalisasi Mandiri</span>
                       </li>
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                         <span>Akses Direktori Kampus & Jurusan</span>
                       </li>
-                      <li className="flex items-center gap-2.5 text-slate-400">
-                        <Check className="h-4 w-4 text-slate-300 shrink-0" />
-                        <span>Sistem Timer CBT Standard</span>
-                      </li>
                     </ul>
                   </div>
 
-                  <Link href="/register" className="w-full pt-4">
-                    <Button variant="outline" className="w-full h-11 font-bold text-xs rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50">
-                      Daftar Akun Gratis
-                    </Button>
-                  </Link>
-                  <Link href="/pricing" className="w-full">
-                    <Button variant="ghost" className="w-full h-9 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                      Lihat Semua Paket
-                    </Button>
-                  </Link>
+                  <div className="space-y-3 pt-2">
+                    <Link href="/register" className="w-full block">
+                      <Button variant="outline" className="w-full h-11 font-bold text-xs rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50">
+                        Daftar Akun Gratis
+                      </Button>
+                    </Link>
+                    <Link href="/pricing" className="w-full block text-center">
+                      <span className="text-xs font-semibold text-blue-600 hover:underline">
+                        Lihat Rincian Paket
+                      </span>
+                    </Link>
+                  </div>
                 </Card>
               </MotionCard>
             </StaggerItem>
 
-            {/* All Access Premium Tier */}
+            {/* VIP All Access Tier */}
             <StaggerItem>
               <MotionCard className="h-full rounded-3xl">
                 <Card className="bg-slate-950 text-white border border-slate-800 shadow-2xl p-8 rounded-3xl flex flex-col justify-between space-y-6 h-full relative overflow-hidden">
@@ -681,29 +683,34 @@ export default function LandingPage() {
                       <Badge className="bg-blue-600 text-white font-bold text-xs">
                         POPULER & REKOMENDASI
                       </Badge>
-                      <span className="text-[11px] font-bold text-emerald-400">Sekali Bayar</span>
+                      <span className="text-[11px] font-bold text-amber-400">All Access</span>
                     </div>
 
                     <div className="space-y-1">
-                      <h3 className="text-2xl font-black text-white">All Access Pass</h3>
+                      <h3 className="text-2xl font-black text-white">Paket VIP</h3>
                       <p className="text-xs text-slate-400">
-                        Akses tanpa batas ke seluruh paket Try Out, Live Class, & Rasionalisasi.
+                        Akses tanpa batas ke seluruh produk SNBP, SNBT, dan Mandiri.
                       </p>
                     </div>
 
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-white">Rp 199.000</span>
-                      <span className="text-xs font-semibold text-slate-400">/ hingga SNBT</span>
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-white">Rp 49.000</span>
+                        <span className="text-xs font-semibold text-slate-400">/ 7 hari</span>
+                      </div>
+                      <p className="text-[11px] text-blue-400 font-semibold mt-1">
+                        Tersedia juga paket bulanan Rp 149.000 / bln
+                      </p>
                     </div>
 
                     <ul className="space-y-3 text-xs text-slate-300 pt-2 border-t border-slate-800">
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-blue-400 shrink-0" />
-                        <span className="font-semibold text-white">Unlimited Try Out IRT Seri 01 - 20</span>
+                        <span className="font-semibold text-white">Cek Rasionalisasi SNBP, SNBT & Mandiri Tanpa Batas</span>
                       </li>
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-blue-400 shrink-0" />
-                        <span className="font-semibold text-white">Cek Peluang PTN Presisi Tanpa Batas</span>
+                        <span>Semua Bank Soal & Timer CBT IRT</span>
                       </li>
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-blue-400 shrink-0" />
@@ -711,18 +718,14 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-center gap-2.5">
                         <Check className="h-4 w-4 text-blue-400 shrink-0" />
-                        <span>Modul PDF Pembahasan & Bank Soal HOTS</span>
-                      </li>
-                      <li className="flex items-center gap-2.5">
-                        <Check className="h-4 w-4 text-blue-400 shrink-0" />
-                        <span>Konsultasi Pemilihan Jurusan & PTN</span>
+                        <span>Konsultasi Pemilihan Jurusan & Priority Support</span>
                       </li>
                     </ul>
                   </div>
 
-                  <Link href="/pricing" className="w-full pt-4">
+                  <Link href="/pricing" className="w-full block pt-2">
                     <Button className="w-full h-12 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25">
-                      Pilih Paket All Access
+                      Pilih Paket VIP
                     </Button>
                   </Link>
                 </Card>
@@ -730,14 +733,22 @@ export default function LandingPage() {
             </StaggerItem>
           </StaggerContainer>
 
-          {/* CTA to see all packages */}
-          <div className="text-center pt-8">
-            <p className="text-sm text-slate-600 mb-4">
-              Butuh paket yang lebih sesuai dengan timeline persiapanmu?
-            </p>
-            <Link href="/pricing">
-              <Button variant="outline" size="lg" className="h-12 px-8 font-bold rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-50 gap-2">
-                <span>Lihat Semua Paket Belajar</span>
+          {/* Try Out Highlight & Link to Full Pricing */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center md:text-left">
+              <div className="flex items-center gap-2 justify-center md:justify-start">
+                <Badge variant="outline" className="text-[10px] font-bold border-purple-200 bg-purple-50 text-purple-700">
+                  PAKET TRY OUT SATUAN
+                </Badge>
+                <span className="text-xs font-extrabold text-slate-900">Rp 59.000 s.d. Rp 400.000</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Beli Try Out IRT satuan (1x, 4x Hemat, 8x Ambiss, 10x Super) tanpa perlu berlangganan.
+              </p>
+            </div>
+            <Link href="/pricing" className="shrink-0">
+              <Button variant="outline" className="h-10 px-6 font-bold text-xs rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 gap-2">
+                <span>Lihat Semua Paket & Try Out</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
