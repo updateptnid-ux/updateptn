@@ -158,7 +158,11 @@ export default function DashboardLayout({
             </div>
 
             <form action={signOutAction} className="pt-6 border-t border-slate-200/80">
-              <Button variant="ghost" className="w-full justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3">
+              <Button 
+                type="submit"
+                variant="ghost" 
+                className="w-full justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3 h-11 touch-manipulation"
+              >
                 <LogOut className="h-4 w-4" />
                 <span>Keluar Akun</span>
               </Button>
