@@ -30,6 +30,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true, // Temporary: skip ESLint for Vercel deploy
   },
+
+  // Output standalone for better performance
+  output: "standalone",
 };
 
 export default nextConfig;

@@ -9,6 +9,10 @@ const inter = Inter({
   fallback: ['-apple-system', 'BlinkMacSystemFont', 'Roboto', 'Noto Sans', 'sans-serif'],
 });
 
+// Force dynamic rendering for all routes
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
