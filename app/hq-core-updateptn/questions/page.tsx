@@ -716,12 +716,7 @@ export default function AdminQuestionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <GeneratorDialog />
-    </div>
-  );
 
-  function GeneratorDialog() {
-    return (
       <Dialog open={isGeneratorDialogOpen} onOpenChange={setIsGeneratorDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -790,6 +785,7 @@ export default function AdminQuestionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    );
-  }
+    </div>
+  );
+
 }
