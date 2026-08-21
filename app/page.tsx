@@ -33,6 +33,7 @@ import {
   Building2,
   Mail,
   Phone,
+  Search,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -159,75 +160,126 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ---------------- 2. HERO SECTION (Single CTA & Trust Metrics) ---------------- */}
-      <section className="py-20 md:py-28 bg-linear-to-b from-blue-50/50 via-white to-white border-b border-slate-200/80 relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
-          <FadeIn className="space-y-6">
-            <Badge variant="outline" className="px-4 py-1.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border-blue-200/80 inline-flex items-center gap-2">
-              <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-              <span>Platform Persiapan UTBK & SNBT #1 di Indonesia</span>
-            </Badge>
+      {/* ---------------- 2. HERO SECTION (Centered Vertical Layout) ---------------- */}
+      <section className="py-12 md:py-16 bg-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left space-y-8">
+              <FadeIn className="space-y-6">
+                {/* Badge */}
+                <Badge variant="outline" className="px-3 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center gap-1.5">
+                  <ShieldCheck className="h-3 w-3 text-blue-600" />
+                  <span>PLATFORM PERSIAPAN SNBP, UTBK DAN UJIAN MANDIRI #1 DI INDONESIA</span>
+                </Badge>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-950 leading-[1.15] max-w-4xl mx-auto">
-              Persiapan Seleksi Masuk PTN{" "}
-              <span className="text-blue-600 bg-clip-text">Terarah & Terukur</span>
-            </h1>
+                {/* Main Heading */}
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-slate-950">
+                  Persiapan Seleksi Masuk PTN Lebih <span className="text-blue-600">Terarah & Terukur</span>
+                </h1>
 
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto font-normal leading-relaxed">
-              Platform pembelajaran terpadu dengan simulasi Try Out IRT, rasionalisasi Cek Peluang PTN, dan bimbingan interaktif untuk kelulusan SNBT.
-            </p>
+                {/* Subheading */}
+                <p className="text-base md:text-lg text-slate-600 leading-relaxed max-w-lg mx-auto lg:mx-0">
+                  Platform pembelajaran terpadu dengan simulasi TRY OUT IRT, rasionalisasi, cek peluang PTN, dan bimbingan interaktif untuk lulus SNBT.
+                </p>
 
-            {/* ONLY ONE PRIMARY ACTION BUTTON */}
-            <div className="pt-2 flex justify-center">
-              <Link href="/register">
-                <MotionButton>
-                  <Button size="lg" className="h-13 px-9 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25 gap-2.5">
-                    <span>Mulai Sekarang</span>
-                    <ArrowRight className="h-5 w-5" />
-                  </Button>
-                </MotionButton>
-              </Link>
-            </div>
-          </FadeIn>
-
-          {/* Try Out Terbaru — inline card */}
-          <TryoutTerbaruInlineCard />
-
-          {/* Trust Metric Bar (PTN Targets & Student Proof) */}
-          <FadeIn delay={0.15} className="pt-8 border-t border-slate-200/60 max-w-4xl mx-auto space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Dipercaya 50.000+ Siswa Pejuang UTBK Menuju PTN Favorit
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-              {[
-                { name: "Universitas Indonesia", logo: "/logo-univ/univ/Universitas Indonesia.png" },
-                { name: "Institut Teknologi Bandung", logo: "/logo-univ/intitut/Logo_Institut_Teknologi_Bandung-removebg-preview.png" },
-                { name: "Universitas Gadjah Mada", logo: "/logo-univ/univ/Universitas Gadjah Mada.png" },
-                { name: "Institut Teknologi Sepuluh November", logo: "/logo-univ/intitut/Logo_ITS-removebg-preview.png" },
-                { name: "Universitas Padjadjaran", logo: "/logo-univ/univ/Universitas Padjadjaran.png" },
-                { name: "Universitas Airlangga", logo: "/logo-univ/univ/UNIVERSITAS AIRLANGGA.png" },
-                { name: "Universitas Brawijaya", logo: "/logo-univ/univ/UNIVERSITAS BRAWIJAYA.png" },
-                { name: "Universitas Diponegoro", logo: "/logo-univ/univ/Universitas Diponegoro.png" }
-              ].map((univ) => (
-                <div
-                  key={univ.name}
-                  className="group relative"
-                  title={univ.name}
-                >
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-2 hover:border-blue-500/40 hover:shadow-md hover:scale-105 transition-all">
-                    <Image
-                      src={univ.logo}
-                      alt={`Logo ${univ.name}`}
-                      width={56}
-                      height={56}
-                      className="object-contain"
-                      loading="lazy"
-                    />
-                  </div>
+                {/* CTA Buttons */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+                  <Link href="/login">
+                    <MotionButton>
+                      <Button size="lg" className="h-11 px-7 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm gap-2 w-full sm:w-auto">
+                        <span>Mulai Sekarang</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </MotionButton>
+                  </Link>
+                  <Link href="#faq">
+                    <Button size="lg" variant="outline" className="h-11 px-7 text-sm font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg w-full sm:w-auto">
+                      <Search className="h-4 w-4 mr-2" />
+                      <span>FAQ</span>
+                    </Button>
+                  </Link>
                 </div>
-              ))}
+
+
+              </FadeIn>
             </div>
-          </FadeIn>
+
+            {/* Right Column - Try Out Terbaru Box */}
+            <div className="flex justify-center lg:justify-end">
+              <FadeIn delay={0.15}>
+                <TryoutTerbaruInlineCard />
+              </FadeIn>
+            </div>
+          </div>
+
+          <div className="mt-20">
+            <FadeIn delay={0.2} className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center border-t border-slate-200">
+              <div className="space-y-1">
+                <div className="flex items-center justify-center gap-1">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">4.900+</p>
+                </div>
+                <p className="text-xs md:text-sm font-semibold text-slate-500">Bank Soal</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center gap-1">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">15.000+</p>
+                </div>
+                <p className="text-xs md:text-sm font-semibold text-slate-500">Siswa Aktif</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center gap-1">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">98.2%</p>
+                </div>
+                <p className="text-xs md:text-sm font-semibold text-slate-500">Akurasi IRT</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center gap-1">
+                  <Award className="h-5 w-5 text-blue-600" />
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">12.400+</p>
+                </div>
+                <p className="text-xs md:text-sm font-semibold text-slate-500">Try Out Selesai</p>
+              </div>
+            </FadeIn>
+
+            {/* PTN Logos */}
+            <FadeIn delay={0.3} className="pt-8 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 text-center">
+                Dipercaya Siswa Menuju PTN Favorit
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                {[
+                  { name: "Universitas Indonesia", logo: "/logo-univ/univ/Universitas Indonesia.png" },
+                  { name: "Institut Teknologi Bandung", logo: "/logo-univ/intitut/Logo_Institut_Teknologi_Bandung-removebg-preview.png" },
+                  { name: "Universitas Gadjah Mada", logo: "/logo-univ/univ/Universitas Gadjah Mada.png" },
+                  { name: "Institut Teknologi Sepuluh November", logo: "/logo-univ/intitut/Logo_ITS-removebg-preview.png" },
+                  { name: "Universitas Padjadjaran", logo: "/logo-univ/univ/Universitas Padjadjaran.png" },
+                  { name: "Universitas Airlangga", logo: "/logo-univ/univ/UNIVERSITAS AIRLANGGA.png" },
+                  { name: "Universitas Brawijaya", logo: "/logo-univ/univ/UNIVERSITAS BRAWIJAYA.png" },
+                  { name: "Universitas Diponegoro", logo: "/logo-univ/univ/Universitas Diponegoro.png" }
+                ].map((univ) => (
+                  <div
+                    key={univ.name}
+                    className="group relative"
+                    title={univ.name}
+                  >
+                    <div className="h-11 w-11 md:h-12 md:w-12 rounded-lg bg-white border border-slate-200 shadow-sm flex items-center justify-center p-2 hover:border-blue-400 hover:shadow-md hover:scale-105 transition-all">
+                      <Image
+                        src={univ.logo}
+                        alt={`Logo ${univ.name}`}
+                        width={48}
+                        height={48}
+                        className="object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
         </div>
       </section>
 
