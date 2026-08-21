@@ -167,8 +167,8 @@ export default function LandingPage() {
             <div className="text-center lg:text-left space-y-8">
               <FadeIn className="space-y-6">
                 {/* Badge */}
-                <Badge variant="outline" className="px-3 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center gap-1.5">
-                  <ShieldCheck className="h-3 w-3 text-blue-600" />
+                <Badge variant="outline" className="px-3 py-1.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center justify-center text-center gap-1.5 whitespace-normal h-auto leading-snug">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
                   <span>PLATFORM PERSIAPAN SNBP, UTBK DAN UJIAN MANDIRI #1 DI INDONESIA</span>
                 </Badge>
 
