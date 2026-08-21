@@ -406,7 +406,16 @@ export default function AdminQuestionsPage() {
           </div>
         )}
 
-        <GeneratorDialog />
+        <GeneratorDialog 
+          isOpen={isGeneratorDialogOpen}
+          setIsOpen={setIsGeneratorDialogOpen}
+          rawText={rawText}
+          setRawText={setRawText}
+          generatedJson={generatedJson}
+          setGeneratedJson={setGeneratedJson}
+          handleGenerateJson={handleGenerateJson}
+          handleCopyJson={handleCopyJson}
+        />
       </div>
     );
   }
@@ -716,76 +725,109 @@ export default function AdminQuestionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={isGeneratorDialogOpen} onOpenChange={setIsGeneratorDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Generator JSON Soal UTBK</DialogTitle>
-            <DialogDescription>
-              Ubah teks CSV raw menjadi format JSON yang valid untuk diupload saat membuat Try Out.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Paste teks CSV di sini</Label>
-              <p className="text-[11px] text-slate-500">
-                Format per baris, dipisahkan dengan tanda pipe (|): <br />
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
-                  Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
-                </code>
-              </p>
-              <textarea
-                value={rawText}
-                onChange={e => setRawText(e.target.value)}
-                className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
-              />
-            </div>
-
-            <Button onClick={handleGenerateJson} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-              Generate JSON
-            </Button>
-
-            {generatedJson && (
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <Label>Hasil JSON</Label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
-                      Copy JSON
-                    </Button>
-                    <Button variant="default" size="sm" onClick={() => {
-                      if (!generatedJson) return;
-                      const blob = new Blob([generatedJson], { type: "application/json" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "soal_tryout.json";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
-                      Download JSON
-                    </Button>
-                  </div>
-                </div>
-                <textarea
-                  readOnly
-                  value={generatedJson}
-                  className="w-full h-48 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
-                />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsGeneratorDialogOpen(false); setGeneratedJson(""); setRawText(""); }}>
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <GeneratorDialog 
+        isOpen={isGeneratorDialogOpen}
+        setIsOpen={setIsGeneratorDialogOpen}
+        rawText={rawText}
+        setRawText={setRawText}
+        generatedJson={generatedJson}
+        setGeneratedJson={setGeneratedJson}
+        handleGenerateJson={handleGenerateJson}
+        handleCopyJson={handleCopyJson}
+      />
     </div>
   );
+}
+
+function GeneratorDialog({
+  isOpen,
+  setIsOpen,
+  rawText,
+  setRawText,
+  generatedJson,
+  setGeneratedJson,
+  handleGenerateJson,
+  handleCopyJson
+}: {
+  isOpen: boolean;
+  setIsOpen: (val: boolean) => void;
+  rawText: string;
+  setRawText: (val: string) => void;
+  generatedJson: string;
+  setGeneratedJson: (val: string) => void;
+  handleGenerateJson: () => void;
+  handleCopyJson: () => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Generator JSON Soal UTBK</DialogTitle>
+          <DialogDescription>
+            Ubah teks CSV raw menjadi format JSON yang valid untuk diupload saat membuat Try Out.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Paste teks CSV di sini</Label>
+            <p className="text-[11px] text-slate-500">
+              Format per baris, dipisahkan dengan tanda pipe (|): <br />
+              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
+                Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
+              </code>
+            </p>
+            <textarea
+              value={rawText}
+              onChange={e => setRawText(e.target.value)}
+              className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
+            />
+          </div>
+
+          <Button onClick={handleGenerateJson} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+            Generate JSON
+          </Button>
+
+          {generatedJson && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <Label>Hasil JSON</Label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
+                    Copy JSON
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => {
+                    if (!generatedJson) return;
+                    const blob = new Blob([generatedJson], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "soal_tryout.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                    Download JSON
+                  </Button>
+                </div>
+              </div>
+              <textarea
+                readOnly
+                value={generatedJson}
+                className="w-full h-48 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setIsOpen(false); setGeneratedJson(""); setRawText(""); }}>
+            Tutup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}  );
 
 }
