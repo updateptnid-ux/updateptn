@@ -828,6 +828,4 @@ function GeneratorDialog({
       </DialogContent>
     </Dialog>
   );
-}  );
-
 }
