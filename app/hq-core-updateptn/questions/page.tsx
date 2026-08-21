@@ -768,7 +768,7 @@ export default function AdminQuestionsPage() {
           </DialogHeader>
 
           <Tabs defaultValue="ai" className="w-full mt-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="flex w-full">
               <TabsTrigger value="ai">AI Auto-Format (Gemini)</TabsTrigger>
               <TabsTrigger value="manual">Manual (CSV)</TabsTrigger>
             </TabsList>
