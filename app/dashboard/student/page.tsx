@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
 import StudentTryoutList from "@/components/StudentTryoutList";
+import ImprovementChart from "@/components/student/ImprovementChart";
 import {
   GraduationCap,
   FileText,
@@ -234,6 +235,11 @@ export default async function StudentDashboardPage() {
             </Card>
           </MotionCard>
         )}
+
+        {/* Improvement Chart */}
+        <MotionCard className="rounded-lg md:rounded-xl">
+          <ImprovementChart userId={user.id} />
+        </MotionCard>
 
         {/* Try Outs List - Compact */}
         <StudentTryoutList

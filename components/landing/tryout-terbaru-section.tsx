@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/ui/fade-in";
-import { Calendar, Clock, FileText, Users, ArrowRight, Flame } from "lucide-react";
+import { Calendar, Clock, FileText, Users, ArrowRight, Sparkles, Bell, Flame } from "lucide-react";
 
 interface PublicTryoutItem {
   id: string;
@@ -17,21 +17,30 @@ interface PublicTryoutItem {
   participants_count: number | null;
 }
 
+interface ArticleItem {
+  id: string;
+  title: string;
+  category: string;
+  published_at: string;
+}
+
 // Kolom aman yang di-select — tidak ada soal, jawaban, atau data sensitif
 const SAFE_COLUMNS =
   "id, title, duration_minutes, total_questions, scheduled_date, is_free, participants_count";
 
 export default function TryoutTerbaruInlineCard() {
   const [tryout, setTryout] = useState<PublicTryoutItem | null>(null);
+  const [article, setArticle] = useState<ArticleItem | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTryout = async () => {
+    const fetchData = async () => {
       const supabase = createClient();
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       try {
-        const { data, error } = await supabase
+        // 1. Coba ambil tryout terbaru
+        const { data: tryoutData } = await supabase
           .from("tryouts")
           .select(SAFE_COLUMNS)
           .gte("scheduled_date", cutoff)
@@ -39,7 +48,24 @@ export default function TryoutTerbaruInlineCard() {
           .limit(1)
           .maybeSingle();
 
-        if (!error && data) setTryout(data as PublicTryoutItem);
+        if (tryoutData) {
+          setTryout(tryoutData as PublicTryoutItem);
+          return; // Berhenti kalau tryout ketemu
+        }
+
+        // 2. Kalau gak ada tryout, coba ambil berita/artikel terbaru
+        const { data: articleData } = await supabase
+          .from("articles")
+          .select("id, title, category, published_at")
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (articleData) {
+          setArticle(articleData as ArticleItem);
+        }
+
       } catch (err) {
         // ignore error
       } finally {
@@ -47,24 +73,56 @@ export default function TryoutTerbaruInlineCard() {
       }
     };
     
-    fetchTryout();
+    fetchData();
   }, []);
 
   if (loading) {
     return (
-      <div className="w-full max-w-2xl mx-auto rounded-2xl bg-blue-50/60 border border-blue-100 h-[72px] animate-pulse" />
+      <div className="w-full max-w-xl mx-auto rounded-full bg-green-50/60 border border-green-200 h-12 animate-pulse" />
     );
   }
 
-  // DB kosong atau belum ada tryout → tidak tampilkan apapun (no fake data)
-  if (!tryout) return null;
+  // Fallback 1: Tampilkan Berita Terbaru kalau tidak ada Try Out
+  if (!tryout && article) {
+    return (
+      <FadeIn delay={0.2} className="w-full max-w-xl mx-auto">
+        <Link
+          href={`/articles/${article.id}`}
+          className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
+        >
+          <div className="relative rounded-full border-2 border-blue-500 bg-white px-5 py-2.5 flex items-center justify-center gap-3 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-500/20 group-hover:-translate-y-0.5 group-hover:border-blue-600">
+            <Bell className="h-5 w-5 text-blue-600 shrink-0" />
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">
+                {article.category || "Info"}
+              </Badge>
+              <span className="text-sm md:text-base font-bold text-slate-900 line-clamp-1">
+                {article.title}
+              </span>
+            </div>
+            <ArrowRight className="h-4 w-4 text-blue-600 shrink-0 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+      </FadeIn>
+    );
+  }
 
-  const daysUntil = Math.ceil(
-    (new Date(tryout.scheduled_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  const countdownLabel =
-    daysUntil <= 0 ? "Hari ini!" : daysUntil === 1 ? "Besok!" : `${daysUntil} hari lagi`;
-  const isUrgent = daysUntil <= 5;
+  // Fallback 2: Tampilkan Promo Flash Sale kalau Try Out & Berita kosong
+  if (!tryout && !article) {
+    return (
+      <FadeIn delay={0.2} className="w-full max-w-xl mx-auto">
+        <Link href="/pricing" className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded-full">
+          <div className="relative rounded-full border border-orange-200 bg-orange-50/50 px-5 py-2.5 flex items-center justify-center gap-3 shadow-sm hover:shadow-md transition-shadow group-hover:-translate-y-0.5 duration-300">
+            <Flame className="h-5 w-5 text-orange-600 shrink-0" />
+            <span className="text-sm md:text-base font-bold text-orange-800">
+              Diskon 50% Paket Premium Terbatas! 🎫
+            </span>
+            <ArrowRight className="h-4 w-4 text-orange-600 shrink-0 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+      </FadeIn>
+    );
+  }
 
   const formattedDate = new Date(tryout.scheduled_date).toLocaleDateString("id-ID", {
     day: "numeric",
@@ -73,82 +131,29 @@ export default function TryoutTerbaruInlineCard() {
   });
 
   return (
-    <FadeIn delay={0.2} className="w-full max-w-2xl mx-auto">
+    <FadeIn delay={0.2} className="w-full max-w-xl mx-auto">
       <Link
         href={`/register?redirect=/tryout/${tryout.id}`}
-        className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-2xl"
+        className="block group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 rounded-full"
         aria-label={`Daftar Try Out: ${tryout.title}`}
       >
-        <div className="relative rounded-2xl border border-blue-200/70 bg-white shadow-md shadow-blue-500/8 overflow-hidden transition-all duration-300 group-hover:shadow-lg group-hover:shadow-blue-500/15 group-hover:-translate-y-0.5">
+        <div className="relative rounded-full border-2 border-green-500 bg-white px-5 py-2.5 flex items-center justify-center gap-3 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-green-500/20 group-hover:-translate-y-0.5 group-hover:border-green-600">
+          
+          {/* Icon */}
+          <Sparkles className="h-5 w-5 text-green-600 shrink-0" />
 
-          {/* Top gradient stripe */}
-          <div className="h-[3px] w-full bg-blue-500" />
-
-          <div className="px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-
-            {/* Icon */}
-            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center shadow shadow-blue-500/25 shrink-0">
-              <Flame className="h-[18px] w-[18px] text-white" />
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              {/* Label row */}
-              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 leading-none">
-                  Try Out Terbaru
-                </span>
-                {tryout.is_free ? (
-                  <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white text-[9px] font-bold px-1.5 h-[14px] rounded-sm">
-                    GRATIS
-                  </Badge>
-                ) : (
-                  <Badge className="bg-indigo-600 hover:bg-indigo-600 text-white text-[9px] font-bold px-1.5 h-[14px] rounded-sm">
-                    PREMIUM
-                  </Badge>
-                )}
-                {isUrgent && (
-                  <span className="text-[10px] font-bold text-red-500 animate-pulse">
-                    🔥 {countdownLabel}
-                  </span>
-                )}
-              </div>
-
-              {/* Title */}
-              <p className="text-sm font-bold text-slate-900 leading-snug truncate group-hover:text-blue-700 transition-colors">
-                {tryout.title}
-              </p>
-
-              {/* Meta */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] font-medium text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-blue-400" />
-                  {formattedDate}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-blue-400" />
-                  {tryout.duration_minutes} menit
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3 w-3 text-blue-400" />
-                  {tryout.total_questions} soal
-                </span>
-                {tryout.participants_count != null && tryout.participants_count > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3 text-blue-400" />
-                    {tryout.participants_count.toLocaleString("id-ID")} peserta
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="flex items-center gap-1.5 bg-blue-600 group-hover:bg-blue-700 text-white font-bold text-[11px] rounded-xl px-3.5 py-2.5 transition-all shadow-sm shadow-blue-500/20 shrink-0 whitespace-nowrap">
-              Daftar Sekarang
-              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-
+          {/* Text */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <span className="text-sm md:text-base font-bold text-slate-900">
+              {tryout.title}
+            </span>
+            <span className="text-sm md:text-base font-semibold text-green-600">
+              - {formattedDate} 🎉
+            </span>
           </div>
+
+          {/* Arrow */}
+          <ArrowRight className="h-4 w-4 text-green-600 shrink-0 group-hover:translate-x-1 transition-transform" />
         </div>
       </Link>
     </FadeIn>

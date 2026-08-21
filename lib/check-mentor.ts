@@ -59,7 +59,7 @@ export async function checkMentorAccess() {
           mentorRecord.full_name ||
           user.user_metadata?.full_name ||
           user.email?.split("@")[0] ||
-          "Mentor",
+          "Tentor",
       };
     }
   } catch (err) {

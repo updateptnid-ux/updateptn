@@ -34,6 +34,8 @@ import {
   ChevronRight,
   Search,
   Gift,
+  Home,
+  UserCog,
 } from "lucide-react";
 
 interface MenuItem {
@@ -83,7 +85,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       groupName: "Pengguna",
       items: [
         { name: "Siswa & Pengguna", href: "/hq-core-updateptn/users", icon: Users },
-        { name: "Tutor & Mentor", href: "/hq-core-updateptn/mentors", icon: UserCheck },
+        { name: "Tutor & Tentor", href: "/hq-core-updateptn/mentors", icon: UserCheck },
       ],
     },
     {
@@ -207,12 +209,38 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               </nav>
             </div>
 
-            <form action={signOutAction} className="pt-4 border-t border-slate-200 mt-6">
-              <Button variant="ghost" className="w-full justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3 text-xs">
-                <LogOut className="h-4 w-4" />
-                <span>Keluar</span>
-              </Button>
-            </form>
+            {/* Mobile: Role Switcher & Logout */}
+            <div className="space-y-3 pt-4 border-t border-slate-200 mt-6">
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
+                  Pindah Menu
+                </p>
+                <Link
+                  href="/dashboard/student"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                >
+                  <Home className="h-4 w-4 text-slate-400" />
+                  <span>Menu Siswa</span>
+                </Link>
+                <Link
+                  href="/mentor"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                >
+                  <UserCog className="h-4 w-4 text-slate-400" />
+                  <span>Menu Tentor</span>
+                </Link>
+              </div>
+              <form action={signOutAction}>
+                <Button 
+                  type="submit"
+                  variant="ghost" 
+                  className="w-full h-12 justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3 text-xs font-semibold touch-manipulation"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Keluar</span>
+                </Button>
+              </form>
+            </div>
           </SheetContent>
         </Sheet>
       </header>
@@ -283,7 +311,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
           </div>
         </div>
 
-        {/* Footer Admin Profile & Logout */}
+        {/* Footer: Role Switcher, Admin Profile & Logout */}
         <div className="pt-4 border-t border-slate-200 space-y-3 shrink-0">
           <div className="flex items-center gap-3 px-2">
             <Avatar className="h-9 w-9 border border-slate-200">
@@ -297,11 +325,32 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
             </div>
           </div>
 
+          {/* Role Switcher */}
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">
+              Pindah Menu
+            </p>
+            <Link
+              href="/dashboard/student"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <Home className="h-3.5 w-3.5 text-slate-400" />
+              <span>Menu Siswa</span>
+            </Link>
+            <Link
+              href="/mentor"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <UserCog className="h-3.5 w-3.5 text-slate-400" />
+              <span>Menu Tentor</span>
+            </Link>
+          </div>
+
           <form action={signOutAction}>
             <Button
               type="submit"
               variant="outline"
-              className="w-full h-9 justify-center border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-xl gap-2"
+              className="w-full h-10 justify-center border-slate-200 text-rose-600 hover:bg-rose-50 active:bg-rose-100 text-xs font-semibold rounded-xl gap-2 touch-manipulation transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span>Keluar</span>

@@ -127,29 +127,34 @@ export async function registerAction(formData: FormData) {
 export async function signOutAction() {
   try {
     const supabase = await createClient();
-    
-    // Sign out dari Supabase auth
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error("Sign out error:", error);
-    }
-    
-    // Clear all cookies manually (important for mobile browsers)
     const { cookies } = await import("next/headers");
     const cookieStore = await cookies();
     
-    // Delete Supabase auth cookies
+    // 1. Sign out dari Supabase auth
+    await supabase.auth.signOut({ scope: 'local' });
+    
+    // 2. Clear all Supabase-related cookies
     const allCookies = cookieStore.getAll();
-    allCookies.forEach(cookie => {
-      if (cookie.name.includes('sb-') || cookie.name.includes('supabase')) {
-        cookieStore.delete(cookie.name);
+    for (const cookie of allCookies) {
+      if (cookie.name.includes('sb-') || 
+          cookie.name.includes('supabase') || 
+          cookie.name.includes('auth')) {
+        try {
+          cookieStore.delete({
+            name: cookie.name,
+            path: '/',
+            domain: cookie.domain || undefined
+          });
+        } catch {
+          // Fallback: simple delete
+          cookieStore.delete(cookie.name);
+        }
       }
-    });
+    }
   } catch (err) {
     console.error("Logout error:", err);
   }
   
-  // Force redirect to login
+  // Force redirect to login page
   redirect("/login");
 }

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, FileQuestion, Edit, Trash2, X, FileText, ArrowLeft, FolderOpen, Calendar, Clock, Database, Upload } from "lucide-react";
+import { MoreHorizontal, FileQuestion, Edit, Trash2, X, FileText, ArrowLeft, FolderOpen, Calendar, Clock, Database, Upload, Loader2, Copy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
@@ -86,6 +87,7 @@ export default function AdminQuestionsPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGeneratorDialogOpen, setIsGeneratorDialogOpen] = useState(false);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [rawText, setRawText] = useState("");
   const [generatedJson, setGeneratedJson] = useState("");
   const [editingQuestion, setEditingQuestion] = useState<QuestionRecord | null>(null);
@@ -721,69 +723,145 @@ export default function AdminQuestionsPage() {
   );
 
   function GeneratorDialog() {
+    
+    const handleGenerateAiJson = async () => {
+      if (!rawText.trim()) {
+        alert("Teks soal tidak boleh kosong");
+        return;
+      }
+      
+      setIsAiGenerating(true);
+      setGeneratedJson("");
+      
+      try {
+        const res = await fetch("/api/generate-soal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: rawText })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal generate JSON dari AI");
+        
+        setGeneratedJson(data.data);
+      } catch (err: any) {
+        alert(err.message);
+      } finally {
+        setIsAiGenerating(false);
+      }
+    };
+
+    const handleCopyPrompt = () => {
+      const prompt = `Tolong ubah soal-soal berikut menjadi array JSON dengan format:\n[\n  {\n    "subtest_id": "Nama Subtes",\n    "question": "Teks Soal",\n    "option_a": "A",\n    "option_b": "B",\n    "option_c": "C",\n    "option_d": "D",\n    "option_e": "E",\n    "correct_answer": "A",\n    "explanation": "..."\n  }\n]\n\nBerikut soalnya:\n${rawText}`;
+      navigator.clipboard.writeText(prompt);
+      alert("Prompt disalin! Silakan paste di ChatGPT atau Gemini.");
+    };
+
     return (
       <Dialog open={isGeneratorDialogOpen} onOpenChange={setIsGeneratorDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generator JSON Soal UTBK</DialogTitle>
             <DialogDescription>
-              Ubah teks CSV raw menjadi format JSON yang valid untuk diupload saat membuat Try Out.
+              Ubah teks mentah soal menjadi format JSON terstruktur untuk Try Out.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Paste teks CSV di sini</Label>
-              <p className="text-[11px] text-slate-500">
-                Format per baris, dipisahkan dengan tanda pipe (|): <br />
-                <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
-                  Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
-                </code>
-              </p>
-              <textarea
-                value={rawText}
-                onChange={e => setRawText(e.target.value)}
-                className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
-              />
-            </div>
-
-            <Button onClick={handleGenerateJson} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-              Generate JSON
-            </Button>
-
-            {generatedJson && (
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
-                  <Label>Hasil JSON</Label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
-                      Copy JSON
-                    </Button>
-                    <Button variant="default" size="sm" onClick={() => {
-                      if (!generatedJson) return;
-                      const blob = new Blob([generatedJson], { type: "application/json" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "soal_tryout.json";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
-                      Download JSON
-                    </Button>
-                  </div>
-                </div>
+          <Tabs defaultValue="ai" className="w-full mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="ai">AI Auto-Format (Gemini)</TabsTrigger>
+              <TabsTrigger value="manual">Manual (CSV)</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="ai" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Paste teks soal bebas di sini</Label>
+                <p className="text-[11px] text-slate-500">
+                  Cukup copy-paste soal dari Word/PDF. AI akan otomatis mengenali pola soal dan mengubahnya ke JSON. Pastikan ada soal, pilihan jawaban (A-E), dan kunci/pembahasan.
+                </p>
                 <textarea
-                  readOnly
-                  value={generatedJson}
-                  className="w-full h-48 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
+                  value={rawText}
+                  onChange={e => setRawText(e.target.value)}
+                  className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Contoh: 1. Siapa presiden RI ke-1? A. Soekarno B. Soeharto ... Kunci: A Pembahasan: ..."
                 />
               </div>
-            )}
-          </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleGenerateAiJson} 
+                  disabled={isAiGenerating || !rawText.trim()}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-sm"
+                >
+                  {isAiGenerating ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sedang Generate...</>
+                  ) : (
+                    "Generate JSON dengan AI"
+                  )}
+                </Button>
+                <Button 
+                  onClick={handleCopyPrompt}
+                  variant="outline"
+                  className="rounded-xl flex gap-2"
+                >
+                  <Copy className="h-4 w-4" /> Salin Prompt External
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="manual" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Paste teks CSV di sini</Label>
+                <p className="text-[11px] text-slate-500">
+                  Format per baris, dipisahkan dengan tanda pipe (|): <br />
+                  <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
+                    Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
+                  </code>
+                </p>
+                <textarea
+                  value={rawText}
+                  onChange={e => setRawText(e.target.value)}
+                  className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
+                />
+              </div>
+              <Button onClick={handleGenerateJson} className="w-full bg-slate-800 hover:bg-slate-900 text-white rounded-xl">
+                Generate JSON Manual
+              </Button>
+            </TabsContent>
+          </Tabs>
 
-          <DialogFooter>
+          {generatedJson && (
+            <div className="space-y-2 pt-4 border-t border-slate-100 mt-4">
+              <div className="flex items-center justify-between">
+                <Label>Hasil JSON</Label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
+                    Copy JSON
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => {
+                    if (!generatedJson) return;
+                    const blob = new Blob([generatedJson], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "soal_tryout.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                    Download JSON
+                  </Button>
+                </div>
+              </div>
+              <textarea
+                readOnly
+                value={generatedJson}
+                className="w-full h-64 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => { setIsGeneratorDialogOpen(false); setGeneratedJson(""); setRawText(""); }}>
               Tutup
             </Button>

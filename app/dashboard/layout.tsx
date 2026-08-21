@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,15 +23,67 @@ import {
   Trophy,
   UserCircle2,
   ShoppingCart,
+  ShieldCheck,
+  UserCog,
 } from "lucide-react";
+
+interface UserRole {
+  isAdmin: boolean;
+  isMentor: boolean;
+}
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isMentor: false });
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Check user role on mount
+  useEffect(() => {
+    async function checkUserRole() {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+        const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
+        // Check if user is in mentors table
+        const { data: mentorRecord } = await supabase
+          .from("mentors")
+          .select("id")
+          .eq("email", user.email!)
+          .eq("status", "active")
+          .maybeSingle();
+
+        // Check if user has admin role in profiles
+        let isAdminRole = false;
+        if (!isAdminEmail) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+          isAdminRole = profile?.role === "admin";
+        }
+
+        setUserRole({
+          isAdmin: isAdminEmail || isAdminRole,
+          isMentor: !!mentorRecord,
+        });
+      } catch (err) {
+        console.error("Error checking user role:", err);
+      }
+    }
+
+    checkUserRole();
+  }, []);
 
   const navItems = [
     {
@@ -157,16 +209,44 @@ export default function DashboardLayout({
               </nav>
             </div>
 
-            <form action={signOutAction} className="pt-6 border-t border-slate-200/80">
-              <Button 
-                type="submit"
-                variant="ghost" 
-                className="w-full justify-start text-rose-600 hover:bg-rose-50 rounded-xl gap-3 h-11 touch-manipulation"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Keluar Akun</span>
-              </Button>
-            </form>
+            {/* Mobile: Role Switcher & Logout */}
+            <div className="space-y-3 pt-6 border-t border-slate-200/80">
+              {(userRole.isAdmin || userRole.isMentor) && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
+                    Pindah Menu
+                  </p>
+                  {userRole.isMentor && (
+                    <Link
+                      href="/mentor"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                    >
+                      <UserCog className="h-4 w-4 text-slate-400" />
+                      <span>Menu Tentor</span>
+                    </Link>
+                  )}
+                  {userRole.isAdmin && (
+                    <Link
+                      href="/hq-core-updateptn"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                    >
+                      <ShieldCheck className="h-4 w-4 text-slate-400" />
+                      <span>Menu Admin</span>
+                    </Link>
+                  )}
+                </div>
+              )}
+              <form action={signOutAction}>
+                <Button 
+                  type="submit"
+                  variant="ghost" 
+                  className="w-full h-12 justify-start text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-xl gap-3 font-semibold touch-manipulation transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Keluar Akun</span>
+                </Button>
+              </form>
+            </div>
           </SheetContent>
         </Sheet>
       </header>
@@ -224,7 +304,7 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* User Footer Profile & Sign Out */}
+        {/* User Footer: Role Switcher, Profile & Sign Out */}
         <div className="space-y-4 pt-6 border-t border-slate-200/80">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50/60 border border-slate-200/60">
             <Avatar className="h-9 w-9 border border-slate-200">
@@ -236,11 +316,38 @@ export default function DashboardLayout({
             </div>
           </div>
 
+          {/* Role Switcher */}
+          {(userRole.isAdmin || userRole.isMentor) && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2">
+                Pindah Menu
+              </p>
+              {userRole.isMentor && (
+                <Link
+                  href="/mentor"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <UserCog className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Menu Tentor</span>
+                </Link>
+              )}
+              {userRole.isAdmin && (
+                <Link
+                  href="/hq-core-updateptn"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Menu Admin</span>
+                </Link>
+              )}
+            </div>
+          )}
+
           <form action={signOutAction}>
             <Button
               type="submit"
               variant="outline"
-              className="w-full h-9 justify-center border-slate-200/80 text-rose-600 hover:bg-rose-50/80 text-xs font-semibold rounded-xl gap-2 transition-all hover:shadow-xs"
+              className="w-full h-10 justify-center border-slate-200/80 text-rose-600 hover:bg-rose-50/80 active:bg-rose-100 text-xs font-semibold rounded-xl gap-2 transition-all hover:shadow-xs touch-manipulation"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span>Keluar</span>
