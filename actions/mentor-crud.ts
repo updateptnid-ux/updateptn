@@ -1,13 +1,13 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { requireAdmin } from "@/lib/auth-helpers";
+import { requireMentorOrAdmin } from "@/lib/auth-helpers";
 
 /**
  * Server-side Supabase client pakai service_role key — bypass RLS sepenuhnya.
  * HANYA digunakan untuk operasi yang sudah divalidasi di server.
  * 
- * ⚠️ SECURITY: Semua fungsi di file ini HARUS memanggil requireAdmin() terlebih dahulu
+ * ⚠️ SECURITY: Semua fungsi di file ini HARUS memanggil requireMentorOrAdmin() terlebih dahulu
  */
 function getServiceClient() {
   return createClient(
@@ -22,11 +22,11 @@ function getServiceClient() {
 // ──────────────────────────────────────────────
 
 export async function ensureLiveClassColumns() {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -52,11 +52,11 @@ export async function ensureLiveClassColumns() {
 }
 
 export async function insertLiveClass(data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -91,11 +91,11 @@ export async function insertLiveClass(data: Record<string, unknown>) {
 }
 
 export async function updateLiveClass(id: string, data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -116,11 +116,11 @@ export async function updateLiveClass(id: string, data: Record<string, unknown>)
 }
 
 export async function deleteLiveClass(id: string) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -137,11 +137,11 @@ export async function deleteLiveClass(id: string) {
 // ──────────────────────────────────────────────
 
 export async function insertVideo(data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -154,11 +154,11 @@ export async function insertVideo(data: Record<string, unknown>) {
 }
 
 export async function updateVideo(id: string, data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -171,11 +171,11 @@ export async function updateVideo(id: string, data: Record<string, unknown>) {
 }
 
 export async function deleteVideo(id: string) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -192,11 +192,11 @@ export async function deleteVideo(id: string) {
 // ──────────────────────────────────────────────
 
 export async function insertModul(data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -209,11 +209,11 @@ export async function insertModul(data: Record<string, unknown>) {
 }
 
 export async function updateModul(id: string, data: Record<string, unknown>) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();
@@ -226,11 +226,11 @@ export async function updateModul(id: string, data: Record<string, unknown>) {
 }
 
 export async function deleteModul(id: string) {
-  // Check admin access
+  // Check mentor or admin access
   try {
-    await requireAdmin();
+    await requireMentorOrAdmin();
   } catch (error) {
-    return { ok: false, message: "Unauthorized: Admin access required" };
+    return { ok: false, message: "Unauthorized: Mentor or Admin access required" };
   }
 
   const supabase = getServiceClient();

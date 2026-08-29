@@ -61,8 +61,66 @@ export default function CekPeluangPage() {
   const [loadingMajors, setLoadingMajors] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // Quota tracking states
+  const [remainingPredictions, setRemainingPredictions] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [userTier, setUserTier] = useState<string>("Basic");
+  const [quotaError, setQuotaError] = useState<string>("");
+
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch user quota on mount
+  useEffect(() => {
+    async function fetchUserQuota() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const now = new Date().toISOString();
+
+        // Cek subscription aktif dari tabel subscriptions
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("tier, status, expires_at")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .gt("expires_at", now)
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const subscribed =
+          !!subscription &&
+          subscription.status === "active" &&
+          subscription.tier !== "Trial / Gratis" &&
+          subscription.tier !== "Basic" &&
+          new Date(subscription.expires_at) > new Date();
+
+        const tier = subscription?.tier || "Basic";
+
+        // Baca prediction_count dari profiles
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("prediction_count, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const isAdminUser = profile?.role === "admin";
+        const count = profile?.prediction_count ?? 0;
+
+        setIsSubscribed(subscribed || isAdminUser);
+        setUserTier(tier);
+        setRemainingPredictions(subscribed || isAdminUser ? 999 : Math.max(0, 2 - count));
+      } catch (err) {
+        console.error("Error fetching quota:", err);
+      }
+    }
+
+    fetchUserQuota();
+  }, []);
+
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -207,55 +265,83 @@ export default function CekPeluangPage() {
   // Submit Handler for Prediction Calculation
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
+    setQuotaError("");
+    setResult(null); // Clear previous result
+    
     if (!selectedUniv || !selectedProdiId) return;
     const numScore = Number(score) || 720;
 
     startTransition(async () => {
-      // Find selected prodi object
-      let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
-      
-      const res = await calculateProbabilityAction({
-        score: numScore,
-        universityName: selectedUniv,
-        prodiId: selectedProdiId,
-      });
+      try {
+        // Find selected prodi object
+        let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
+        
+        const res = await calculateProbabilityAction({
+          score: numScore,
+          universityName: selectedUniv,
+          prodiId: selectedProdiId,
+        });
 
-      if (res?.success) {
-        // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
-        if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
-          const pg = Number(currentProdi.passing_grade_est);
-          const diff = numScore - pg;
-          let percentage = 75;
-          let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
-          let recommendation = "";
+        console.log("Prediction response:", res); // Debug log
 
-          if (diff >= 20) {
-            status = "AMAN";
-            percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
-            recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
-          } else if (diff >= 0) {
-            status = "BERSAING";
-            percentage = Math.round(60 + (diff / 20) * 24);
-            recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
-          } else {
-            status = "RENTAN";
-            percentage = Math.max(25, Math.round(60 + diff * 1.2));
-            recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
+        // Handle quota exceeded error
+        if (!res.success && res.error === "QuotaExceeded") {
+          setQuotaError(res.message || "Quota habis. Upgrade untuk unlimited!");
+          setRemainingPredictions(0);
+          return;
+        }
+
+        // Handle other errors
+        if (!res.success) {
+          setQuotaError(res.message || "Terjadi kesalahan. Silakan coba lagi.");
+          return;
+        }
+
+        if (res?.success) {
+          // Update remaining predictions from response
+          if (typeof res.remainingPredictions === "number") {
+            setRemainingPredictions(res.remainingPredictions);
           }
 
-          setResult({
-            score: numScore,
-            passingGrade: pg,
-            diff,
-            percentage,
-            status,
-            majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
-            universityName: selectedUniv,
-            recommendation,
-          });
-        } else {
-          setResult(res as PredictionResult);
+          // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
+          if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
+            const pg = Number(currentProdi.passing_grade_est);
+            const diff = numScore - pg;
+            let percentage = 75;
+            let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+            let recommendation = "";
+
+            if (diff >= 20) {
+              status = "AMAN";
+              percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+              recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
+            } else if (diff >= 0) {
+              status = "BERSAING";
+              percentage = Math.round(60 + (diff / 20) * 24);
+              recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
+            } else {
+              status = "RENTAN";
+              percentage = Math.max(25, Math.round(60 + diff * 1.2));
+              recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
+            }
+
+            setResult({
+              score: numScore,
+              passingGrade: pg,
+              diff,
+              percentage,
+              status,
+              majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
+              universityName: selectedUniv,
+              recommendation,
+            });
+          } else {
+            setResult(res as PredictionResult);
+          }
         }
+      } catch (error) {
+        console.error("Error during analysis:", error);
+        setQuotaError("Terjadi kesalahan saat menganalisis. Silakan coba lagi.");
       }
     });
   };
@@ -286,6 +372,53 @@ export default function CekPeluangPage() {
           Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian secara presisi.
         </p>
       </div>
+
+      {/* Quota Display Banner */}
+      {remainingPredictions !== null && !isSubscribed && (
+        <div className={`border rounded-2xl p-4 ${remainingPredictions === 0 ? "bg-rose-50 border-rose-200" : "bg-blue-50 border-blue-200"}`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${remainingPredictions === 0 ? "bg-rose-100" : "bg-blue-100"}`}>
+                <Target className={`h-5 w-5 ${remainingPredictions === 0 ? "text-rose-600" : "text-blue-600"}`} />
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${remainingPredictions === 0 ? "text-rose-900" : "text-blue-900"}`}>
+                  {remainingPredictions === 0 ? "Quota Gratis Habis!" : `Sisa ${remainingPredictions}x Cek Gratis`}
+                </p>
+                <p className={`text-xs ${remainingPredictions === 0 ? "text-rose-600" : "text-blue-600"}`}>
+                  {remainingPredictions === 0 
+                    ? "Upgrade ke Premium/Plus untuk unlimited cek peluang" 
+                    : "Setelah habis, upgrade untuk unlimited analisis"}
+                </p>
+              </div>
+            </div>
+            {remainingPredictions === 0 && (
+              <Link href="/pricing">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-10 px-6 shrink-0">
+                  Upgrade Sekarang
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quota Error Alert */}
+      {quotaError && (
+        <div className="border border-rose-200 bg-rose-50 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-rose-900 mb-2">{quotaError}</p>
+              <Link href="/pricing">
+                <Button className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl h-10 px-6">
+                  Lihat Paket Berlangganan
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input Form Card */}
       <div className="border border-blue-100 shadow-md rounded-2xl bg-white p-6 sm:p-8" style={{ overflow: "visible" }}>

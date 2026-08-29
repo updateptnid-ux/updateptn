@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { createSubscription, getUserSubscription } from "@/actions/subscription";
+import { resolveTierName } from "@/lib/subscription-helpers";
 import {
   Check,
   ArrowRight,
@@ -57,7 +58,7 @@ interface PricingPlan {
   }>;
   buttonText: string;
   buttonVariant?: "default" | "outline";
-  type: "subscription" | "bimbel" | "tryout";
+  type: "subscription" | "bimbel" | "tryout" | "cek-peluang";
   quantity?: string;
   pertemuan?: string;
 }
@@ -69,7 +70,7 @@ export default function PricingPage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"subscription" | "bimbel" | "tryout">("subscription");
+  const [activeTab, setActiveTab] = useState<"subscription" | "bimbel" | "tryout" | "cek-peluang">("subscription");
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
 
   useEffect(() => {
@@ -627,6 +628,70 @@ export default function PricingPage() {
     },
   ];
 
+  // ── PAKET CEK PELUANG PTN ──────────────────────────────────────────────
+  const cekPeluangPlans: PricingPlan[] = [
+    {
+      id: "cek-peluang-3x",
+      name: "Paket Cek 3x",
+      subtitle: "Coba Dulu",
+      price: 20000,
+      priceDisplay: "Rp 20.000",
+      duration: "3x Cek",
+      quantity: "3x",
+      icon: CheckCircle2,
+      type: "cek-peluang",
+      features: [
+        { name: "3x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "Analisis Peluang Lolos", included: true },
+        { name: "Rekomendasi Jurusan", included: true },
+        { name: "Konsultasi Jurusan", included: false },
+      ],
+      buttonText: "Beli 3x Cek",
+      buttonVariant: "outline",
+    },
+    {
+      id: "cek-peluang-5x",
+      name: "Paket Cek 5x",
+      subtitle: "Lebih Hemat",
+      price: 35000,
+      priceDisplay: "Rp 35.000",
+      duration: "5x Cek",
+      quantity: "5x",
+      badge: "HEMAT",
+      badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      icon: Star,
+      type: "cek-peluang",
+      features: [
+        { name: "5x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "Analisis Peluang Lolos", included: true },
+        { name: "Rekomendasi Jurusan", included: true },
+        { name: "Konsultasi Jurusan", included: false },
+      ],
+      buttonText: "Beli 5x Cek",
+    },
+    {
+      id: "cek-peluang-10x",
+      name: "Paket Cek 10x",
+      subtitle: "Paling Populer",
+      price: 60000,
+      priceDisplay: "Rp 60.000",
+      duration: "10x Cek",
+      quantity: "10x",
+      badge: "POPULER",
+      badgeColor: "bg-blue-600 text-white",
+      popular: true,
+      icon: Flame,
+      type: "cek-peluang",
+      features: [
+        { name: "10x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "Analisis Peluang Lolos", included: true },
+        { name: "Rekomendasi Jurusan", included: true },
+        { name: "Konsultasi Jurusan Khusus", included: true },
+      ],
+      buttonText: "Beli 10x Cek",
+    },
+  ];
+
   const [checkoutPlan, setCheckoutPlan] = useState<PricingPlan | null>(null);
   const [voucherInput, setVoucherInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<{
@@ -679,10 +744,13 @@ export default function PricingPage() {
 
       let vType: "percentage" | "fixed" = "percentage";
       let vVal = 0;
+      let vCat = "universal";
 
       if (!error && data) {
         vType = data.discount_type || "percentage";
-        vVal = Number(data.value || 0);
+        // Hapus semua karakter non-angka agar "15%" menjadi 15 atau "Rp 50.000" menjadi 50000
+        vVal = parseInt(String(data.value || "0").replace(/\D/g, "")) || 0;
+        vCat = data.category || "universal";
       } else {
         // Fallback demo codes if DB voucher doesn't match
         if (codeUpper === "UPDATEPTN" || codeUpper === "UPDATEPTN2026") {
@@ -691,11 +759,36 @@ export default function PricingPage() {
         } else if (codeUpper === "SNBT50" || codeUpper === "HEMAT50") {
           vType = "percentage";
           vVal = 50;
+          vCat = "snbt";
         } else if (codeUpper === "PEJUANG") {
           vType = "fixed";
           vVal = 25000;
         } else {
           setVoucherError("Kode voucher tidak ditemukan atau sudah kadaluarsa.");
+          setIsValidatingVoucher(false);
+          return;
+        }
+      }
+
+      // Validasi Kategori Voucher
+      if (vCat !== "universal") {
+        let isEligible = false;
+        const planId = checkoutPlan.id.toLowerCase();
+        
+        if (vCat === "snbt" && planId.includes("snbt")) isEligible = true;
+        if (vCat === "snbp" && planId.includes("snbp")) isEligible = true;
+        if (vCat === "mandiri" && planId.includes("mandiri")) isEligible = true;
+        if (vCat === "tryout" && checkoutPlan.type === "tryout") isEligible = true;
+        if (vCat === "bimbel" && checkoutPlan.type === "bimbel") isEligible = true;
+        if (vCat === "cek-peluang" && checkoutPlan.type === "cek-peluang") isEligible = true;
+
+        if (!isEligible) {
+          let catName = vCat.toUpperCase();
+          if (vCat === "tryout") catName = "Try Out";
+          if (vCat === "bimbel") catName = "Bimbel";
+          if (vCat === "cek-peluang") catName = "Cek Peluang PTN";
+          
+          setVoucherError(`Voucher ini khusus untuk paket ${catName}.`);
           setIsValidatingVoucher(false);
           return;
         }
@@ -744,14 +837,17 @@ export default function PricingPage() {
         ? Math.max(0, checkoutPlan.price - appliedVoucher.discountAmount)
         : checkoutPlan.price;
 
+      // Resolve tier name yang benar sesuai plan ID
+      const tierName = resolveTierName(checkoutPlan.id, checkoutPlan.name);
+
       const subscriptionData = {
         user_id: currentUser.id,
         user_name: userProfile?.full_name || currentUser.email?.split("@")[0] || "User",
         user_email: currentUser.email || "",
-        tier: (checkoutPlan.id.startsWith("vip") ? "Platinum" : "Premium") as "Platinum" | "Premium" | "Basic",
+        tier: tierName,
         status: "pending" as const,
         price_paid: `Rp ${finalPrice.toLocaleString("id-ID")}`,
-        duration_months: checkoutPlan.duration.includes("3 bulan") ? 3 : checkoutPlan.duration.includes("7 hari") ? 0 : 1,
+        duration: checkoutPlan.duration, // String durasi: "7 hari", "1 bulan", "3 bulan"
         payment_method: selectedPaymentMethod,
       };
 
@@ -759,10 +855,10 @@ export default function PricingPage() {
 
       if (result.success) {
         alert(
-          `Pesanan Paket ${checkoutPlan.name} Berhasil Dibuat!\n\n` +
+          `Pesanan ${tierName} (${checkoutPlan.duration}) Berhasil Dibuat!\n\n` +
           `Total Bayar: Rp ${finalPrice.toLocaleString("id-ID")}${appliedVoucher ? ` (Hemat Rp ${appliedVoucher.discountAmount.toLocaleString("id-ID")})` : ""}\n` +
           `Metode Pembayaran: ${selectedPaymentMethod.toUpperCase()}\n\n` +
-          `Silakan lakukan pembayaran. Akun kamu akan langsung aktif setelah konfirmasi.`
+          `Silakan lakukan pembayaran. Akun kamu akan aktif setelah admin konfirmasi.`
         );
         setCheckoutPlan(null);
         window.location.reload();
@@ -883,6 +979,16 @@ export default function PricingPage() {
               }`}
             >
               Paket Try Out
+            </button>
+            <button
+              onClick={() => setActiveTab("cek-peluang")}
+              className={`px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm transition-all ${
+                activeTab === "cek-peluang"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Cek Peluang PTN
             </button>
           </div>
         </div>
@@ -1147,6 +1253,102 @@ export default function PricingPage() {
                         </div>
 
                         {/* Features - Collapsible */}
+                        {isExpanded && (
+                          <ul className="space-y-2 py-3 border-b border-slate-200/20">
+                            {plan.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                {feature.included
+                                  ? <CheckCircle2 className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-blue-400" : "text-emerald-600"}`} />
+                                  : <X className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 mt-0.5 ${plan.popular ? "text-slate-600" : "text-slate-300"}`} />}
+                                <span className={`text-xs md:text-sm leading-[1.6] ${
+                                  feature.included
+                                    ? plan.popular ? "text-slate-200 font-medium" : "text-slate-700 font-medium"
+                                    : plan.popular ? "text-slate-600" : "text-slate-400"
+                                }`}>{feature.name}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="space-y-1.5 pt-2">
+                          <Button
+                            onClick={() => setExpandedPlan(isExpanded ? null : plan.id)}
+                            variant="ghost"
+                            className={`w-full h-8 text-[10px] md:text-xs font-semibold ${
+                              plan.popular ? "text-slate-300 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                            }`}
+                          >
+                            {isExpanded ? "Sembunyikan Detail" : "Lihat Detail Fitur"}
+                          </Button>
+                          
+                          <Button
+                            onClick={() => handleSelectPlan(plan)}
+                            disabled={processingPlan === plan.id}
+                            className={`w-full h-9 md:h-10 font-bold text-xs md:text-sm rounded-lg touch-manipulation ${
+                              plan.popular
+                                ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/25"
+                                : plan.buttonVariant === "outline"
+                                ? "border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100"
+                                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white"
+                            }`}
+                          >
+                            {processingPlan === plan.id
+                              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Memproses...</span></>
+                              : <span>{plan.buttonText}</span>}
+                          </Button>
+                        </div>
+                      </Card>
+                    </MotionCard>
+                  </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          </div>
+        </section>
+      )}
+
+      {/* PAKET CEK PELUANG PTN */}
+      {activeTab === "cek-peluang" && (
+        <section className="py-16 md:py-20 bg-slate-50/50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <FadeIn className="text-center space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Paket Cek Peluang PTN</h2>
+              <p className="text-sm text-slate-500 max-w-xl mx-auto">
+                Cek seberapa besar peluang kamu lolos ke PTN Impian berdasarkan nilai Try Out atau Rapot.
+              </p>
+            </FadeIn>
+            <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6" staggerDelay={0.1}>
+              {cekPeluangPlans.map((plan) => {
+                const Icon = plan.icon;
+                const isExpanded = expandedPlan === plan.id;
+                return (
+                  <StaggerItem key={plan.id}>
+                    <MotionCard className="h-full">
+                      <Card className={`p-3 md:p-4 rounded-lg flex flex-col ${
+                        plan.popular
+                          ? "bg-slate-950 text-white border-slate-800 shadow-2xl ring-2 ring-blue-500/20"
+                          : "bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                      }`}>
+                        {/* Header */}
+                        <div className="space-y-2 pb-2 border-b border-slate-200/20">
+                          <div className="flex items-center justify-between">
+                            <div className={`h-7 w-7 md:h-9 md:w-9 rounded-lg flex items-center justify-center ${
+                              plan.popular ? "bg-blue-600/20 text-blue-400" : "bg-blue-50 text-blue-600"
+                            }`}>
+                              <Icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                            </div>
+                            {plan.badge && <Badge className={`text-[9px] md:text-[10px] font-bold ${plan.badgeColor} px-1.5 py-0.5`}>{plan.badge}</Badge>}
+                          </div>
+                          <div className={`text-2xl md:text-4xl font-black ${plan.popular ? "text-blue-400" : "text-blue-600"}`}>{plan.quantity}</div>
+                          <div>
+                            <h3 className={`text-sm md:text-base font-black ${plan.popular ? "text-white" : "text-slate-900"} line-clamp-1`}>{plan.name}</h3>
+                            <p className={`text-[10px] md:text-xs ${plan.popular ? "text-slate-400" : "text-slate-500"}`}>{plan.subtitle}</p>
+                          </div>
+                          <div className={`text-base md:text-2xl font-black ${plan.popular ? "text-white" : "text-slate-900"}`}>{plan.priceDisplay}</div>
+                        </div>
+
+                        {/* Features */}
                         {isExpanded && (
                           <ul className="space-y-2 py-3 border-b border-slate-200/20">
                             {plan.features.map((feature, idx) => (

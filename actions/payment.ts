@@ -222,34 +222,35 @@ export async function rejectSubscription(subscriptionId: string, reason: string)
 
 /**
  * Get package pricing info
+ * @deprecated Gunakan resolveTierName dari actions/subscription.ts untuk tier naming
  */
 export function getPackageInfo(tier: PackageTier) {
   const packages = {
     premium: {
-      name: "Premium",
-      price: 150000,
-      durationMonths: 1,
+      name: "Premium SNBT",
+      price: 79000,
+      durationDays: 30,
       features: [
-        "Semua Tryout Premium",
-        "Live Class Interaktif",
-        "Analisis Detail Skor",
-        "Pembahasan Lengkap",
-        "Update Materi Rutin"
-      ]
+        "Cek Rasionalisasi SNBT Tak Terbatas",
+        "Modul Belajar SNBT Lengkap",
+        "Bank Soal SNBT HOTS",
+        "Timer CBT Standard",
+        "Download Rekaman HD",
+      ],
     },
     gold: {
-      name: "Gold",
-      price: 300000,
-      durationMonths: 3,
+      name: "VIP",
+      price: 149000,
+      durationDays: 30,
       features: [
-        "Semua Tryout Premium",
-        "Live Class Interaktif",
-        "Analisis Detail Skor",
-        "Modul Eksklusif",
-        "Konsultasi Mentor",
-        "Priority Support"
-      ]
-    }
+        "Cek Rasionalisasi SNBP, SNBT & Mandiri",
+        "Semua Materi & Bank Soal",
+        "Timer CBT Full",
+        "Download Rekaman HD",
+        "Live Class & Materi Replay",
+        "Konsultasi Jurusan",
+      ],
+    },
   };
 
   return packages[tier];

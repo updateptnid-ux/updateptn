@@ -25,6 +25,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   UserCog,
+  FileText,
 } from "lucide-react";
 
 interface UserRole {
@@ -87,9 +88,20 @@ export default function DashboardLayout({
 
   const navItems = [
     {
-      name: "Dashboard & Try Out",
+      name: "Dashboard",
       href: "/dashboard/student",
       icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      name: "Try Out SNBT",
+      href: "/dashboard/student/tryout-snbt",
+      icon: FileText,
+    },
+    {
+      name: "Try Out Mandiri",
+      href: "/dashboard/student/tryout-mandiri",
+      icon: GraduationCap,
     },
     {
       name: "Kalender",
@@ -181,7 +193,7 @@ export default function DashboardLayout({
               <nav className="space-y-1.5">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
+                  const isActive = (item as any).exact ? pathname === item.href : pathname.startsWith(item.href);
                   return (
                     <motion.div
                       key={item.href}
@@ -276,7 +288,7 @@ export default function DashboardLayout({
             <nav className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = (item as any).exact ? pathname === item.href : pathname.startsWith(item.href);
                 return (
                   <motion.div
                     key={item.href}

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
-import StudentTryoutList from "@/components/StudentTryoutList";
 import ImprovementChart from "@/components/student/ImprovementChart";
 import {
   GraduationCap,
@@ -48,15 +47,9 @@ export default async function StudentDashboardPage() {
 
   // 2. Parallel data fetching untuk performa optimal
   const [
-    { data: tryoutsData },
     { data: resultsData },
     { data: subData }
   ] = await Promise.all([
-    supabase
-      .from("tryouts")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    
     supabase
       .from("results")
       .select("*, tryouts(title)")
@@ -76,9 +69,6 @@ export default async function StudentDashboardPage() {
   const userResultsCount = resultsData?.length || 0;
   const lastResult = resultsData?.[0] || null;
   const activeSubscription = subData?.[0] || null;
-
-  // Use real tryouts from database only
-  const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
 
   const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
   const targetUniv = user?.user_metadata?.target_univ as string | undefined;
@@ -240,15 +230,6 @@ export default async function StudentDashboardPage() {
         <MotionCard className="rounded-lg md:rounded-xl">
           <ImprovementChart userId={user.id} />
         </MotionCard>
-
-        {/* Try Outs List - Compact */}
-        <StudentTryoutList
-          tryouts={activeTryouts}
-          userId={user.id}
-          userName={user.user_metadata?.full_name || ""}
-          userEmail={user.email || ""}
-          initialSubscription={activeSubscription}
-        />
       </div>
     </div>
   );

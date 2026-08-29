@@ -58,6 +58,7 @@ export default function SubtesModulesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<SubtesModule | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL"); // ← BARU: Filter kategori
 
   const [formData, setFormData] = useState({
     subtes_category: "penalaran-umum",
@@ -194,15 +195,65 @@ export default function SubtesModulesPage() {
     return subtesCategories.find(c => c.value === value)?.label || value;
   };
 
+  // ← BARU: Filter modules berdasarkan kategori
+  const filteredModules = selectedCategory === "ALL" 
+    ? modules 
+    : modules.filter(m => m.subtes_category === selectedCategory);
+
+  const modulesByCategory = subtesCategories.reduce((acc, cat) => {
+    acc[cat.value] = modules.filter(m => m.subtes_category === cat.value).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="space-y-4">
+      {/* ← BARU: Category Filter Tabs */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900">Modul Latihan Per Subtes</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Kelola daftar modul latihan untuk setiap kategori subtes UTBK</p>
+          </div>
+          <Button onClick={handleCreate} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl gap-2">
+            Tambah Modul
+          </Button>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          <button
+            onClick={() => setSelectedCategory("ALL")}
+            className={`px-4 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${
+              selectedCategory === "ALL"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white border border-slate-200 text-slate-600 hover:border-blue-300"
+            }`}
+          >
+            Semua Kategori ({modules.length})
+          </button>
+          {subtesCategories.map((cat) => (
+            <button
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
+              className={`px-4 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${
+                selectedCategory === cat.value
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-blue-300"
+              }`}
+            >
+              {cat.label} ({modulesByCategory[cat.value] || 0})
+            </button>
+          ))}
+        </div>
+      </div>
+
       <CrudLayout
-        title="Modul Latihan Per Subtes"
-        description="Kelola daftar modul latihan untuk setiap kategori subtes UTBK"
-        addButtonLabel="Tambah Modul"
+        title=""
+        description=""
+        addButtonLabel=""
         onAddClick={handleCreate}
         searchPlaceholder="Cari modul..."
-        totalItems={modules.length}
+        totalItems={filteredModules.length}
         currentPage={1}
         totalPages={1}
       >
@@ -226,14 +277,14 @@ export default function SubtesModulesPage() {
                   Memuat data...
                 </TableCell>
               </TableRow>
-            ) : modules.length === 0 ? (
+            ) : filteredModules.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-500">
-                  Belum ada data.
+                  {selectedCategory === "ALL" ? "Belum ada data." : `Belum ada modul untuk kategori ${getCategoryLabel(selectedCategory)}.`}
                 </TableCell>
               </TableRow>
             ) : (
-              modules.map((module) => (
+              filteredModules.map((module) => (
                 <TableRow key={module.id} className="border-slate-100 hover:bg-slate-50/60 transition-colors">
                   <TableCell>
                     <Badge variant="outline" className="text-xs font-semibold">

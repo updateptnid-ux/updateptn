@@ -150,15 +150,35 @@ export default function LatihanSubtesPage() {
       {/* Header Section */}
       <div className="space-y-3 md:space-y-4">
         <div>
-          <Badge variant="outline" className="text-[10px] md:text-xs font-bold bg-blue-50 text-blue-700 border-blue-200 mb-2 md:mb-3">
-            Bank Soal Terstruktur
+          <Badge variant="outline" className="text-[10px] md:text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-200 mb-2 md:mb-3">
+            📚 Bank Soal Terstruktur
           </Badge>
           <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
             Latihan <span className="text-blue-600">Per Subtes</span>
           </h1>
-          <p className="text-slate-600 text-xs md:text-base mt-1 md:mt-2 max-w-2xl">
+          <p className="text-slate-600 text-xs md:text-base mt-1 md:mt-2 max-w-3xl">
             Asah kemampuanmu di setiap subtes untuk meningkatkan peluang keloloson secara signifikan.
           </p>
+          
+          {/* Penjelasan Kategori - NEW */}
+          <div className="mt-3 md:mt-4 p-3 md:p-4 bg-blue-50 border border-blue-200 rounded-lg md:rounded-xl">
+            <div className="flex items-start gap-2 md:gap-3">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Brain className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xs md:text-sm font-bold text-slate-900">💡 Apa itu Latihan Per Subtes?</h3>
+                <p className="text-[10px] md:text-xs text-slate-700 leading-relaxed">
+                  <strong>Latihan Per Subtes</strong> adalah bank soal yang <strong>terfokus per materi</strong> (contoh: hanya Penalaran Umum, hanya Literasi Bahasa Indonesia, dll).
+                  <br className="hidden md:block" />
+                  Cocok untuk <strong>belajar konsep</strong> dan <strong>memperdalam satu subtes</strong> tanpa batasan waktu ketat.
+                </p>
+                <div className="flex flex-wrap gap-1.5 md:gap-2 pt-1 md:pt-2">
+                  {/* Removed badges based on user feedback */}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filter Tabs */}
@@ -225,20 +245,6 @@ export default function LatihanSubtesPage() {
                       <p className="text-[9px] md:text-xs text-slate-600 leading-relaxed line-clamp-2">{category.description}</p>
                     </div>
 
-                    <div className="space-y-1 md:space-y-2 pt-1 md:pt-2">
-                      <div className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-semibold text-slate-700">
-                        <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-emerald-500 flex-shrink-0" />
-                        <span>{category.totalSoal}+ Bank Soal</span>
-                      </div>
-                      <div className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-semibold text-slate-700">
-                        <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-emerald-500 flex-shrink-0" />
-                        <span>Pembahasan Lengkap</span>
-                      </div>
-                      <div className="flex items-center gap-1 md:gap-2 text-[9px] md:text-xs font-semibold text-slate-700">
-                        <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-emerald-500 flex-shrink-0" />
-                        <span className="line-clamp-1">Update Kisi-kisi SNPMB 2026</span>
-                      </div>
-                    </div>
                   </div>
 
                   {/* CTA Button */}

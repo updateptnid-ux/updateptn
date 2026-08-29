@@ -13,6 +13,8 @@ import {
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
+import { getCached } from "@/lib/cache";
+
 interface LeaderboardEntry {
   user_id: string;
   full_name: string;
@@ -88,7 +90,6 @@ export default function LeaderboardPage() {
       setCurrentUserId(user.id);
 
       // Load user profile data for auto-filter
-      // Baca dari auth metadata sebagai fallback (jika kolom provinsi di DB belum ada)
       const meta = user.user_metadata as Record<string, string>;
 
       const { data: profileData } = await supabase
@@ -97,7 +98,6 @@ export default function LeaderboardPage() {
         .eq("id", user.id)
         .single();
 
-      // Prioritas: DB > auth metadata (fallback sebelum migration dijalankan)
       const resolvedProvinsi = profileData?.provinsi || meta?.provinsi || "";
       const resolvedPTN = profileData?.target_ptn || meta?.target_ptn || meta?.target_univ || "";
       const resolvedProdi = profileData?.target_prodi || meta?.target_prodi || "";
@@ -106,7 +106,6 @@ export default function LeaderboardPage() {
       setUserTargetPTN(resolvedPTN);
       setUserTargetProdi(resolvedProdi);
 
-
       // Fetch tryouts for filter
       const { data: tryoutsData } = await supabase
         .from("tryouts")
@@ -114,24 +113,35 @@ export default function LeaderboardPage() {
         .order("created_at", { ascending: false });
       if (tryoutsData && tryoutsData.length > 0) setTryouts(tryoutsData);
 
-      // Fetch results table directly with join to profiles
-      let resQuery = supabase
-        .from("results")
-        .select("id, user_id, score, irt_score, tryout_id, created_at, profiles(full_name, target_prodi, target_ptn, asal_sekolah, bio, provinsi), tryouts(title)")
-        .order("score", { ascending: false })
-        .limit(200);
+      // CACHE KEY per tryout filter
+      const cacheKey = `leaderboard_${selectedTryout}`;
 
-      if (selectedTryout !== "all") {
-        resQuery = resQuery.eq("tryout_id", selectedTryout);
-      }
+      // Use cached data with 5-minute TTL
+      const cachedData = await getCached<any[]>(
+        cacheKey,
+        async () => {
+          // Fetch results with optimized query (limit 200, indexed)
+          let resQuery = supabase
+            .from("results")
+            .select("id, user_id, score, irt_score, tryout_id, created_at, profiles(full_name, target_prodi, target_ptn, asal_sekolah, bio, provinsi), tryouts(title)")
+            .order("score", { ascending: false })
+            .limit(200);
 
-      const { data: resData } = await resQuery;
+          if (selectedTryout !== "all") {
+            resQuery = resQuery.eq("tryout_id", selectedTryout);
+          }
 
-      if (resData && resData.length > 0) {
+          const { data: resData } = await resQuery;
+          return resData || [];
+        },
+        300 // 5 minutes cache
+      );
+
+      if (cachedData && cachedData.length > 0) {
         // Deduplikasi berdasarkan user_id, ambil skor tertinggi
         const dedupedMap = new Map<string, any>();
         
-        resData.forEach((item: any) => {
+        cachedData.forEach((item: any) => {
           const currentScore = Math.round(Number(item.irt_score || item.score || 0));
           const p = item.profiles || {};
           

@@ -31,6 +31,7 @@ interface VoucherRecord {
   code: string;
   discount_type: "percentage" | "fixed";
   value: string;
+  category: "universal" | "snbt" | "snbp" | "mandiri" | "tryout" | "bimbel" | "cek-peluang";
   usage_limit: number;
   usage_count: number;
   status: "active" | "expired";
@@ -49,6 +50,7 @@ export default function AdminVouchersPage() {
     code: "",
     discount_type: "percentage" as "percentage" | "fixed",
     value: "15%",
+    category: "universal" as "universal" | "snbt" | "snbp" | "mandiri" | "tryout" | "bimbel" | "cek-peluang",
     usage_limit: 100,
     usage_count: 0,
     status: "active" as "active" | "expired",
@@ -88,6 +90,7 @@ export default function AdminVouchersPage() {
       code: "",
       discount_type: "percentage",
       value: "15%",
+      category: "universal",
       usage_limit: 100,
       usage_count: 0,
       status: "active",
@@ -102,6 +105,7 @@ export default function AdminVouchersPage() {
       code: v.code,
       discount_type: v.discount_type,
       value: v.value,
+      category: v.category || "universal",
       usage_limit: v.usage_limit,
       usage_count: v.usage_count,
       status: v.status,
@@ -204,6 +208,7 @@ export default function AdminVouchersPage() {
             <TableRow className="border-slate-200 bg-slate-50/50">
               <TableHead className="font-bold text-slate-700">Kode Voucher</TableHead>
               <TableHead className="font-bold text-slate-700">Jenis Diskon</TableHead>
+              <TableHead className="font-bold text-slate-700">Kategori</TableHead>
               <TableHead className="font-bold text-slate-700">Nilai Potongan</TableHead>
               <TableHead className="font-bold text-slate-700">Penggunaan</TableHead>
               <TableHead className="font-bold text-slate-700">Status</TableHead>
@@ -229,6 +234,9 @@ export default function AdminVouchersPage() {
                   </TableCell>
                   <TableCell className="text-xs text-slate-700 font-semibold uppercase">
                     {voucher.discount_type === "percentage" ? "Persentase" : "Nominal Tetap"}
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-700 font-bold uppercase">
+                    {voucher.category === "universal" ? "Semua Paket" : voucher.category}
                   </TableCell>
                   <TableCell className="text-xs font-bold text-slate-900">{voucher.value}</TableCell>
                   <TableCell className="text-xs text-slate-700 font-semibold">
@@ -288,7 +296,7 @@ export default function AdminVouchersPage() {
               <Label>Kode Voucher *</Label>
               <Input value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} placeholder="PROMOUTBK" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Jenis Diskon *</Label>
                 <select
@@ -301,7 +309,23 @@ export default function AdminVouchersPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Nilas Potongan *</Label>
+                <Label>Kategori Paket *</Label>
+                <select
+                  value={formData.category}
+                  onChange={e => setFormData({ ...formData, category: e.target.value as any })}
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                >
+                  <option value="universal">Semua Paket (Universal)</option>
+                  <option value="snbt">Premium SNBT</option>
+                  <option value="snbp">Premium SNBP</option>
+                  <option value="mandiri">Premium Mandiri</option>
+                  <option value="tryout">Paket Try Out</option>
+                  <option value="bimbel">Paket Bimbel</option>
+                  <option value="cek-peluang">Paket Cek Peluang PTN</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nilai Potongan *</Label>
                 <Input value={formData.value} onChange={e => setFormData({ ...formData, value: e.target.value })} placeholder="15% / Rp 50.000" />
               </div>
             </div>

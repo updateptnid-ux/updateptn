@@ -31,14 +31,7 @@ export default function ImprovementChart({ userId }: { userId?: string }) {
         // Fetch tryout results
         const { data, error } = await supabase
           .from("results")
-          .select(`
-            score,
-            total_score,
-            created_at,
-            tryouts (
-              title
-            )
-          `)
+          .select("score, irt_score, created_at, tryouts(title)")
           .eq("user_id", targetUserId)
           .not("created_at", "is", null)
           .order("created_at", { ascending: true })
@@ -48,7 +41,7 @@ export default function ImprovementChart({ userId }: { userId?: string }) {
 
         const formattedScores = (data || []).map((item: any) => ({
           tryout_name: item.tryouts?.title || "Try Out",
-          score: item.score ?? item.total_score ?? 0,
+          score: item.score ?? item.irt_score ?? 0,
           taken_at: new Date(item.created_at).toLocaleDateString("id-ID", {
             day: "numeric",
             month: "short",
@@ -56,8 +49,8 @@ export default function ImprovementChart({ userId }: { userId?: string }) {
         }));
 
         setScores(formattedScores);
-      } catch (err) {
-        console.error("Error fetching improvement data:", err);
+      } catch (err: any) {
+        console.error("Error fetching improvement data:", err?.message || JSON.stringify(err));
       } finally {
         setLoading(false);
       }

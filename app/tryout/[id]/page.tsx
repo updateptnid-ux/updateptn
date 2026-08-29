@@ -166,6 +166,12 @@ export default function TryoutEnginePage({
         const isPremium = subsData?.tier === "Premium" || subsData?.tier === "Platinum";
         setIsPremiumUser(isPremium);
 
+        let tryoutInfo: any = null;
+        if (!tryoutId.startsWith("latihan-")) {
+          const { data: tInfo } = await supabase.from("tryouts").select("tryout_type, mandiri_category").eq("id", tryoutId).maybeSingle();
+          tryoutInfo = tInfo;
+        }
+
         // Limit Check (hanya untuk try out asli, bukan latihan subtes)
         if (!tryoutId.startsWith("latihan-")) {
           const { data: resultsData } = await supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId);
@@ -237,7 +243,7 @@ export default function TryoutEnginePage({
         if (dbData && dbData.length > 0) {
           const finalQs = normalizeQuestions(dbData);
           setQuestions(finalQs);
-          extractSubtests(finalQs);
+          extractSubtests(finalQs, tryoutInfo);
         } else {
           // Fallback to local /40_soal_snbt.json
           try {
@@ -247,7 +253,7 @@ export default function TryoutEnginePage({
               if (localJson && localJson.length > 0) {
                 const finalQs = normalizeQuestions(localJson);
                 setQuestions(finalQs);
-                extractSubtests(finalQs);
+                extractSubtests(finalQs, tryoutInfo);
               } else {
                 setQuestions([]);
               }
@@ -266,7 +272,7 @@ export default function TryoutEnginePage({
             const localJson = await res.json();
             const finalQs = normalizeQuestions(localJson);
             setQuestions(finalQs);
-            extractSubtests(finalQs);
+            extractSubtests(finalQs, tryoutInfo);
           }
         } catch {
           setQuestions([]);
@@ -276,7 +282,7 @@ export default function TryoutEnginePage({
       }
     }
 
-    const extractSubtests = (qs: QuestionItem[]) => {
+    const extractSubtests = (qs: QuestionItem[], tInfo?: any) => {
       const map = new Map<string, number>();
       qs.forEach(q => {
         const sub = q.subtest || "Lainnya";
@@ -285,6 +291,59 @@ export default function TryoutEnginePage({
       
       const getCategoryAndDuration = (name: string) => {
         const n = name.toLowerCase();
+        
+        // 1. Check if this is a Mandiri tryout and apply specific rules
+        if (tInfo?.tryout_type === "mandiri") {
+          const category = tInfo.mandiri_category || "";
+          
+          if (category === "SIMAK UI") {
+            // SIMAK UI
+            if (n.includes("verbal")) return { category: "Kemampuan Skolastik", duration: 25 }; // estimasi
+            if (n.includes("kuantitatif")) return { category: "Kemampuan Skolastik", duration: 35 }; // estimasi
+            if (n.includes("logika")) return { category: "Kemampuan Skolastik", duration: 25 }; // estimasi
+            if (n.includes("matematika dasar")) return { category: "Kemampuan Dasar", duration: 40 }; // total kem. dasar 45 soal 35 menit
+            if (n.includes("indonesia")) return { category: "Kemampuan Dasar", duration: 25 };
+            if (n.includes("inggris")) return { category: "Kemampuan Dasar", duration: 25 };
+          }
+          
+          if (category === "SSU ITB") {
+            // SSU ITB
+            if (n.includes("matematika")) return { category: "Matematika", duration: 50 };
+            if (n.includes("fisika")) return { category: "Fisika", duration: 50 };
+            if (n.includes("kognitif")) return { category: "Tes Potensi Kognitif", duration: 50 };
+          }
+          
+          if (category === "UM-CBT UGM") {
+            // UM UGM
+            if (n.includes("tka") || n.includes("akademik")) return { category: "Tes Kemampuan Akademik (TKA)", duration: 60 };
+            if (n.includes("tpa") || n.includes("potensi akademik")) return { category: "Tes Potensi Akademik (TPA)", duration: 60 };
+            if (n.includes("matematika dasar")) return { category: "Kemampuan Dasar (TKDU)", duration: 20 };
+            if (n.includes("indonesia")) return { category: "Kemampuan Dasar (TKDU)", duration: 20 };
+            if (n.includes("inggris")) return { category: "Kemampuan Dasar (TKDU)", duration: 20 };
+          }
+          
+          if (category === "Bela Negara UPN Jogja") {
+            // UPN Jogja
+            if (n.includes("pancasila")) return { category: "Komponen Kebangsaan & Negara", duration: 12 };
+            if (n.includes("kewarganegaraan")) return { category: "Komponen Kebangsaan & Negara", duration: 12 };
+            if (n.includes("bela negara")) return { category: "Komponen Kebangsaan & Negara", duration: 13 };
+            if (n.includes("sejarah kebangsaan")) return { category: "Komponen Kebangsaan & Negara", duration: 13 };
+            if (n.includes("matematika") || n.includes("kognitif") || n.includes("skolastik")) return { category: "Komponen Kognitif & Skolastik", duration: 50 };
+          }
+          
+          if (category === "SMMPTN-Barat") {
+            // SMMPTN-Barat
+            if (n.includes("penalaran umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 30 };
+            if (n.includes("pemahaman umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 25 };
+            if (n.includes("bacaan dan menulis")) return { category: "Tes Potensi Skolastik (TPS)", duration: 25 };
+            if (n.includes("kuantitatif")) return { category: "Tes Potensi Skolastik (TPS)", duration: 25 };
+            if (n.includes("indonesia")) return { category: "Tes Literasi & Penalaran Matematika", duration: 30 };
+            if (n.includes("inggris")) return { category: "Tes Literasi & Penalaran Matematika", duration: 30 };
+            if (n.includes("matematika")) return { category: "Tes Literasi & Penalaran Matematika", duration: 30 };
+          }
+        }
+
+        // Default SNBT mapping
         if (n.includes("penalaran umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 30 };
         if (n.includes("pemahaman umum")) return { category: "Tes Potensi Skolastik (TPS)", duration: 15 };
         if (n.includes("bacaan dan menulis")) return { category: "Tes Potensi Skolastik (TPS)", duration: 25 };

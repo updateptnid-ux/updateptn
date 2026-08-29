@@ -56,10 +56,10 @@ export const OFFICIAL_SNBT_SUBTESTS = [
   { name: "Penalaran Umum", max: 30, category: "TPS", duration: 30 },
   { name: "Pengetahuan dan Pemahaman Umum", max: 20, category: "TPS", duration: 15 },
   { name: "Kemampuan Memahami Bacaan dan Menulis", max: 20, category: "TPS", duration: 25 },
-  { name: "Pengetahuan Kuantitatif", max: 15, category: "TPS", duration: 20 },
-  { name: "Literasi dalam Bahasa Indonesia", max: 30, category: "Tes Literasi", duration: 45 },
-  { name: "Literasi dalam Bahasa Inggris", max: 20, category: "Tes Literasi", duration: 30 },
-  { name: "Penalaran Matematika", max: 20, category: "Tes Literasi", duration: 30 },
+  { name: "Pengetahuan Kuantitatif", max: 20, category: "TPS", duration: 20 },
+  { name: "Literasi dalam Bahasa Indonesia", max: 30, category: "Tes Literasi", duration: 42.5 },
+  { name: "Literasi dalam Bahasa Inggris", max: 20, category: "Tes Literasi", duration: 20 },
+  { name: "Penalaran Matematika", max: 20, category: "Tes Literasi", duration: 42.5 },
 ];
 
 export function getNormalizedSubtest(rawName: string) {
@@ -121,6 +121,7 @@ export default function AdminQuestionsPage() {
       const { data, error } = await supabase
         .from("tryouts")
         .select("*")
+        .eq("tryout_type", "snbt") // ← FILTER: Hanya SNBT
         .order("scheduled_date", { ascending: false });
 
       if (data) {
@@ -129,7 +130,7 @@ export default function AdminQuestionsPage() {
       if (error) throw error;
     } catch (err) {
       console.error(err);
-      alert("Gagal memuat daftar Try Out.");
+      alert("Gagal memuat daftar Try Out SNBT.");
     } finally {
       setLoading(false);
     }
@@ -348,8 +349,8 @@ export default function AdminQuestionsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Bank Soal UTBK</h1>
-            <p className="text-sm text-slate-500 mt-1">Pilih paket Try Out untuk mengelola soal di dalamnya.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Bank Soal Try Out SNBT</h1>
+            <p className="text-sm text-slate-500 mt-1">Pilih paket Try Out SNBT untuk mengelola soal di dalamnya.</p>
           </div>
           <Button
             onClick={() => setIsGeneratorDialogOpen(true)}
@@ -364,7 +365,7 @@ export default function AdminQuestionsPage() {
           <div className="text-center py-12 text-slate-500">Memuat paket Try Out...</div>
         ) : tryouts.length === 0 ? (
           <div className="text-center py-12 text-slate-500 bg-white border border-slate-200 rounded-2xl">
-            Belum ada paket Try Out. Buat di menu Manajemen Try Out.
+            Belum ada paket Try Out SNBT. Buat di menu "Buat Try Out SNBT".
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

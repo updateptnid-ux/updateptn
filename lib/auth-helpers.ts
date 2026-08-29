@@ -132,3 +132,22 @@ export async function requireMentor() {
   
   return { user, mentorId };
 }
+
+/**
+ * Require mentor OR admin access (throw if neither)
+ */
+export async function requireMentorOrAdmin() {
+  const { isAdmin, user: adminUser } = await checkAdminAccess();
+  
+  if (isAdmin) {
+    return { user: adminUser, role: "admin" as const };
+  }
+  
+  const { isMentor, user: mentorUser, mentorId } = await checkMentorAccess();
+  
+  if (isMentor) {
+    return { user: mentorUser, role: "mentor" as const, mentorId };
+  }
+  
+  throw new Error("Mentor or Admin access required");
+}

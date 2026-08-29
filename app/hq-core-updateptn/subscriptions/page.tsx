@@ -165,25 +165,44 @@ export default function AdminSubscriptionsPage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      const payload = {
+      const payload: any = {
         ...formData,
         expires_at: new Date(formData.expires_at).toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       if (isDemoMode) {
         if (editingSub) {
           setSubs(prev => prev.map(s => (s.id === editingSub.id ? { ...s, ...payload } : s)));
         } else {
-          setSubs(prev => [
-            ...prev,
-            { id: `s_${Date.now()}`, ...payload },
-          ]);
+          setSubs(prev => [...prev, { id: `s_${Date.now()}`, ...payload }]);
         }
         setIsDialogOpen(false);
         return;
       }
 
       const supabase = createClient();
+
+      // Jika create baru, lookup user_id dari email
+      if (!editingSub && formData.user_email) {
+        try {
+          const res = await fetch(`/api/lookup-user?email=${encodeURIComponent(formData.user_email)}`);
+          if (res.ok) {
+            const userData = await res.json();
+            payload.user_id = userData.user_id;
+            // Isi user_name dari data jika kosong
+            if (!payload.user_name && userData.name) {
+              payload.user_name = userData.name;
+            }
+          } else {
+            // User tidak ditemukan di auth — tetap simpan tanpa user_id
+            console.warn("User tidak ditemukan di auth.users untuk email:", formData.user_email);
+          }
+        } catch (lookupErr) {
+          console.warn("Gagal lookup user_id:", lookupErr);
+        }
+      }
+
       if (editingSub) {
         const { error } = await supabase.from("subscriptions").update(payload).eq("id", editingSub.id);
         if (error) throw error;

@@ -35,7 +35,6 @@ interface MentorSidebarLayoutProps {
 const navItems = [
   { name: "Beranda", href: "/mentor", icon: LayoutDashboard, exact: true },
   { name: "Live Class", href: "/mentor/live-class", icon: Video, exact: false },
-  { name: "Video Pembelajaran", href: "/mentor/video", icon: PlaySquare, exact: false },
   { name: "Modul Belajar", href: "/mentor/modul", icon: BookOpen, exact: false },
   { name: "Jadwal Mengajar", href: "/mentor/jadwal", icon: CalendarDays, exact: false },
   { name: "Profil Saya", href: "/mentor/profil", icon: UserCircle2, exact: false },

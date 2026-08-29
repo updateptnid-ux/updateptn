@@ -65,7 +65,10 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
     "Overview": true,
     "Pengguna": true,
     "Transaksi": true,
-    "Bank Soal & Ujian": true,
+    "Try Out SNBT": true,
+    "Try Out Mandiri": true,
+    "Latihan Per Subtes": true,
+    "Konten Pembelajaran": false,
     "Master Data PTN": true,
     "Sistem & Konten": false,
   });
@@ -97,14 +100,32 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       ],
     },
     {
-      groupName: "Bank Soal & Ujian",
+      groupName: "Try Out SNBT",
       items: [
-        { name: "Bank Soal UTBK", href: "/hq-core-updateptn/questions", icon: FileQuestion },
-        { name: "Modul Latihan Subtes", href: "/hq-core-updateptn/subtes-modules", icon: FileText },
-        { name: "Soal Latihan Subtes", href: "/hq-core-updateptn/practice-questions", icon: FileText },
+        { name: "Soal Try Out SNBT", href: "/hq-core-updateptn/questions", icon: FileQuestion },
+        { name: "Buat Try Out SNBT", href: "/hq-core-updateptn/tryouts", icon: FileSpreadsheet },
         { name: "Klaim Try Out Gratis", href: "/hq-core-updateptn/free-claims", icon: Gift },
-        { name: "Paket Try Out IRT", href: "/hq-core-updateptn/tryouts", icon: FileSpreadsheet },
-        { name: "Hasil Ujian", href: "/hq-core-updateptn/results", icon: BarChart3 },
+        { name: "Hasil Ujian SNBT", href: "/hq-core-updateptn/results", icon: BarChart3 },
+      ],
+    },
+    {
+      groupName: "Try Out Mandiri",
+      items: [
+        { name: "Soal Try Out Mandiri", href: "/hq-core-updateptn/questions-mandiri", icon: FileQuestion },
+        { name: "Buat Try Out Mandiri", href: "/hq-core-updateptn/tryouts-mandiri", icon: FileSpreadsheet },
+        { name: "Hasil Ujian Mandiri", href: "/hq-core-updateptn/results-mandiri", icon: BarChart3 },
+      ],
+    },
+    {
+      groupName: "Latihan Per Subtes",
+      items: [
+        { name: "Modul Latihan", href: "/hq-core-updateptn/subtes-modules", icon: BookOpen },
+        { name: "Soal Latihan", href: "/hq-core-updateptn/practice-questions", icon: FileText },
+      ],
+    },
+    {
+      groupName: "Konten Pembelajaran",
+      items: [
         { name: "Live Class", href: "/hq-core-updateptn/live-classes", icon: Video },
         { name: "Video Pembelajaran", href: "/hq-core-updateptn/videos", icon: PlaySquare },
       ],

@@ -217,7 +217,7 @@ export default function LandingPage() {
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <p className="text-3xl md:text-4xl font-black text-slate-900">4.900+</p>
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">50.000+</p>
                 </div>
                 <p className="text-xs md:text-sm font-semibold text-slate-500">Bank Soal</p>
               </div>
@@ -231,16 +231,16 @@ export default function LandingPage() {
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1">
                   <Target className="h-5 w-5 text-blue-600" />
-                  <p className="text-3xl md:text-4xl font-black text-slate-900">98.2%</p>
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">99.2%</p>
                 </div>
                 <p className="text-xs md:text-sm font-semibold text-slate-500">Akurasi IRT</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1">
                   <Award className="h-5 w-5 text-blue-600" />
-                  <p className="text-3xl md:text-4xl font-black text-slate-900">12.400+</p>
+                  <p className="text-3xl md:text-4xl font-black text-slate-900">4.900+</p>
                 </div>
-                <p className="text-xs md:text-sm font-semibold text-slate-500">Try Out Selesai</p>
+                <p className="text-xs md:text-sm font-semibold text-slate-500">Prodi Terdaftar</p>
               </div>
             </FadeIn>
 
@@ -1054,9 +1054,9 @@ export default function LandingPage() {
           <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
             <p>© {new Date().getFullYear()} UpdatePTN. Seluruh Hak Cipta Dilindungi.</p>
             <div className="flex items-center gap-4 text-slate-400">
-              <Link href="#" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>
               <span>•</span>
-              <Link href="#" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
             </div>
           </div>
         </div>

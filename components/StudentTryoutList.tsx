@@ -16,6 +16,7 @@ interface Tryout {
   duration_minutes: number;
   total_questions: number;
   is_free: boolean;
+  allow_free_claim?: boolean;
 }
 
 interface StudentTryoutListProps {
@@ -116,7 +117,11 @@ export default function StudentTryoutList({
         </Badge>
       </div>
 
-      <StaggerContainer className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" staggerDelay={0.1}>
+      <StaggerContainer 
+        key={tryouts.map(t => t.id).join("-")} 
+        className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6" 
+        staggerDelay={0.1}
+      >
         {tryouts.map((to) => {
           const isReqStatus = requestStatuses[to.id];
           const isApproved = isReqStatus === "approved";
@@ -243,12 +248,22 @@ export default function StudentTryoutList({
                         <span className="hidden sm:inline">Menunggu Persetujuan Admin</span>
                         <span className="sm:hidden">Pending</span>
                       </Button>
+                    ) : to.allow_free_claim === false ? (
+                      <Link href="/pricing" className="w-full">
+                        <Button
+                          className="w-full h-10 md:h-11 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-lg md:rounded-xl gap-1 md:gap-2 shadow-sm transition-all touch-manipulation text-[10px] sm:text-xs md:text-sm px-2"
+                        >
+                          <Lock className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                          <span className="hidden sm:inline">Langganan Paket Premium</span>
+                          <span className="sm:hidden">Premium</span>
+                        </Button>
+                      </Link>
                     ) : (
                       <Button
                         onClick={() => handleActionClick(to)}
-                        className="w-full h-10 md:h-11 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 shadow-sm transition-all touch-manipulation text-xs md:text-base"
+                        className="w-full h-10 md:h-11 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-bold rounded-lg md:rounded-xl gap-1 md:gap-2 shadow-sm transition-all touch-manipulation text-[10px] sm:text-xs md:text-sm px-2"
                       >
-                        <Lock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                        <Lock className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                         <span className="hidden sm:inline">Buka Akses Gratis Bersyarat</span>
                         <span className="sm:hidden">Unlock</span>
                       </Button>

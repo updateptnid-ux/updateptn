@@ -32,20 +32,39 @@ export default function AdminResultsPage() {
   const [results, setResults] = useState<ResultRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const ITEMS_PER_PAGE = 50;
 
   useEffect(() => {
     fetchResults();
-  }, []);
+  }, [currentPage]);
 
   const fetchResults = async () => {
     try {
       setLoading(true);
       const supabase = createClient();
 
+      // Get total count for pagination
+      const { count } = await supabase
+        .from("results")
+        .select("id", { count: "exact", head: true })
+        .eq("tryout_type", "snbt");
+
+      setTotalCount(count || 0);
+
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
       const { data, error } = await supabase
         .from("results")
-        .select("*, tryouts(title)")
-        .order("created_at", { ascending: false });
+        .select(`
+          *,
+          tryouts!inner(title, tryout_type)
+        `)
+        .eq("tryouts.tryout_type", "snbt") // ← FILTER: Hanya SNBT
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) {
         console.error("Error fetching results:", error);
@@ -100,6 +119,8 @@ export default function AdminResultsPage() {
     }
   };
 
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
   return (
     <div className="space-y-4">
       {isDemoMode && (
@@ -113,12 +134,13 @@ export default function AdminResultsPage() {
       )}
 
       <CrudLayout
-        title="Hasil & Skor IRT"
-        description="Laporan hasil ujian Try Out siswa, skor bobot IRT per subtes, dan peringkat nasional (leaderboard)."
+        title="Hasil Ujian SNBT"
+        description="Laporan hasil ujian Try Out SNBT siswa, skor bobot IRT per subtes, dan peringkat nasional (leaderboard)."
         searchPlaceholder="Cari berdasarkan siswa..."
-        totalItems={results.length}
-        currentPage={1}
-        totalPages={1}
+        totalItems={totalCount}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
       >
         <Table>
           <TableHeader>

@@ -206,9 +206,9 @@ export default function AdminMentorsPage() {
       
       if (error) {
         console.error("Supabase error:", error.code, error.message, error.details);
-        // If table doesn't exist, use fallback data
-        if (error.code === "PGRST116" || error.message.includes("does not exist")) {
-          console.warn("Table direktori_prodi not found, using fallback universities");
+        // If table doesn't exist or cache issue, use fallback data
+        if (error.code === "PGRST116" || error.code === "PGRST205" || error.message.includes("does not exist") || error.message.includes("schema cache")) {
+          console.warn("Table direktori_prodi not found or cache issue, using fallback universities");
           useFallbackUniversities();
         }
         return;

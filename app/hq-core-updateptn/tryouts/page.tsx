@@ -44,6 +44,9 @@ interface Tryout {
   scheduled_date: string;
   is_free: boolean;
   is_active: boolean;
+  tryout_type: string;
+  mandiri_category: string | null;
+  allow_free_claim: boolean;
   created_at: string;
 }
 
@@ -54,7 +57,6 @@ export default function AdminTryoutsPage() {
   const [editingTryout, setEditingTryout] = useState<Tryout | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -63,6 +65,9 @@ export default function AdminTryoutsPage() {
     scheduled_date: "",
     is_free: true,
     is_active: true,
+    tryout_type: "snbt",
+    mandiri_category: "",
+    allow_free_claim: true,
   });
 
   useEffect(() => {
@@ -76,6 +81,7 @@ export default function AdminTryoutsPage() {
       const { data, error } = await supabase
         .from("tryouts")
         .select("*")
+        .eq("tryout_type", "snbt") // ← FILTER: Hanya SNBT
         .order("scheduled_date", { ascending: false });
 
       if (!error && data) {
@@ -98,6 +104,9 @@ export default function AdminTryoutsPage() {
       scheduled_date: new Date().toISOString().split("T")[0],
       is_free: true,
       is_active: true,
+      tryout_type: "snbt",
+      mandiri_category: "",
+      allow_free_claim: true,
     });
     setIsDialogOpen(true);
   };
@@ -112,6 +121,9 @@ export default function AdminTryoutsPage() {
       scheduled_date: tryout.scheduled_date ? new Date(tryout.scheduled_date).toISOString().split("T")[0] : "",
       is_free: tryout.is_free,
       is_active: tryout.is_active,
+      tryout_type: tryout.tryout_type || "snbt",
+      mandiri_category: tryout.mandiri_category || "",
+      allow_free_claim: tryout.allow_free_claim !== false, // default true
     });
     setIsDialogOpen(true);
   };
@@ -123,17 +135,25 @@ export default function AdminTryoutsPage() {
 
       if (editingTryout) {
         // Update existing
+        const payload = {
+          ...formData,
+          mandiri_category: formData.tryout_type === "mandiri" ? (formData.mandiri_category || "Lainnya") : null
+        };
         const { error } = await supabase
           .from("tryouts")
-          .update(formData)
+          .update(payload)
           .eq("id", editingTryout.id);
 
         if (error) throw error;
       } else {
         // Create new
+        const payload = {
+          ...formData,
+          mandiri_category: formData.tryout_type === "mandiri" ? (formData.mandiri_category || "Lainnya") : null
+        };
         const { data: newTryout, error } = await supabase
           .from("tryouts")
-          .insert([formData])
+          .insert([payload])
           .select("id")
           .single();
 
@@ -179,9 +199,9 @@ export default function AdminTryoutsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Manajemen Try Out</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900">Buat Try Out SNBT</h1>
           <p className="text-sm text-slate-600 mt-1">
-            Kelola jadwal Try Out UTBK untuk siswa
+            Kelola jadwal Try Out SNBT untuk siswa
           </p>
         </div>
         <Button
@@ -208,6 +228,7 @@ export default function AdminTryoutsPage() {
             <TableHeader>
               <TableRow className="bg-slate-50">
                 <TableHead className="font-bold">Judul Try Out</TableHead>
+                <TableHead className="font-bold">Tipe & Kategori</TableHead>
                 <TableHead className="font-bold">Tanggal Pelaksanaan</TableHead>
                 <TableHead className="font-bold">Durasi</TableHead>
                 <TableHead className="font-bold">Soal</TableHead>
@@ -225,6 +246,26 @@ export default function AdminTryoutsPage() {
                       <p className="text-xs text-slate-500 line-clamp-1">
                         {tryout.description}
                       </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      {tryout.tryout_type === "mandiri" ? (
+                        <>
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs font-bold w-fit">
+                            Mandiri
+                          </Badge>
+                          {tryout.mandiri_category && (
+                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded w-fit">
+                              {tryout.mandiri_category}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs font-bold w-fit">
+                          SNBT
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -251,9 +292,20 @@ export default function AdminTryoutsPage() {
                         Gratis
                       </Badge>
                     ) : (
-                      <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
-                        Premium
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs w-fit">
+                          Premium
+                        </Badge>
+                        {tryout.allow_free_claim ? (
+                          <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded px-1.5 py-0.5 w-fit">
+                            Klaim Gratis Aktif
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 w-fit">
+                            Berbayar Murni
+                          </span>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -370,6 +422,85 @@ export default function AdminTryoutsPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="tryout_type">Tipe Try Out *</Label>
+              <select
+                id="tryout_type"
+                value={formData.tryout_type}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "snbt") {
+                    setFormData({
+                      ...formData,
+                      tryout_type: val,
+                      duration_minutes: 195,
+                      total_questions: 155,
+                      mandiri_category: "",
+                    });
+                  } else {
+                    setFormData({
+                      ...formData,
+                      tryout_type: val,
+                      duration_minutes: 120, // default SIMAK UI
+                      total_questions: 130, // default SIMAK UI
+                      mandiri_category: "SIMAK UI",
+                    });
+                  }
+                }}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="snbt">SNBT (Seleksi Nasional)</option>
+                <option value="mandiri">Mandiri (Ujian Mandiri PTN)</option>
+              </select>
+            </div>
+
+            {formData.tryout_type === "mandiri" && (
+              <div className="space-y-2 animate-in fade-in duration-200">
+                <Label htmlFor="mandiri_category">Kategori / Universitas Mandiri *</Label>
+                <select
+                  id="mandiri_category"
+                  value={formData.mandiri_category}
+                  onChange={(e) => {
+                    const cat = e.target.value;
+                    let dur = 120;
+                    let qs = 130;
+
+                    if (cat === "SIMAK UI") {
+                      dur = 120;
+                      qs = 130;
+                    } else if (cat === "SSU ITB") {
+                      dur = 150;
+                      qs = 70;
+                    } else if (cat === "UM-CBT UGM") {
+                      dur = 180;
+                      qs = 120;
+                    } else if (cat === "Bela Negara UPN Jogja") {
+                      dur = 100;
+                      qs = 75;
+                    } else if (cat === "SMMPTN-Barat") {
+                      dur = 195;
+                      qs = 125;
+                    }
+
+                    setFormData({
+                      ...formData,
+                      mandiri_category: cat,
+                      duration_minutes: dur,
+                      total_questions: qs,
+                    });
+                  }}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="SIMAK UI">SIMAK UI</option>
+                  <option value="UM-CBT UGM">UM-CBT UGM</option>
+                  <option value="SMMPTN-Barat">SMMPTN-Barat</option>
+                  <option value="Bela Negara UPN Jogja">Bela Negara UPN Jogja</option>
+                  <option value="SSU ITB">SSU ITB</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-2">
               <Label htmlFor="scheduled_date">Tanggal Pelaksanaan *</Label>
               <Input
                 id="scheduled_date"
@@ -382,7 +513,7 @@ export default function AdminTryoutsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-6 pt-2">
+            <div className="flex items-center gap-6 pt-2 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -394,6 +525,22 @@ export default function AdminTryoutsPage() {
                 />
                 <span className="text-sm font-semibold">Gratis untuk semua siswa</span>
               </label>
+
+              {!formData.is_free && (
+                <label className="flex items-center gap-2 cursor-pointer animate-in slide-in-from-top-1 duration-200">
+                  <input
+                    type="checkbox"
+                    checked={formData.allow_free_claim}
+                    onChange={(e) =>
+                      setFormData({ ...formData, allow_free_claim: e.target.checked })
+                    }
+                    className="rounded"
+                  />
+                  <span className="text-sm font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Bolehkan Akses Gratis Bersyarat (Follow Sosmed)
+                  </span>
+                </label>
+              )}
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
