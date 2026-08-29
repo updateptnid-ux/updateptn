@@ -303,37 +303,9 @@ export default function AdminQuestionsPage() {
     }
   };
 
-  const handleGenerateJson = () => {
-    try {
-      const lines = rawText.split('\n').filter(l => l.trim() !== '');
-      const jsonArray = lines.map((line, index) => {
-        const parts = line.split('|');
-        if (parts.length < 8) {
-          throw new Error(`Baris ${index + 1} tidak valid. Kurang dari 8 kolom.`);
-        }
-        return {
-          subtest: parts[0]?.trim() || "Penalaran Umum",
-          text: parts[1]?.trim() || "",
-          option_a: parts[2]?.trim() || "",
-          option_b: parts[3]?.trim() || "",
-          option_c: parts[4]?.trim() || "",
-          option_d: parts[5]?.trim() || "",
-          option_e: parts[6]?.trim() || "",
-          correct_answer: parts[7]?.trim().toUpperCase() || "A",
-          explanation: parts[8]?.trim() || ""
-        };
-      });
-      setGeneratedJson(JSON.stringify(jsonArray, null, 2));
-    } catch (e: any) {
-      alert("Gagal mem-parsing teks: " + e.message);
-    }
-  };
-
-  const handleCopyJson = () => {
-    if (!generatedJson) return;
-    navigator.clipboard.writeText(generatedJson);
-    alert("JSON berhasil di-copy! Silakan paste ke notepad dan save sebagai .json, atau gunakan langsung.");
-  };
+  // Legacy stub — logic moved into GeneratorDialog
+  const handleGenerateJson = () => {};
+  const handleCopyJson = () => {};
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("id-ID", {
@@ -740,92 +712,257 @@ export default function AdminQuestionsPage() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Smart JSON Generator — 2-column layout (Teks Bacaan | Soal + Kunci)
+// ─────────────────────────────────────────────────────────────────────────────
+function parseQuestionsToJson(
+  readingText: string,
+  questionsText: string,
+  answerKeyText: string,
+  subtest: string
+): object[] {
+  // 1. Parse answer key: "1. C" or "1 C" or "1.C"
+  const answerMap: Record<number, string> = {};
+  answerKeyText.split("\n").forEach(line => {
+    const m = line.trim().match(/^(\d+)[.\s]+([A-Ea-e])/);
+    if (m) answerMap[parseInt(m[1])] = m[2].toUpperCase();
+  });
+
+  // 2. Split questions by numbered pattern e.g. "1." or "1)" at line start
+  const blocks: string[][] = [];
+  let cur: string[] = [];
+  questionsText.split("\n").forEach(line => {
+    if (/^\s*\d+\s*[.)\s]\s*\S/.test(line) && cur.length > 0) {
+      blocks.push(cur);
+      cur = [line];
+    } else {
+      cur.push(line);
+    }
+  });
+  if (cur.length > 0) blocks.push(cur);
+
+  return blocks.map(blockLines => {
+    const filtered = blockLines.filter(l => l.trim());
+    if (!filtered.length) return null;
+
+    // Extract question number
+    const numMatch = filtered[0].match(/^\s*(\d+)\s*[.)]/);
+    const qNum = numMatch ? parseInt(numMatch[1]) : 0;
+
+    const textLines: string[] = [];
+    const opts: Record<string, string> = {};
+
+    filtered.forEach(line => {
+      const optM = line.match(/^\s*\(?([A-Ea-e])\)?\s*[.)\s]\s*(.+)/);
+      if (optM) {
+        opts[optM[1].toUpperCase()] = optM[2].trim();
+      } else {
+        textLines.push(line.trim());
+      }
+    });
+
+    const prefix = readingText.trim() ? readingText.trim() + "\n\n" : "";
+    return {
+      subtest,
+      text: prefix + textLines.join("\n"),
+      option_a: opts["A"] || "",
+      option_b: opts["B"] || "",
+      option_c: opts["C"] || "",
+      option_d: opts["D"] || "",
+      option_e: opts["E"] || "",
+      correct_answer: answerMap[qNum] || "A",
+      explanation: "",
+    };
+  }).filter((x): x is object => x !== null);
+}
+
 function GeneratorDialog({
   isOpen,
   setIsOpen,
-  rawText,
-  setRawText,
-  generatedJson,
-  setGeneratedJson,
-  handleGenerateJson,
-  handleCopyJson
 }: {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
-  rawText: string;
-  setRawText: (val: string) => void;
-  generatedJson: string;
-  setGeneratedJson: (val: string) => void;
-  handleGenerateJson: () => void;
-  handleCopyJson: () => void;
+  rawText?: string;
+  setRawText?: (val: string) => void;
+  generatedJson?: string;
+  setGeneratedJson?: (val: string) => void;
+  handleGenerateJson?: () => void;
+  handleCopyJson?: () => void;
 }) {
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Generator JSON Soal UTBK</DialogTitle>
-          <DialogDescription>
-            Ubah teks CSV raw menjadi format JSON yang valid untuk diupload saat membuat Try Out.
-          </DialogDescription>
-        </DialogHeader>
+  const [readingText, setReadingText] = useState("");
+  const [questionsText, setQuestionsText] = useState("");
+  const [answerKeyText, setAnswerKeyText] = useState("");
+  const [selectedSubtest, setSelectedSubtest] = useState("Kemampuan Memahami Bacaan dan Menulis");
+  const [generatedJson, setGeneratedJson] = useState("");
+  const [parsed, setParsed] = useState<object[]>([]);
+  const [copied, setCopied] = useState(false);
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Paste teks CSV di sini</Label>
-            <p className="text-[11px] text-slate-500">
-              Format per baris, dipisahkan dengan tanda pipe (|): <br />
-              <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[10px]">
-                Subtest | Soal | A | B | C | D | E | Kunci Jawaban | Pembahasan (Opsional)
-              </code>
-            </p>
+  const handleGenerate = () => {
+    try {
+      if (!questionsText.trim()) {
+        alert("Kolom Soal tidak boleh kosong.");
+        return;
+      }
+      const result = parseQuestionsToJson(readingText, questionsText, answerKeyText, selectedSubtest);
+      if (!result.length) {
+        alert("Tidak ada soal yang berhasil di-parse. Pastikan format nomor soal benar (1. ... 2. ...)");
+        return;
+      }
+      setParsed(result);
+      setGeneratedJson(JSON.stringify(result, null, 2));
+    } catch (e: any) {
+      alert("Gagal parse: " + e.message);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedJson);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([generatedJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `soal_${selectedSubtest.toLowerCase().replace(/\s+/g, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReset = () => {
+    setReadingText("");
+    setQuestionsText("");
+    setAnswerKeyText("");
+    setGeneratedJson("");
+    setParsed([]);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) handleReset(); }}>
+      <DialogContent className="max-w-[95vw] w-[1300px] max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Generator JSON Soal SNBT
+            </h2>
+            <p className="text-xs text-blue-100 mt-0.5">Paste teks bacaan & soal → generate JSON siap upload</p>
+          </div>
+          <button onClick={() => setIsOpen(false)} className="text-white/70 hover:text-white transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Subtest Selector */}
+        <div className="px-6 py-3 border-b border-slate-200 bg-slate-50 flex items-center gap-4 flex-wrap">
+          <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">Subtes:</label>
+          <div className="flex flex-wrap gap-2">
+            {OFFICIAL_SNBT_SUBTESTS.map(s => (
+              <button
+                key={s.name}
+                onClick={() => setSelectedSubtest(s.name)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  selectedSubtest === s.name
+                    ? "bg-blue-600 text-white border-blue-600 shadow"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-400"
+                }`}
+              >
+                {s.name} <span className="opacity-60">({s.max})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Main 2-column area */}
+        <div className="flex flex-1 min-h-0 divide-x divide-slate-200 overflow-hidden">
+          {/* Left: Teks Bacaan */}
+          <div className="flex flex-col w-[35%] min-w-0">
+            <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+              <p className="text-xs font-bold text-slate-700">📄 Teks Bacaan <span className="text-slate-400 font-normal">(opsional — akan ditempel di atas setiap soal)</span></p>
+            </div>
             <textarea
-              value={rawText}
-              onChange={e => setRawText(e.target.value)}
-              className="w-full h-40 p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="Penalaran Umum | Siapa presiden RI ke-1? | Soekarno | Soeharto | Habibie | Gus Dur | Megawati | A | Jelas"
+              value={readingText}
+              onChange={e => setReadingText(e.target.value)}
+              className="flex-1 p-4 text-xs font-mono resize-none focus:outline-none text-slate-700 leading-relaxed"
+              placeholder={`Teks Bacaan 1\n(1) Sekitar 200 juta penduduk Amerika Serikat...\n(2) Akibat fenomena bom siklon...\n\n(Teks ini akan otomatis ditempel sebelum setiap soal yang di-parse)`}
             />
           </div>
 
-          <Button onClick={handleGenerateJson} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
-            Generate JSON
-          </Button>
-
-          {generatedJson && (
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <Label>Hasil JSON</Label>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-7 text-[11px] rounded-lg">
-                    Copy JSON
-                  </Button>
-                  <Button variant="default" size="sm" onClick={() => {
-                    if (!generatedJson) return;
-                    const blob = new Blob([generatedJson], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "soal_tryout.json";
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }} className="h-7 text-[11px] rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
-                    Download JSON
-                  </Button>
-                </div>
+          {/* Right: Soal + Kunci */}
+          <div className="flex flex-col flex-1 min-w-0 divide-y divide-slate-200">
+            <div className="flex flex-col flex-[3] min-h-0">
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-700">📝 Soal + Pilihan Jawaban</p>
+                <span className="text-[10px] text-slate-400">Format: 1. Soal... A. ... B. ... C. ... D. ... E. ...</span>
               </div>
               <textarea
-                readOnly
-                value={generatedJson}
-                className="w-full h-48 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
+                value={questionsText}
+                onChange={e => setQuestionsText(e.target.value)}
+                className="flex-1 p-4 text-xs font-mono resize-none focus:outline-none text-slate-700 leading-relaxed"
+                placeholder={`1. Jika ingin menambahkan informasi agar isi paragraf lebih utuh...\nA. Diletakkan sebagai pembuka pada paragraf pertama.\nB. Disisipkan sebelum kalimat (2).\nC. Ditempatkan setelah kalimat (3).\nD. Disisipkan sebelum kalimat (4).\nE. Dijadikan sebagai kalimat penutup.\n\n2. Apabila informasi pada pertanyaan nomor (1) dimasukkan...\nA. Kalimat (4)\nB. Kalimat (5)\n...`}
               />
+            </div>
+            <div className="flex flex-col flex-[1] min-h-0">
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+                <p className="text-xs font-bold text-slate-700">🔑 Kunci Jawaban <span className="text-slate-400 font-normal">(satu per baris: "1. C" atau "1 C")</span></p>
+              </div>
+              <textarea
+                value={answerKeyText}
+                onChange={e => setAnswerKeyText(e.target.value)}
+                className="flex-1 p-4 text-xs font-mono resize-none focus:outline-none text-slate-700"
+                placeholder={`1. C\n2. B\n3. B\n4. C\n5. C`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Action bar + preview */}
+        <div className="border-t border-slate-200 bg-white">
+          <div className="px-6 py-3 flex items-center gap-3">
+            <Button
+              onClick={handleGenerate}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl px-6 gap-2 shadow"
+            >
+              <FileText className="h-4 w-4" />
+              Generate JSON ({parsed.length} soal)
+            </Button>
+            {generatedJson && (
+              <>
+                <Button variant="outline" onClick={handleCopy} className="rounded-xl gap-2 border-slate-300">
+                  {copied ? "✅ Tersalin!" : "Copy JSON"}
+                </Button>
+                <Button onClick={handleDownload} className="rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  ⬇ Download .json
+                </Button>
+                <span className="text-xs text-slate-500 ml-auto">{parsed.length} soal · subtes: <b>{selectedSubtest}</b></span>
+              </>
+            )}
+            {!generatedJson && (
+              <span className="text-xs text-slate-400 ml-auto">Isi kolom soal & kunci jawaban, lalu klik Generate</span>
+            )}
+          </div>
+
+          {generatedJson && (
+            <div className="px-6 pb-4">
+              <div className="rounded-xl bg-slate-900 border border-slate-700 overflow-hidden">
+                <div className="px-4 py-2 bg-slate-800 flex items-center gap-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                  <span className="text-[10px] text-slate-400 ml-2 font-mono">preview output JSON</span>
+                </div>
+                <textarea
+                  readOnly
+                  value={generatedJson}
+                  className="w-full h-36 p-4 bg-transparent text-[11px] font-mono text-emerald-300 focus:outline-none resize-none"
+                />
+              </div>
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => { setIsOpen(false); setGeneratedJson(""); setRawText(""); }}>
-            Tutup
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
