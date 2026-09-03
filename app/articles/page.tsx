@@ -2,8 +2,9 @@ import { getPublishedArticles } from '@/actions/articles';
 import { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Calendar, Clock, ArrowRight, Star, TrendingUp, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, ArrowRight, Star, TrendingUp, Search, Filter, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 /**
  * Mobile-optimized viewport configuration
@@ -47,20 +48,100 @@ export const metadata: Metadata = {
 export default async function ArticlesPage() {
   const result = await getPublishedArticles({ limit: 50 });
   
+  // Handle errors gracefully
   if (!result.success || !result.data) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            Gagal Memuat Artikel
-          </h1>
-          <p className="text-slate-600">{result.error}</p>
-        </div>
+      <div className="min-h-screen bg-white">
+        <header className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-b border-blue-500/20 safe-top">
+          <div className="max-w-7xl mx-auto px-3 md:px-4 py-8 md:py-20">
+            <div className="max-w-3xl">
+              <Link 
+                href="/" 
+                className="inline-flex items-center gap-2 text-xs md:text-sm text-blue-100 hover:text-white mb-3 md:mb-4 transition-colors touch-manipulation"
+              >
+                ← Kembali ke Beranda
+              </Link>
+              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4">
+                Artikel & Berita
+              </h1>
+              <p className="text-sm md:text-lg lg:text-xl text-blue-100">
+                Info terkini seputar SNBT, tips belajar, berita pendidikan
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-3 md:px-4 py-12 md:py-20">
+          <div className="text-center max-w-md mx-auto">
+            <div className="bg-slate-100 rounded-full p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+              <TrendingUp className="h-10 w-10 text-slate-400" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-3">
+              Belum Ada Artikel
+            </h2>
+            <p className="text-sm md:text-base text-slate-600 mb-6">
+              Artikel sedang dalam persiapan. Nantikan konten menarik seputar SNBT dan pendidikan!
+            </p>
+            <Link href="/">
+              <Button className="gap-2 bg-blue-600 hover:bg-blue-700 touch-manipulation">
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke Beranda
+              </Button>
+            </Link>
+          </div>
+        </main>
       </div>
     );
   }
 
   const { articles } = result.data;
+  
+  // If no articles exist yet
+  if (!articles || articles.length === 0) {
+    return (
+      <div className="min-h-screen bg-white">
+        <header className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-b border-blue-500/20 safe-top">
+          <div className="max-w-7xl mx-auto px-3 md:px-4 py-8 md:py-20">
+            <div className="max-w-3xl">
+              <Link 
+                href="/" 
+                className="inline-flex items-center gap-2 text-xs md:text-sm text-blue-100 hover:text-white mb-3 md:mb-4 transition-colors touch-manipulation"
+              >
+                ← Kembali ke Beranda
+              </Link>
+              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4">
+                Artikel & Berita
+              </h1>
+              <p className="text-sm md:text-lg lg:text-xl text-blue-100">
+                Info terkini seputar SNBT, tips belajar, berita pendidikan
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-3 md:px-4 py-12 md:py-20">
+          <div className="text-center max-w-md mx-auto">
+            <div className="bg-blue-100 rounded-full p-6 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+              <TrendingUp className="h-10 w-10 text-blue-600" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 mb-3">
+              Belum Ada Artikel Tersedia
+            </h2>
+            <p className="text-sm md:text-base text-slate-600 mb-6">
+              Kami sedang menyiapkan konten menarik untuk Anda. Nantikan artikel seputar tips SNBT, strategi belajar, dan berita pendidikan terkini!
+            </p>
+            <Link href="/">
+              <Button className="gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 touch-manipulation h-11 md:h-12">
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke Beranda
+              </Button>
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+  
   const featuredArticles = articles.filter(a => a.is_featured).slice(0, 3);
   const regularArticles = articles.filter(a => !a.is_featured);
 
