@@ -263,70 +263,79 @@ export default async function ArticlesPage() {
           </div>
 
           {regularArticles.length === 0 ? (
-            <div className="text-center py-8 md:py-12">
-              <p className="text-sm md:text-base text-slate-600">Belum ada artikel tersedia</p>
+            <div className="text-center py-8 md:py-12 bg-slate-50 rounded-lg">
+              <p className="text-sm md:text-base text-slate-600">
+                {featuredArticles.length > 0 
+                  ? 'Tidak ada artikel lain saat ini' 
+                  : 'Belum ada artikel tersedia'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {regularArticles.map((article) => (
-                <Link
-                  key={article.id}
-                  href={`/articles/${article.slug}`}
-                  className="group block bg-white border border-slate-200 rounded-lg md:rounded-xl overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all duration-300 touch-manipulation"
-                >
-                  {article.featured_image && (
-                    <div className="relative h-36 md:h-40 bg-slate-100 overflow-hidden">
-                      <Image
-                        src={article.featured_image}
-                        alt={article.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        unoptimized
-                      />
-                    </div>
-                  )}
-
-                  <div className="p-4 md:p-5">
-                    <div className="flex items-center gap-2 mb-2 md:mb-3">
-                      <Badge variant="outline" className="text-[10px] md:text-xs">
-                        {article.category}
-                      </Badge>
-                    </div>
-
-                    <h3 className="text-sm md:text-base font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                      {article.title}
-                    </h3>
-
-                    {article.excerpt && (
-                      <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4 line-clamp-2">
-                        {article.excerpt}
-                      </p>
+              {regularArticles.map((article) => {
+                // Defensive checks
+                if (!article || !article.id || !article.slug) return null;
+                
+                return (
+                  <Link
+                    key={article.id}
+                    href={`/articles/${article.slug}`}
+                    className="group block bg-white border border-slate-200 rounded-lg md:rounded-xl overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all duration-300 touch-manipulation"
+                  >
+                    {article.featured_image && (
+                      <div className="relative h-36 md:h-40 bg-slate-100 overflow-hidden">
+                        <Image
+                          src={article.featured_image}
+                          alt={article.title || 'Article image'}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          unoptimized
+                        />
+                      </div>
                     )}
 
-                    <div className="flex items-center justify-between text-[10px] md:text-xs text-slate-500">
-                      <div className="flex items-center gap-3">
-                        {article.published_at && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>
-                              {new Date(article.published_at).toLocaleDateString('id-ID', {
-                                day: 'numeric',
-                                month: 'short'
-                              })}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{article.read_time} min</span>
-                        </div>
+                    <div className="p-4 md:p-5">
+                      <div className="flex items-center gap-2 mb-2 md:mb-3">
+                        <Badge variant="outline" className="text-[10px] md:text-xs">
+                          {article.category || 'Umum'}
+                        </Badge>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-blue-600 group-hover:translate-x-1 transition-transform" />
+
+                      <h3 className="text-sm md:text-base font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {article.title || 'Untitled'}
+                      </h3>
+
+                      {article.excerpt && (
+                        <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4 line-clamp-2">
+                          {article.excerpt}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] md:text-xs text-slate-500">
+                        <div className="flex items-center gap-3">
+                          {article.published_at && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>
+                                {new Date(article.published_at).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{article.read_time || 5} min</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-blue-600 group-hover:translate-x-1 transition-transform" />
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>
