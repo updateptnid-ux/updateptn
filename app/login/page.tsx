@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -49,6 +49,33 @@ function SubmitButton() {
 export default function LoginPage() {
   const [state, formAction] = useActionState(loginAction, null);
   const router = useRouter();
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
+  // Check for OAuth errors in URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    const messageParam = params.get('message');
+    
+    if (errorParam) {
+      let errorMsg = 'Terjadi kesalahan saat login dengan Google.';
+      
+      if (errorParam === 'access_denied') {
+        errorMsg = 'Akses ditolak. Anda membatalkan login dengan Google.';
+      } else if (errorParam === 'auth_failed') {
+        errorMsg = messageParam || 'Gagal autentikasi dengan Google.';
+      } else if (errorParam === 'no_session') {
+        errorMsg = 'Sesi tidak berhasil dibuat. Silakan coba lagi.';
+      } else if (messageParam) {
+        errorMsg = messageParam;
+      }
+      
+      setOauthError(errorMsg);
+      
+      // Clear URL params without reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Handle client-side redirect after successful login
   useEffect(() => {
@@ -65,12 +92,20 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard/student`,
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
-      if (error) console.warn("[Google Login] error:", error.message);
+      if (error) {
+        console.error("[Google Login] error:", error.message);
+        alert('Gagal login dengan Google: ' + error.message);
+      }
     } catch (err: any) {
-      console.warn("[Google Login] unexpected:", err?.message);
+      console.error("[Google Login] unexpected:", err?.message);
+      alert('Terjadi kesalahan saat login dengan Google');
     }
   };
 
@@ -133,6 +168,14 @@ export default function LoginPage() {
                 <div className="p-3.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-rose-700 flex items-center gap-2.5 text-xs font-medium animate-in fade-in">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
                   <span>{state.error}</span>
+                </div>
+              )}
+
+              {/* OAuth Error dari URL params */}
+              {oauthError && (
+                <div className="p-3.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-rose-700 flex items-center gap-2.5 text-xs font-medium animate-in fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{oauthError}</span>
                 </div>
               )}
 

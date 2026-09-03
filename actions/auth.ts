@@ -81,10 +81,6 @@ export async function registerAction(formData: FormData) {
   const fullName = formData.get("fullName") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const asalSekolah = formData.get("asalSekolah") as string;
-  const targetUniv = formData.get("targetUniv") as string;
-  const targetProdi = formData.get("targetProdi") as string;
-  const targetPtn = (formData.get("targetPtn") as string) || targetUniv || "";
 
   if (!email || !password || !fullName) {
     return { error: "Nama lengkap, email, dan kata sandi wajib diisi." };
@@ -99,10 +95,6 @@ export async function registerAction(formData: FormData) {
       options: {
         data: {
           full_name: fullName,
-          asal_sekolah: asalSekolah || "",
-          target_univ: targetUniv || "",
-          target_prodi: targetProdi || "",
-          target_ptn: targetPtn,
         },
       },
     });
@@ -124,6 +116,8 @@ export async function registerAction(formData: FormData) {
   redirect("/dashboard/student");
 }
 
+// REMOVED: completeProfileAction - not needed anymore, profile auto-created by trigger
+
 export async function signOutAction() {
   try {
     const supabase = await createClient();
@@ -143,7 +137,6 @@ export async function signOutAction() {
           cookieStore.delete({
             name: cookie.name,
             path: '/',
-            domain: cookie.domain || undefined
           });
         } catch {
           // Fallback: simple delete

@@ -36,6 +36,7 @@ import {
   Gift,
   Home,
   UserCog,
+  FileJson,
 } from "lucide-react";
 
 interface MenuItem {
@@ -142,6 +143,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       groupName: "Sistem & Konten",
       items: [
         { name: "Artikel & Berita", href: "/hq-core-updateptn/articles", icon: FileText },
+        { name: "Generator JSON Soal", href: "/hq-core-updateptn/json-generator", icon: FileJson },
         { name: "Broadcast Notifikasi", href: "/hq-core-updateptn/notifications", icon: Bell },
         { name: "Audit Log", href: "/hq-core-updateptn/audit-logs", icon: ShieldAlert },
         { name: "Pengaturan Sistem", href: "/hq-core-updateptn/settings", icon: Settings },

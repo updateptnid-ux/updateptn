@@ -739,7 +739,7 @@ export default function LandingPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <h3 className="text-2xl font-black text-white">Paket VIP</h3>
+                      <h3 className="text-2xl font-black text-white">CEK PELUANG PTN</h3>
                       <p className="text-xs text-slate-400">
                         Akses tanpa batas ke seluruh produk SNBP, SNBT, dan Mandiri.
                       </p>
@@ -777,7 +777,7 @@ export default function LandingPage() {
 
                   <Link href="/pricing" className="w-full block pt-2">
                     <Button className="w-full h-12 font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25">
-                      Pilih Paket VIP
+                      Pilih CEK PELUANG PTN
                     </Button>
                   </Link>
                 </Card>
@@ -986,78 +986,103 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ---------------- 10. ENTERPRISE FOOTER ---------------- */}
-      <footer className="mt-auto bg-slate-950 text-white py-16 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 justify-between">
-            {/* Column 1: Brand & Mission */}
-            <div className="md:col-span-5 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <Image
-                  src="/logo.svg"
-                  alt="UpdatePTN Logo"
-                  width={32}
-                  height={32}
-                  className="h-8 w-auto object-contain"
-                />
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  Update<span className="text-blue-500">PTN</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                Ekosistem Pembelajaran & Persiapan UTBK SNBT #1 di Indonesia. Membantu siswa meraih cita-cita masuk perguruan tinggi negeri favorit secara terarah dan terukur.
+      {/* ---------------- 10. COMPACT FOOTER (Alternatifa Style) ---------------- */}
+      <footer className="mt-auto bg-slate-950 text-white py-12 border-t border-slate-800">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Centered Content */}
+          <div className="flex flex-col items-center text-center space-y-8">
+            
+            {/* Logo & Brand */}
+            <div className="flex items-center gap-2.5">
+              <Image
+                src="/logo.svg"
+                alt="UpdatePTN Logo"
+                width={36}
+                height={36}
+                className="h-9 w-auto object-contain"
+              />
+              <span className="font-extrabold text-2xl tracking-tight text-white">
+                Update<span className="text-blue-500">PTN</span>
+              </span>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
+              <Link href="/" className="text-slate-400 hover:text-blue-400 transition-colors">
+                Beranda
+              </Link>
+              <Link href="#faq" className="text-slate-400 hover:text-blue-400 transition-colors">
+                FAQ
+              </Link>
+              <Link href="/privacy" className="text-slate-400 hover:text-blue-400 transition-colors">
+                Kebijakan Privasi
+              </Link>
+              <Link href="/terms" className="text-slate-400 hover:text-blue-400 transition-colors">
+                Syarat dan Ketentuan
+              </Link>
+            </nav>
+
+            {/* Social Media Icons */}
+            <div className="flex items-center gap-4">
+              <Link
+                href="https://twitter.com/updateptn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-all group text-slate-400 group-hover:text-white font-bold text-lg"
+                aria-label="Twitter/X"
+              >
+                𝕏
+              </Link>
+              
+              <Link
+                href="https://youtube.com/@updateptn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-slate-800 hover:bg-red-600 flex items-center justify-center transition-all group"
+                aria-label="YouTube"
+              >
+                <Video className="h-5 w-5 text-slate-400 group-hover:text-white" />
+              </Link>
+              
+              <Link
+                href="https://instagram.com/updateptn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-slate-800 hover:bg-pink-600 flex items-center justify-center transition-all group"
+                aria-label="Instagram"
+              >
+                <Award className="h-5 w-5 text-slate-400 group-hover:text-white" />
+              </Link>
+              
+              <Link
+                href="https://wa.me/6281234567890"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-slate-800 hover:bg-green-600 flex items-center justify-center transition-all group"
+                aria-label="WhatsApp"
+              >
+                <MessageSquare className="h-5 w-5 text-slate-400 group-hover:text-white" />
+              </Link>
+
+              {/* QR Code Linktree */}
+              <Link
+                href="https://linktr.ee/Updateptn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-10 w-10 rounded-full bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-all group"
+                aria-label="Linktree Komunitas"
+              >
+                <Users className="h-5 w-5 text-slate-400 group-hover:text-white" />
+              </Link>
+            </div>
+
+            {/* Copyright */}
+            <div className="pt-6 border-t border-slate-800 w-full">
+              <p className="text-xs text-slate-500">
+                © {new Date().getFullYear()} UpdatePTN. All rights reserved.
               </p>
             </div>
 
-            {/* Column 2: Navigation Links */}
-            <div className="md:col-span-3 space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">Navigasi Utama</p>
-              <ul className="space-y-2 text-xs text-slate-400">
-                <li>
-                  <Link href="#fitur" className="hover:text-blue-400 transition-colors">Program & Fitur</Link>
-                </li>
-                <li>
-                  <Link href="#keunggulan" className="hover:text-blue-400 transition-colors">Keunggulan</Link>
-                </li>
-                <li>
-                  <Link href="#paket" className="hover:text-blue-400 transition-colors">Paket Belajar</Link>
-                </li>
-                <li>
-                  <Link href="#faq" className="hover:text-blue-400 transition-colors">Pertanyaan Umum (FAQ)</Link>
-                </li>
-                <li>
-                  <Link href="/direktori-prodi" className="hover:text-blue-400 transition-colors">Direktori Kampus</Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Column 3: Contact & Support */}
-            <div className="md:col-span-4 space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">Layanan Bantuan</p>
-              <ul className="space-y-2 text-xs text-slate-400">
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-blue-500 shrink-0" />
-                  <span>support@updateptn.id</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-blue-500 shrink-0" />
-                  <span>+62 812-3456-7890 (WhatsApp Support)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-500 shrink-0" />
-                  <span>Senin - Sabtu: 08.00 - 20.00 WIB</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-            <p>© {new Date().getFullYear()} UpdatePTN. Seluruh Hak Cipta Dilindungi.</p>
-            <div className="flex items-center gap-4 text-slate-400">
-              <Link href="/terms" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>
-              <span>•</span>
-              <Link href="/privacy" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
-            </div>
           </div>
         </div>
       </footer>

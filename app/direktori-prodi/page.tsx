@@ -115,21 +115,64 @@ export default function DirektoriProdiPage() {
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Subscription & Quota states
+  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [userTier, setUserTier] = useState<string>("Basic");
+  const [searchCount, setSearchCount] = useState<number>(0);
+  const [maxFreeSearches] = useState<number>(3); // 3x free searches
+  const [showUpgradeAlert, setShowUpgradeAlert] = useState<boolean>(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Auth guard - harus login
+  // Auth guard + Subscription check
   useEffect(() => {
-    async function checkAuth() {
+    async function checkAuthAndSubscription() {
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
         router.push("/login?redirect=/direktori-prodi");
+        return;
       }
+
+      // Check subscription status
+      const now = new Date().toISOString();
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("tier, status, expires_at")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .gt("expires_at", now)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const subscribed =
+        !!subscription &&
+        subscription.status === "active" &&
+        subscription.tier !== "Trial / Gratis" &&
+        subscription.tier !== "Basic" &&
+        new Date(subscription.expires_at) > new Date();
+
+      const tier = subscription?.tier || "Basic";
+
+      // Check if admin
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, directory_search_count")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const isAdminUser = profile?.role === "admin";
+      const count = profile?.directory_search_count ?? 0;
+
+      setIsSubscribed(subscribed || isAdminUser);
+      setUserTier(tier);
+      setSearchCount(count);
     }
-    checkAuth();
+    
+    checkAuthAndSubscription();
   }, [router]);
 
   // Close dropdown on outside click
@@ -142,6 +185,95 @@ export default function DirektoriProdiPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Helper: Normalize text for better search matching
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
+  // Helper: Get university aliases/abbreviations
+  const getUnivAliases = (univName: string): string[] => {
+    const aliases: string[] = [univName.toLowerCase()];
+    const normalized = normalizeText(univName);
+    
+    // Common abbreviations mapping
+    const abbrevMap: Record<string, string[]> = {
+      'universitas indonesia': ['ui', 'univ indonesia'],
+      'institut teknologi bandung': ['itb', 'teknologi bandung'],
+      'universitas gadjah mada': ['ugm', 'gajah mada', 'gadjahmada'],
+      'universitas brawijaya': ['ub', 'unibraw', 'brawijaya'],
+      'universitas airlangga': ['unair', 'airlangga'],
+      'universitas diponegoro': ['undip', 'diponegoro'],
+      'universitas padjadjaran': ['unpad', 'padjadjaran'],
+      'institut teknologi sepuluh nopember': ['its', 'sepuluh nopember'],
+      'institut pertanian bogor': ['ipb', 'pertanian bogor'],
+      'upn veteran yogyakarta': ['upn yogya', 'upn yogyakarta', 'upn yk', 'upn jogja', 'upn yogja', 'veteran yogyakarta', 'veteran yogya'],
+      'upn veteran jakarta': ['upn jkt', 'upn jakarta', 'veteran jakarta'],
+      'upn veteran jawa timur': ['upn jatim', 'upn surabaya', 'upn sby', 'veteran jatim'],
+      'universitas sebelas maret': ['uns', 'sebelas maret'],
+      'universitas hasanuddin': ['unhas', 'hasanuddin'],
+      'universitas sumatera utara': ['usu', 'sumut'],
+      'universitas negeri yogyakarta': ['uny', 'negeri yogyakarta'],
+      'universitas negeri surabaya': ['unesa', 'negeri surabaya'],
+      'universitas negeri malang': ['um', 'negeri malang'],
+      'universitas negeri jakarta': ['unj', 'negeri jakarta'],
+      'universitas negeri semarang': ['unnes', 'negeri semarang'],
+    };
+    
+    // Find matching aliases
+    for (const [key, values] of Object.entries(abbrevMap)) {
+      if (normalized.includes(key)) {
+        aliases.push(...values);
+      }
+    }
+    
+    return aliases;
+  };
+
+  // Helper: Calculate search relevance score
+  const getSearchScore = (item: ProdiRecord, searchTerms: string[]): number => {
+    const prodiNorm = normalizeText(item.prodi);
+    const univNorm = normalizeText(item.univ);
+    const jenjangNorm = normalizeText(item.jenjang || '');
+    const kelompokNorm = normalizeText(item.kelompok || '');
+    
+    // Get university aliases
+    const univAliases = getUnivAliases(item.univ);
+    
+    const fullText = `${prodiNorm} ${univNorm} ${jenjangNorm} ${kelompokNorm} ${univAliases.join(' ')}`;
+    
+    let score = 0;
+    
+    // Check each search term
+    for (const term of searchTerms) {
+      // Exact match in prodi = highest priority
+      if (prodiNorm === term) score += 100;
+      else if (prodiNorm.startsWith(term)) score += 80;
+      else if (prodiNorm.includes(term)) score += 60;
+      
+      // Match in university name or aliases
+      if (univNorm.includes(term)) score += 50;
+      for (const alias of univAliases) {
+        if (alias.includes(term) || term.includes(alias)) {
+          score += 45;
+          break;
+        }
+      }
+      
+      // Match in full text
+      if (fullText.includes(term)) score += 20;
+    }
+    
+    // Bonus if all terms found
+    const allTermsFound = searchTerms.every(term => fullText.includes(term));
+    if (allTermsFound) score += 50;
+    
+    return score;
+  };
 
   // Fetch Autocomplete Suggestions — JSON lokal sebagai primary source (data verified)
   // Supabase RPC hanya sebagai fallback jika JSON gagal
@@ -161,18 +293,26 @@ export default function DirektoriProdiPage() {
       setLoading(true);
       try {
         let results: ProdiRecord[] = [];
-        const q = searchQuery.toLowerCase().trim();
+        const searchNormalized = normalizeText(searchQuery);
+        const searchTerms = searchNormalized.split(' ').filter(t => t.length > 0);
 
         // PRIMARY: local data_snbt.json (verified, always up-to-date)
         try {
           const res = await fetch("/data_snbt.json");
           if (res.ok) {
             const localData: ProdiRecord[] = await res.json();
-            results = localData.filter((item) =>
-              `${item.univ} ${item.prodi} ${item.jenjang || ""} ${item.kelompok || ""}`
-                .toLowerCase()
-                .includes(q)
-            );
+            
+            // Score and filter results
+            const scoredResults = localData
+              .map(item => ({
+                item,
+                score: getSearchScore(item, searchTerms)
+              }))
+              .filter(({ score }) => score > 0)
+              .sort((a, b) => b.score - a.score)
+              .map(({ item }) => item);
+            
+            results = scoredResults;
           }
         } catch {
           // JSON gagal → coba Supabase RPC
@@ -205,10 +345,13 @@ export default function DirektoriProdiPage() {
           );
         }
 
-        setSuggestions(results.slice(0, 15));
-        setShowDropdown(results.length > 0);
+        // Increased limit from 15 to 50 for better search results
+        setSuggestions(results.slice(0, 50));
+        // Always show dropdown when searching (even if no results, to show "not found" message)
+        setShowDropdown(true);
       } catch (err) {
         console.error("Error fetching suggestions:", err);
+        setShowDropdown(true); // Show dropdown even on error
       } finally {
         setLoading(false);
       }
@@ -217,10 +360,34 @@ export default function DirektoriProdiPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedKelompok, selectedJenjang, selectedProdi]);
 
-  const handleSelectSuggestion = (item: ProdiRecord) => {
+  const handleSelectSuggestion = async (item: ProdiRecord) => {
+    // Check quota for non-subscribers
+    if (!isSubscribed && searchCount >= maxFreeSearches) {
+      setShowUpgradeAlert(true);
+      return;
+    }
+
     setSelectedProdi(item);
     setSearchQuery(`${item.prodi} - ${item.univ}`);
     setShowDropdown(false);
+
+    // Increment search count for non-subscribers
+    if (!isSubscribed) {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const newCount = searchCount + 1;
+          await supabase
+            .from("profiles")
+            .update({ directory_search_count: newCount })
+            .eq("id", user.id);
+          setSearchCount(newCount);
+        }
+      } catch (err) {
+        console.error("Error updating search count:", err);
+      }
+    }
   };
 
   const handleClearSelection = () => {
@@ -228,6 +395,27 @@ export default function DirektoriProdiPage() {
     setSearchQuery("");
     setSuggestions([]);
     setShowDropdown(false);
+  };
+
+  // Helper: Highlight matching text
+  const highlightMatch = (text: string, query: string): React.ReactNode => {
+    if (!query.trim()) return text;
+    
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
+    const index = normalizedText.indexOf(normalizedQuery);
+    
+    if (index === -1) return text;
+    
+    return (
+      <>
+        {text.slice(0, index)}
+        <span className="bg-yellow-100 text-yellow-900 font-bold">
+          {text.slice(index, index + query.length)}
+        </span>
+        {text.slice(index + query.length)}
+      </>
+    );
   };
 
   const formatCurrency = (val?: number) => {
@@ -267,6 +455,115 @@ export default function DirektoriProdiPage() {
             Cari informasi lengkap jurusan dan universitas
           </p>
         </div>
+
+        {/* Quota Display Banner */}
+        {!isSubscribed && (
+          <div className={`border rounded-2xl p-4 ${
+            searchCount >= maxFreeSearches 
+              ? "bg-rose-50 border-rose-200" 
+              : "bg-blue-50 border-blue-200"
+          }`}>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${
+                  searchCount >= maxFreeSearches 
+                    ? "bg-rose-100" 
+                    : "bg-blue-100"
+                }`}>
+                  <Search className={`h-5 w-5 ${
+                    searchCount >= maxFreeSearches 
+                      ? "text-rose-600" 
+                      : "text-blue-600"
+                  }`} />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold ${
+                    searchCount >= maxFreeSearches 
+                      ? "text-rose-900" 
+                      : "text-blue-900"
+                  }`}>
+                    {searchCount >= maxFreeSearches 
+                      ? "Quota Gratis Habis!" 
+                      : `Sisa ${maxFreeSearches - searchCount}x Pencarian Gratis`}
+                  </p>
+                  <p className={`text-xs ${
+                    searchCount >= maxFreeSearches 
+                      ? "text-rose-600" 
+                      : "text-blue-600"
+                  }`}>
+                    {searchCount >= maxFreeSearches 
+                      ? "Upgrade ke Premium untuk unlimited akses direktori PTN" 
+                      : "Akses data lengkap 4.900+ jurusan"}
+                  </p>
+                </div>
+              </div>
+              {searchCount >= maxFreeSearches && (
+                <Link href="/pricing">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-10 px-6 shrink-0 touch-manipulation">
+                    Upgrade Sekarang
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Upgrade Alert Modal */}
+        {showUpgradeAlert && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowUpgradeAlert(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-rose-100 mb-2">
+                  <Target className="h-7 w-7 text-rose-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  Quota Pencarian Habis
+                </h3>
+                <p className="text-sm text-slate-600">
+                  Kamu sudah menggunakan {maxFreeSearches}x pencarian gratis. Upgrade ke paket Premium untuk unlimited akses direktori PTN!
+                </p>
+              </div>
+
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-xs font-bold text-blue-900 mb-2">✨ Keuntungan Premium:</p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 shrink-0">✓</span>
+                    <span>Unlimited pencarian direktori jurusan & PTN</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 shrink-0">✓</span>
+                    <span>Akses data lengkap 4.900+ jurusan</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 shrink-0">✓</span>
+                    <span>Unlimited cek peluang kelulusan PTN</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-600 shrink-0">✓</span>
+                    <span>Try-out SNBT premium & pembahasan detail</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowUpgradeAlert(false)}
+                  className="flex-1 rounded-xl h-11 font-bold touch-manipulation"
+                >
+                  Nanti Saja
+                </Button>
+                <Link href="/pricing" className="flex-1">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-11 gap-2 touch-manipulation">
+                    <Target className="h-4 w-4" />
+                    Lihat Paket
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search Container */}
         <div ref={containerRef} className="relative w-full space-y-3">
@@ -357,9 +654,21 @@ export default function DirektoriProdiPage() {
             ))}
           </div>
 
-          {/* Dropdown Suggestions - FIXED SCROLLING */}
+          {/* Dropdown Suggestions - FIXED SCROLLING & BETTER NO RESULTS MESSAGE */}
           {showDropdown && !selectedProdi && (
             <div className="fixed inset-x-0 md:absolute md:inset-x-auto md:left-0 md:right-0 top-auto bottom-0 md:bottom-auto md:top-full md:mt-2 bg-white border-t md:border md:border-slate-200 md:rounded-2xl shadow-2xl z-50 max-h-[50vh] md:max-h-[60vh] overflow-hidden flex flex-col">
+              {/* Results counter header */}
+              {!loading && suggestions.length > 0 && (
+                <div className="px-4 py-2 border-b border-slate-100 bg-blue-50 flex items-center justify-between flex-shrink-0">
+                  <span className="text-[11px] font-bold text-blue-700">
+                    {suggestions.length} jurusan ditemukan
+                  </span>
+                  <span className="text-[10px] text-blue-500">
+                    Diurutkan berdasarkan relevansi
+                  </span>
+                </div>
+              )}
+
               <div className="overflow-y-auto overscroll-contain divide-y divide-slate-100" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {loading ? (
                   <div className="flex items-center justify-center p-6 space-x-2 text-slate-500 text-xs font-medium">
@@ -367,8 +676,35 @@ export default function DirektoriProdiPage() {
                     <span>Mencari data jurusan...</span>
                   </div>
                 ) : suggestions.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-slate-500 font-medium">
-                    Tidak ditemukan prodi yang cocok. Coba kata kunci lainnya.
+                  <div className="p-6 space-y-3">
+                    <div className="text-center space-y-2">
+                      <Search className="h-8 w-8 text-slate-300 mx-auto" />
+                      <p className="text-sm font-bold text-slate-700">
+                        Tidak ada hasil untuk "{searchQuery}"
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Coba kata kunci lain atau periksa ejaan
+                      </p>
+                    </div>
+                    
+                    {/* Search tips */}
+                    <div className="bg-blue-50 rounded-xl p-3 space-y-2 border border-blue-100">
+                      <p className="text-[11px] font-bold text-blue-700 mb-1">Tips Pencarian:</p>
+                      <ul className="text-[10px] text-slate-600 space-y-1">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 shrink-0">•</span>
+                          <span>Coba singkatan: <strong>UI</strong>, <strong>ITB</strong>, <strong>UGM</strong></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 shrink-0">•</span>
+                          <span>Gunakan nama lengkap: <strong>Teknik Informatika</strong></span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 shrink-0">•</span>
+                          <span>Kombinasi kata: <strong>teknik UI</strong>, <strong>kedokteran UGM</strong></span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 ) : (
                   suggestions.map((item) => {
@@ -393,10 +729,10 @@ export default function DirektoriProdiPage() {
 
                           <div className="space-y-1 flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-900 leading-tight truncate">
-                              {item.prodi}
+                              {highlightMatch(item.prodi, searchQuery)}
                             </p>
                             <p className="text-xs text-slate-500 font-medium truncate">
-                              {item.univ}
+                              {highlightMatch(item.univ, searchQuery)}
                             </p>
                           </div>
                         </div>

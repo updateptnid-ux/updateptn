@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "total_soal": 30,
+    "jenis": "Tes Penalaran",
+    "deskripsi": "Kumpulan soal penalaran logika dan numerik"
+  },
+  "soal": [
+    {
+      "nomor": 1,
+      "tipe": "penalaran_logis",
+      "teks": "Tubuh memang memanfaatkan lemak sebagai sumber daya, tetapi mengonsumsi hidangan kaya lemak berpotensi memicu rasa lemas di siang hari. Masukan lemak berlebih memicu surplus kalori yang berujung pada kenaikan bobot tubuh. Kondisi berat badan yang melonjak ini kemudian menyulitkan seseorang untuk beraktivitas secara aktif.",
+      "pertanyaan": "Berdasarkan uraian di atas, manakah korelasi yang PASTI BENAR?",
+      "pilihan": [
+        {
+          "kode": "A",
+          "teks": "Asupan lemak melimpah sanggup memicu lonjakan stamina pada siang hari."
+        },
+        {
+          "kode": "B",
+          "teks": "Melonjaknya berat badan akibat lemak memberikan dampak positif bagi kesehatan."
+        },
+        {
+          "kode": "C",
+          "teks": "Penumpukan kalori dari lemak berisiko menghambat kelincahan pergerakan tubuh."
+        },
+        {
+          "kode": "D",
+          "teks": "Rasa lemas di siang hari selalu dipicu oleh konsumsi lemak yang tinggi."
+        },
+        {
+          "kode": "E",
+          "teks": "Memakan lemak dalam takaran pas akan membatasi kelincahan gerak tubuh."
+        }
+      ],
+      "jawaban": "C",
+      "pembahasan": "Teks menjelaskan bahwa surplus kalori dari lemak memicu kenaikan berat badan yang kemudian menyulitkan seseorang beraktivitas aktif, sehingga berisiko menghambat kelincahan tubuh."
+    },
+    {
+      "nomor": 2,
+      "tipe": "penalaran_logis",
+      "teks": "Nanas menyimpan beragam nutrisi yang kaya akan khasiat kesehatan. Salah satu kelebihannya adalah memperkuat sistem imun berkat kandungan vitamin C di dalamnya. Imunitas yang prima sanggup menangkal infeksi seperti flu. Namun, kandungan enzim bromelain di dalam nanas berpotensi memicu timbulnya mual serta perut kembung pada penderita gangguan maag.",
+      "pertanyaan": "Berdasarkan paparan tersebut, manakah pernyataan yang PASTI SALAH?",
+      "pilihan": [
+        {
+          "kode": "A",
+          "teks": "Konsumsi nanas bermanfaat dalam mencegah serangan infeksi penyakit."
+        },
+        {
+          "kode": "B",
+          "teks": "Vitamin C pada nanas merupakan penyebab timbulnya mual dan kembung penderita maag."
+        },
+        {
+          "kode": "C",
+          "teks": "Keberadaan enzim bromelain di dalam nanas berdampak buruk bagi orang dengan gangguan maag."
+        },
+        {
+          "kode": "D",
+          "teks": "Seseorang dapat terhindar dari flu musiman berkat asupan vitamin C nanas."
+        },
+        {
+          "kode": "E",
+          "teks": "Kendati memicu reaksi maag, nanas sama sekali tidak mengganggu sistem pencernaan."
+        }
+      ],
+      "jawaban": "B",
+      "pembahasan": "Teks secara eksplisit menyebutkan bahwa enzim bromelain, bukan vitamin C, yang berpotensi memicu mual dan kembung pada penderita maag."
+    }
+  ]
+}

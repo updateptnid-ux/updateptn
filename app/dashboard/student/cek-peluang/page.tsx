@@ -346,15 +346,65 @@ export default function CekPeluangPage() {
     });
   };
 
-  const filteredUnivs = universities.filter((u) =>
-    u.toLowerCase().includes(univSearch.trim().toLowerCase())
-  );
-
-  const filteredMajors = majors.filter((m) =>
-    `${m.prodi} ${m.jenjang || ""} ${m.kelompok || ""}`
+  // Improved search with normalization and scoring
+  const normalizeText = (text: string): string => {
+    return text
       .toLowerCase()
-      .includes(majorSearch.trim().toLowerCase())
-  );
+      .trim()
+      .replace(/\s+/g, ' ') // normalize multiple spaces
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents
+  };
+
+  // Calculate search relevance score
+  const getRelevanceScore = (text: string, search: string): number => {
+    const normalizedText = normalizeText(text);
+    const normalizedSearch = normalizeText(search);
+    
+    if (!normalizedSearch) return 1;
+    if (normalizedText === normalizedSearch) return 100; // exact match
+    if (normalizedText.startsWith(normalizedSearch)) return 80; // starts with
+    if (normalizedText.includes(normalizedSearch)) return 60; // contains
+    
+    // Check word-by-word match
+    const words = normalizedSearch.split(' ').filter(w => w.length > 0);
+    const matchedWords = words.filter(word => normalizedText.includes(word));
+    if (matchedWords.length > 0) {
+      return (matchedWords.length / words.length) * 40; // partial match
+    }
+    
+    return 0;
+  };
+
+  const filteredUnivs = universities
+    .map(u => ({ univ: u, score: getRelevanceScore(u, univSearch) }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.univ);
+
+  // Enhanced major search with better matching and sorting
+  const filteredMajors = majors
+    .map((m) => {
+      const searchTerm = normalizeText(majorSearch);
+      
+      // If no search, return all with neutral score
+      if (!searchTerm) return { major: m, score: 1 };
+      
+      // Calculate scores for different fields
+      const prodiScore = getRelevanceScore(m.prodi, searchTerm);
+      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
+      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
+      
+      // Combined full text score
+      const fullText = `${m.prodi} ${m.jenjang || ''} ${m.kelompok || ''}`;
+      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
+      
+      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore;
+      
+      return { major: m, score: totalScore };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.major);
 
   const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
 
@@ -412,7 +462,7 @@ export default function CekPeluangPage() {
               <p className="text-sm font-bold text-rose-900 mb-2">{quotaError}</p>
               <Link href="/pricing">
                 <Button className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl h-10 px-6">
-                  Lihat Paket Berlangganan
+                  Lihat Paket CEK PELUANG PTN
                 </Button>
               </Link>
             </div>
@@ -516,8 +566,13 @@ export default function CekPeluangPage() {
                           </button>
                         ))
                       ) : (
-                        <div className="p-4 text-center text-xs text-blue-400 font-medium">
-                          PTN "{univSearch}" tidak ditemukan
+                        <div className="p-6 text-center space-y-2">
+                          <p className="text-sm text-slate-600 font-medium">
+                            PTN "{univSearch}" tidak ditemukan
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Coba singkatan atau nama lengkap kampus
+                          </p>
                         </div>
                       )}
                     </div>
@@ -565,7 +620,9 @@ export default function CekPeluangPage() {
 
                     <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
                       <span>Jurusan di {selectedUniv}</span>
-                      <span>{filteredMajors.length} prodi</span>
+                      <span className={filteredMajors.length === 0 ? "text-rose-500" : "text-blue-600"}>
+                        {filteredMajors.length} {filteredMajors.length === 1 ? "prodi" : "prodi"}
+                      </span>
                     </div>
 
                     <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
@@ -594,8 +651,13 @@ export default function CekPeluangPage() {
                           );
                         })
                       ) : (
-                        <div className="p-4 text-center text-xs text-blue-400 font-medium">
-                          Jurusan "{majorSearch}" tidak ditemukan
+                        <div className="p-6 text-center space-y-2">
+                          <p className="text-sm text-slate-600 font-medium">
+                            Tidak ada jurusan yang cocok dengan "{majorSearch}"
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Coba kata kunci lain atau cek ejaan pencarian
+                          </p>
                         </div>
                       )}
                     </div>

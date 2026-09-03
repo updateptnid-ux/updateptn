@@ -35,6 +35,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Allow public auth routes
+  if (pathname === '/auth/success' || pathname === '/auth/callback') {
+    return supabaseResponse;
+  }
+
   // Admin route protection (TETAP AKTIF)
   if (pathname.startsWith("/hq-core-updateptn")) {
     if (pathname === "/hq-core-updateptn/login") {

@@ -85,9 +85,6 @@ export default function AdminQuestionsPage() {
   const [isUploadingJson, setIsUploadingJson] = useState(false);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isGeneratorDialogOpen, setIsGeneratorDialogOpen] = useState(false);
-  const [rawText, setRawText] = useState("");
-  const [generatedJson, setGeneratedJson] = useState("");
   const [editingQuestion, setEditingQuestion] = useState<QuestionRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -280,10 +277,30 @@ export default function AdminQuestionsPage() {
         return;
       }
 
-      const questionsToInsert = parsed.map((q) => ({
-        ...q,
-        tryout_id: selectedTryout.id,
-      }));
+      // Transform JSON to match database schema
+      const questionsToInsert = parsed.map((q) => {
+        // Normalize subtest name
+        const normalizedSubtest = getNormalizedSubtest(q.subtest || "Penalaran Umum");
+        
+        // Combine text and question into single text field
+        let fullText = q.text || "";
+        if (q.question) {
+          fullText = fullText ? `${fullText}\n\n${q.question}` : q.question;
+        }
+        
+        return {
+          tryout_id: selectedTryout.id,
+          text: fullText || q.question_text || "", // Support old format too
+          option_a: q.option_a || "",
+          option_b: q.option_b || "",
+          option_c: q.option_c || "",
+          option_d: q.option_d || "",
+          option_e: q.option_e || "",
+          correct_answer: q.correct_answer || "A",
+          explanation: q.explanation || "",
+          subtest: normalizedSubtest,
+        };
+      });
 
       const supabase = createClient();
       const { error } = await supabase.from("questions").insert(questionsToInsert);
@@ -296,14 +313,14 @@ export default function AdminQuestionsPage() {
       }
     } catch (err: any) {
       console.error(err);
-      alert("Gagal membaca atau mem-parsing file JSON.");
+      alert("Gagal membaca atau mem-parsing file JSON: " + err.message);
     } finally {
       setIsUploadingJson(false);
       e.target.value = ""; // Reset input
     }
   };
 
-  // Legacy stub — logic moved into GeneratorDialog
+  // Legacy stub functions - no longer needed
   const handleGenerateJson = () => {};
   const handleCopyJson = () => {};
 
@@ -325,11 +342,11 @@ export default function AdminQuestionsPage() {
             <p className="text-sm text-slate-500 mt-1">Pilih paket Try Out SNBT untuk mengelola soal di dalamnya.</p>
           </div>
           <Button
-            onClick={() => setIsGeneratorDialogOpen(true)}
+            onClick={() => window.open('/hq-core-updateptn/json-generator', '_blank')}
             className="rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold gap-2 h-11 px-5 shadow-sm"
           >
             <FileText className="h-4 w-4" />
-            <span>Alat Generator JSON</span>
+            <span>Alat Generator JSON (Tab Baru)</span>
           </Button>
         </div>
 
@@ -378,17 +395,6 @@ export default function AdminQuestionsPage() {
             ))}
           </div>
         )}
-
-        <GeneratorDialog 
-          isOpen={isGeneratorDialogOpen}
-          setIsOpen={setIsGeneratorDialogOpen}
-          rawText={rawText}
-          setRawText={setRawText}
-          generatedJson={generatedJson}
-          setGeneratedJson={setGeneratedJson}
-          handleGenerateJson={handleGenerateJson}
-          handleCopyJson={handleCopyJson}
-        />
       </div>
     );
   }
@@ -698,16 +704,6 @@ export default function AdminQuestionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <GeneratorDialog 
-        isOpen={isGeneratorDialogOpen}
-        setIsOpen={setIsGeneratorDialogOpen}
-        rawText={rawText}
-        setRawText={setRawText}
-        generatedJson={generatedJson}
-        setGeneratedJson={setGeneratedJson}
-        handleGenerateJson={handleGenerateJson}
-        handleCopyJson={handleCopyJson}
-      />
     </div>
   );
 }

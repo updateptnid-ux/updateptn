@@ -187,4 +187,78 @@
     line-height: 1.7;
     letter-spacing: 0.01em;
   }
+  
+  /* TipTap Editor Styles */
+  .ProseMirror {
+    outline: none;
+  }
+  
+  .ProseMirror > * + * {
+    margin-top: 0.75em;
+  }
+  
+  .ProseMirror h2 {
+    @apply text-2xl font-bold text-slate-900 mt-8 mb-4;
+  }
+  
+  .ProseMirror h3 {
+    @apply text-xl font-bold text-slate-900 mt-6 mb-3;
+  }
+  
+  .ProseMirror p {
+    @apply text-base text-slate-700 leading-relaxed;
+  }
+  
+  .ProseMirror ul,
+  .ProseMirror ol {
+    @apply pl-6 space-y-2;
+  }
+  
+  .ProseMirror ul {
+    @apply list-disc;
+  }
+  
+  .ProseMirror ol {
+    @apply list-decimal;
+  }
+  
+  .ProseMirror li {
+    @apply text-slate-700;
+  }
+  
+  .ProseMirror blockquote {
+    @apply border-l-4 border-blue-500 pl-4 py-2 italic text-slate-600 bg-slate-50 rounded-r-lg my-4;
+  }
+  
+  .ProseMirror code {
+    @apply bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  
+  .ProseMirror pre {
+    @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto my-4;
+  }
+  
+  .ProseMirror pre code {
+    @apply bg-transparent text-slate-100 p-0;
+  }
+  
+  .ProseMirror img {
+    @apply max-w-full h-auto rounded-lg shadow-md my-4;
+  }
+  
+  .ProseMirror a {
+    @apply text-blue-600 hover:underline;
+  }
+  
+  .ProseMirror hr {
+    @apply border-slate-300 my-8;
+  }
+  
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: #adb5bd;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
 }

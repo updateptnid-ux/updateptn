@@ -1,0 +1,41 @@
+# robots.txt for UpdatePTN Platform
+# Allow all search engines to crawl public content
+
+User-agent: *
+Allow: /
+Allow: /articles
+Allow: /articles/*
+Allow: /pricing
+Allow: /direktori-prodi
+
+# Disallow admin and dashboard areas
+Disallow: /hq-core-updateptn/
+Disallow: /hq-core-updateptn/*
+Disallow: /dashboard/
+Disallow: /dashboard/*
+Disallow: /api/
+Disallow: /api/*
+Disallow: /login
+Disallow: /register
+Disallow: /profile
+
+# Block sensitive files
+Disallow: /*.json$
+Disallow: /*template*
+Disallow: /*.env*
+
+# Sitemap location
+Sitemap: https://updateptn.com/sitemap.xml
+
+# Crawl delay to be polite
+Crawl-delay: 1
+
+# Additional rules for specific bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: baiduspider
+Disallow: /

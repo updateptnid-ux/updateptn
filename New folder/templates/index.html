@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konversi Soal ke JSON</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .input-group textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 25px;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            border: 2px solid #e0e0e0;
+            border-bottom: none;
+        }
+        
+        .result-header h3 {
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .result-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .result-content {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+            border: 2px solid #e0e0e0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-content pre {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .btn-download {
+            margin-top: 15px;
+            background: #10b981;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-download:hover {
+            background: #059669;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example-btn {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .example-btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Konversi Soal ke JSON</h1>
+            <p>Tool otomatis untuk mengkonversi soal ujian ke format JSON</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert alert-success" id="alertSuccess"></div>
+            <div class="alert alert-error" id="alertError"></div>
+            
+            <div class="input-group">
+                <label for="rawText">📝 Raw Text Soal</label>
+                <button class="example-btn" onclick="loadExample('soal')">Load Contoh</button>
+                <textarea id="rawText" placeholder="Paste soal di sini...&#10;&#10;Format:&#10;Soal 1&#10;Teks&#10;[Isi teks]&#10;&#10;[Pertanyaan]&#10;&#10;A [Pilihan A]&#10;B [Pilihan B]&#10;..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="kunciText">🔑 Kunci Jawaban & Pembahasan</label>
+                <button class="example-btn" onclick="loadExample('kunci')">Load Contoh</button>
+                <textarea id="kunciText" placeholder="Paste kunci jawaban di sini...&#10;&#10;Format:&#10;KUNCI JAWABAN&#10;1. C (Jawaban)&#10;Pembahasan...&#10;&#10;2. B (Jawaban)&#10;Pembahasan..."></textarea>
+            </div>
+            
+            <div class="btn-container">
+                <button class="btn btn-primary" id="convertBtn" onclick="convertSoal()">
+                    ✨ Konversi ke JSON
+                </button>
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    🗑️ Hapus Semua
+                </button>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Memproses soal...</p>
+            </div>
+            
+            <div class="result-container" id="resultContainer">
+                <div class="result-header">
+                    <h3>📊 Hasil Konversi JSON</h3>
+                    <span class="result-count" id="resultCount">0 soal</span>
+                </div>
+                <div class="result-content">
+                    <pre id="resultJson"></pre>
+                </div>
+                <button class="btn btn-download" onclick="downloadJSON()">
+                    ⬇️ Download JSON
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let convertedData = null;
+        
+        function showAlert(type, message) {
+            const alertId = type === 'success' ? 'alertSuccess' : 'alertError';
+            const alert = document.getElementById(alertId);
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        function loadExample(type) {
+            if (type === 'soal') {
+                document.getElementById('rawText').value = `Soal 1
+Teks
+Tubuh memang memanfaatkan lemak sebagai sumber daya, tetapi mengonsumsi hidangan kaya lemak berpotensi memicu rasa lemas di siang hari.
+
+Berdasarkan uraian di atas, manakah korelasi yang PASTI BENAR?
+
+A Asupan lemak melimpah sanggup memicu lonjakan stamina pada siang hari.
+B Penumpukan kalori dari lemak berisiko menghambat kelincahan pergerakan tubuh.
+C Rasa lemas di siang hari selalu dipicu oleh konsumsi lemak yang tinggi.`;
+            } else {
+                document.getElementById('kunciText').value = `KUNCI JAWABAN
+1. B (Penumpukan kalori dari lemak berisiko menghambat kelincahan pergerakan tubuh)
+Teks menjelaskan bahwa surplus kalori dari lemak memicu kenaikan berat badan.`;
+            }
+        }
+        
+        async function convertSoal() {
+            const rawText = document.getElementById('rawText').value.trim();
+            const kunciText = document.getElementById('kunciText').value.trim();
+            
+            if (!rawText || !kunciText) {
+                showAlert('error', '❌ Harap isi kedua field!');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('convertBtn').disabled = true;
+            document.getElementById('resultContainer').style.display = 'none';
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        raw_text: rawText,
+                        kunci_text: kunciText
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    convertedData = result.data;
+                    document.getElementById('resultJson').textContent = JSON.stringify(result.data, null, 2);
+                    document.getElementById('resultCount').textContent = `${result.count} soal`;
+                    document.getElementById('resultContainer').style.display = 'block';
+                    showAlert('success', `✅ Berhasil mengkonversi ${result.count} soal!`);
+                } else {
+                    showAlert('error', `❌ Error: ${result.error}`);
+                }
+            } catch (error) {
+                showAlert('error', `❌ Terjadi kesalahan: ${error.message}`);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('convertBtn').disabled = false;
+            }
+        }
+        
+        function downloadJSON() {
+            if (!convertedData) return;
+            
+            const blob = new Blob([JSON.stringify(convertedData, null, 2)], {
+                type: 'application/json'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `soal_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert('success', '✅ File JSON berhasil didownload!');
+        }
+        
+        function clearAll() {
+            if (confirm('Yakin ingin menghapus semua input?')) {
+                document.getElementById('rawText').value = '';
+                document.getElementById('kunciText').value = '';
+                document.getElementById('resultContainer').style.display = 'none';
+                convertedData = null;
+            }
+        }
+    </script>
+</body>
+</html>

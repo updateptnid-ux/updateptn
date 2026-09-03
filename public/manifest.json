@@ -1,0 +1,54 @@
+{
+  "name": "UpdatePTN - Platform Persiapan SNBT #1",
+  "short_name": "UpdatePTN",
+  "description": "Lulus PTN Impianmu dengan Persiapan UTBK Terarah & Terukur",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Akses dashboard belajar",
+      "url": "/dashboard/student",
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Try Out SNBT",
+      "short_name": "Try Out",
+      "description": "Mulai try out SNBT",
+      "url": "/dashboard/student/tryout-snbt",
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Cek Peluang PTN",
+      "short_name": "Cek Peluang",
+      "description": "Hitung peluang lolos PTN",
+      "url": "/dashboard/student/cek-peluang",
+      "icons": [{ "src": "/icon.png", "sizes": "96x96" }]
+    }
+  ]
+}
