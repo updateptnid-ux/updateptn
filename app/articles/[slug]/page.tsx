@@ -79,25 +79,41 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ArticlePage({ params }: { params: { slug: string } }) {
-  const result = await getArticleBySlug(params.slug);
+  let result;
+  
+  try {
+    result = await getArticleBySlug(params.slug);
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    notFound();
+  }
 
-  if (!result.success || !result.data) {
+  if (!result || !result.success || !result.data) {
     notFound();
   }
 
   const article = result.data;
 
-  // Increment view count (fire-and-forget)
-  incrementArticleViews(article.id);
+  // Increment view count (fire-and-forget, ignore errors)
+  try {
+    incrementArticleViews(article.id).catch(() => {});
+  } catch (e) {
+    // Silent fail
+  }
 
-  // Get related articles
-  const relatedResult = await getRelatedArticles(
-    article.id,
-    article.category,
-    article.tags,
-    3
-  );
-  const relatedArticles = relatedResult.success ? relatedResult.data || [] : [];
+  // Get related articles (ignore errors)
+  let relatedArticles: any[] = [];
+  try {
+    const relatedResult = await getRelatedArticles(
+      article.id,
+      article.category,
+      article.tags,
+      3
+    );
+    relatedArticles = relatedResult.success ? relatedResult.data || [] : [];
+  } catch (e) {
+    console.error('Error fetching related articles:', e);
+  }
 
   return (
     <div className="min-h-screen bg-white">
