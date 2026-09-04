@@ -28,17 +28,7 @@ import {
   Code
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { sanitizeHTML } from '@/lib/article-security';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 
 interface RichTextEditorProps {
   content: string;
@@ -53,11 +43,6 @@ export function RichTextEditor({
   onImageUpload,
   placeholder = 'Tulis konten artikel di sini...' 
 }: RichTextEditorProps) {
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
-  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkText, setLinkText] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const editor = useEditor({
@@ -107,60 +92,6 @@ export function RichTextEditor({
     } finally {
       setUploadingImage(false);
     }
-  };
-
-  const insertImageUrl = () => {
-    if (!imageUrl) return;
-    
-    // Validate URL format (basic XSS prevention)
-    try {
-      const url = new URL(imageUrl);
-      if (!url.protocol.match(/^https?:$/)) {
-        alert('URL harus menggunakan http atau https');
-        return;
-      }
-    } catch {
-      alert('URL tidak valid');
-      return;
-    }
-
-    editor.chain().focus().setImage({ src: imageUrl }).run();
-    setImageUrl('');
-    setIsImageDialogOpen(false);
-  };
-
-  const insertLink = () => {
-    if (!linkUrl) return;
-
-    // Validate URL format
-    try {
-      const url = new URL(linkUrl);
-      if (!url.protocol.match(/^https?:$/)) {
-        alert('URL harus menggunakan http atau https');
-        return;
-      }
-    } catch {
-      alert('URL tidak valid');
-      return;
-    }
-
-    const text = linkText || linkUrl;
-    
-    if (editor.state.selection.empty) {
-      // No selection, insert new link
-      editor
-        .chain()
-        .focus()
-        .insertContent(`<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`)
-        .run();
-    } else {
-      // Has selection, make it a link
-      editor.chain().focus().setLink({ href: linkUrl }).run();
-    }
-
-    setLinkUrl('');
-    setLinkText('');
-    setIsLinkDialogOpen(false);
   };
 
   return (
@@ -269,7 +200,17 @@ export function RichTextEditor({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setIsImageDialogOpen(true)}
+          onClick={() => {
+            const url = prompt('Masukkan URL gambar:');
+            if (url) {
+              try {
+                new URL(url);
+                editor.chain().focus().setImage({ src: url }).run();
+              } catch {
+                alert('URL tidak valid');
+              }
+            }
+          }}
           className="h-9 w-9 p-0 touch-manipulation"
           title="Insert Image"
         >
@@ -280,7 +221,26 @@ export function RichTextEditor({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setIsLinkDialogOpen(true)}
+          onClick={() => {
+            const url = prompt('Masukkan URL link:');
+            if (url) {
+              try {
+                new URL(url);
+                if (editor.state.selection.empty) {
+                  const text = prompt('Teks link:', url) || url;
+                  editor
+                    .chain()
+                    .focus()
+                    .insertContent(`<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`)
+                    .run();
+                } else {
+                  editor.chain().focus().setLink({ href: url }).run();
+                }
+              } catch {
+                alert('URL tidak valid');
+              }
+            }
+          }}
           className="h-9 w-9 p-0 touch-manipulation"
           title="Insert Link"
         >
@@ -317,103 +277,6 @@ export function RichTextEditor({
 
       {/* Editor Content */}
       <EditorContent editor={editor} />
-
-      {/* Image Dialog */}
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Sisipkan Gambar</DialogTitle>
-            <DialogDescription>
-              Upload gambar atau masukkan URL gambar
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {onImageUpload && (
-              <div className="space-y-2">
-                <Label>Upload File</Label>
-                <Input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage}
-                  style={{ fontSize: '16px' }}
-                />
-                {uploadingImage && (
-                  <p className="text-xs text-slate-500">Uploading...</p>
-                )}
-              </div>
-            )}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-slate-500">atau</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>URL Gambar</Label>
-              <Input
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                style={{ fontSize: '16px' }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImageDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={insertImageUrl} disabled={!imageUrl}>
-              Sisipkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Link Dialog */}
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Sisipkan Link</DialogTitle>
-            <DialogDescription>
-              Tambahkan link ke teks yang dipilih atau buat link baru
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>URL *</Label>
-              <Input
-                type="url"
-                placeholder="https://example.com"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                style={{ fontSize: '16px' }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Teks Link (opsional)</Label>
-              <Input
-                type="text"
-                placeholder="Klik di sini"
-                value={linkText}
-                onChange={(e) => setLinkText(e.target.value)}
-                style={{ fontSize: '16px' }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={insertLink} disabled={!linkUrl}>
-              Sisipkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
