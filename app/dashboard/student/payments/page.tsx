@@ -1,14 +1,14 @@
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import BeliPaketClient from './beli-paket-client';
+import PaymentsClient from './payments-client';
 
 export const metadata: Metadata = {
-  title: 'Beli Paket | UpdatePTN',
-  description: 'Pilih paket berlangganan UpdatePTN'
+  title: 'Riwayat Pembayaran | UpdatePTN',
+  description: 'Lihat riwayat pembayaran dan lanjutkan pembayaran pending'
 };
 
-export default async function BeliPaketPage() {
+export default async function PaymentsPage() {
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -17,5 +17,5 @@ export default async function BeliPaketPage() {
     redirect('/auth/login');
   }
   
-  return <BeliPaketClient />;
+  return <PaymentsClient />;
 }

@@ -74,31 +74,62 @@ export async function POST(request: NextRequest) {
 
     // If payment successful, activate subscription
     if (finalStatus === 'success') {
-      // Get payment details
+      // Get payment details with metadata
       const { data: payment } = await supabase
         .from('payments')
-        .select('user_id, subscription_id')
+        .select('user_id, metadata')
         .eq('order_id', orderId)
         .single();
 
-      if (payment && payment.subscription_id) {
-        // Activate subscription
-        await supabase
-          .from('subscriptions')
-          .update({
-            status: 'active',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', payment.subscription_id);
+      if (payment && payment.metadata) {
+        const metadata = payment.metadata as any;
+        const subscriptionId = metadata.subscription_id;
 
-        // Update user profile to premium
-        await supabase
-          .from('profiles')
-          .update({
-            is_premium: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', payment.user_id);
+        if (subscriptionId) {
+          // Activate subscription
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'active',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', subscriptionId);
+
+          // Update user profile to premium
+          await supabase
+            .from('profiles')
+            .update({
+              is_premium: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', payment.user_id);
+          
+          console.log(`✅ Subscription ${subscriptionId} activated for user ${payment.user_id}`);
+        }
+      }
+    } else if (finalStatus === 'failed') {
+      // Mark subscription as failed
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('metadata')
+        .eq('order_id', orderId)
+        .single();
+
+      if (payment && payment.metadata) {
+        const metadata = payment.metadata as any;
+        const subscriptionId = metadata.subscription_id;
+
+        if (subscriptionId) {
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'failed',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', subscriptionId);
+          
+          console.log(`❌ Subscription ${subscriptionId} marked as failed`);
+        }
       }
     }
 

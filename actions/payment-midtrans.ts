@@ -16,10 +16,12 @@ interface ActionResult<T = void> {
 }
 
 /**
- * Create payment transaction
+ * Create payment for subscription (New - matching actual schema)
  */
-export async function createPayment(params: {
-  subscriptionPlanId: string;
+export async function createSubscriptionPayment(params: {
+  tier: string;
+  duration: string;
+  price: number;
   voucherCode?: string;
 }): Promise<ActionResult<{ token: string; orderId: string }>> {
   try {
@@ -28,127 +30,180 @@ export async function createPayment(params: {
     // Get user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return { success: false, error: 'Unauthorized' };
+      console.error('Auth error:', authError);
+      return { success: false, error: 'Unauthorized - silakan login kembali' };
     }
 
     // Get user profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, email, phone')
       .eq('id', user.id)
       .single();
 
-    if (!profile) {
-      return { success: false, error: 'Profile not found' };
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
     }
 
-    // Get subscription plan
-    const { data: plan, error: planError } = await supabase
-      .from('subscription_plans')
-      .select('*')
-      .eq('id', params.subscriptionPlanId)
-      .eq('is_active', true)
-      .single();
+    const userName = profile?.full_name || user.email?.split('@')[0] || 'User';
+    const userEmail = user.email || '';
+    const userPhone = profile?.phone || '08123456789';
 
-    if (planError || !plan) {
-      return { success: false, error: 'Subscription plan not found' };
-    }
-
-    let finalAmount = plan.price;
+    let finalAmount = params.price;
     let discountAmount = 0;
+    let appliedVoucherCode = null;
 
     // Apply voucher if provided
     if (params.voucherCode) {
       const { data: voucher } = await supabase
         .from('vouchers')
         .select('*')
-        .eq('code', params.voucherCode.toUpperCase())
-        .eq('is_active', true)
+        .ilike('code', params.voucherCode)
+        .eq('status', 'active')
         .single();
 
       if (voucher && new Date(voucher.valid_until) > new Date()) {
+        const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
+        
         if (voucher.discount_type === 'percentage') {
-          discountAmount = (finalAmount * voucher.discount_value) / 100;
+          discountAmount = Math.round((finalAmount * voucherValue) / 100);
         } else {
-          discountAmount = voucher.discount_value;
+          discountAmount = voucherValue;
         }
-        finalAmount = finalAmount - discountAmount;
+        
+        finalAmount = Math.max(0, finalAmount - discountAmount);
+        appliedVoucherCode = voucher.code;
       }
     }
 
-    // Generate order ID
+    // Parse duration to calculate expires_at
+    let durationDays = 30;
+    if (params.duration.includes('hari')) {
+      durationDays = parseInt(params.duration) || 1;
+    } else if (params.duration.includes('bulan')) {
+      durationDays = (parseInt(params.duration) || 1) * 30;
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+    // Generate order ID and invoice number
     const orderId = generateOrderId('UPDPTN');
+    const invoiceNo = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-    // Create subscription record
-    const subscriptionEndDate = new Date();
-    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + plan.duration_days);
-
+    // Create subscription record (matching actual schema)
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')
       .insert({
-        user_id: user.id,
-        plan_id: plan.id,
+        user_name: userName,
+        user_email: userEmail,
+        tier: params.tier,
         status: 'pending',
-        start_date: new Date().toISOString(),
-        end_date: subscriptionEndDate.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        price_paid: `Rp ${finalAmount.toLocaleString('id-ID')}`,
       })
       .select()
       .single();
 
     if (subError) {
-      return { success: false, error: 'Failed to create subscription' };
+      console.error('❌ Subscription insert error:', subError);
+      return { success: false, error: `Gagal membuat subscription: ${subError.message}` };
     }
 
-    // Create payment record
+    console.log('✅ Subscription created:', subscription.id);
+
+    // Create payment record - ONLY provide required columns and common ones
+    const paymentData: any = {
+      // REQUIRED columns (NOT NULL)
+      amount: finalAmount,        // REQUIRED
+      method: 'midtrans',         // REQUIRED
+      
+      // Common columns (might have defaults or nullable)
+      user_id: user.id,
+      order_id: orderId,
+      invoice_no: invoiceNo,
+      status: 'pending',
+      original_amount: params.price,
+      discount_amount: discountAmount || 0,
+      
+      // Store additional info in metadata JSON
+      metadata: {
+        tier: params.tier,
+        duration: params.duration,
+        subscription_id: subscription.id,
+        user_name: userName,
+        user_email: userEmail,
+        payment_method: 'midtrans', // backup
+      }
+    };
+
+    // Add voucher_code only if exists
+    if (appliedVoucherCode) {
+      paymentData.voucher_code = appliedVoucherCode;
+    }
+
     const { error: paymentError } = await supabase
       .from('payments')
-      .insert({
-        user_id: user.id,
-        subscription_id: subscription.id,
-        order_id: orderId,
-        amount: finalAmount,
-        original_amount: plan.price,
-        discount_amount: discountAmount,
-        voucher_code: params.voucherCode || null,
-        status: 'pending',
-        payment_method: 'midtrans',
-      });
+      .insert(paymentData);
 
     if (paymentError) {
-      return { success: false, error: 'Failed to create payment record' };
+      console.error('❌ Payment insert error:', paymentError);
+      console.error('📦 Payment data attempted:', paymentData);
+      
+      // Rollback: delete the subscription we just created
+      await supabase.from('subscriptions').delete().eq('id', subscription.id);
+      
+      return { success: false, error: `Gagal membuat record pembayaran: ${paymentError.message}` };
     }
 
+    console.log('✅ Payment record created for order:', orderId);
+
     // Create Midtrans transaction
-    const { token, redirectUrl } = await createSnapToken({
-      orderId,
-      grossAmount: finalAmount,
-      customerDetails: {
-        firstName: profile.full_name || 'User',
-        email: profile.email || user.email || '',
-        phone: profile.phone || '08123456789',
-      },
-      itemDetails: [
-        {
-          id: plan.id,
-          name: plan.name,
-          price: finalAmount,
-          quantity: 1,
-        },
-      ],
-    });
-
-    revalidatePath('/dashboard/student');
-
-    return {
-      success: true,
-      data: {
-        token,
+    try {
+      const { token, redirectUrl } = await createSnapToken({
         orderId,
-      },
-    };
-  } catch (error) {
-    console.error('Create payment error:', error);
-    return { success: false, error: 'Internal server error' };
+        grossAmount: finalAmount,
+        customerDetails: {
+          firstName: userName,
+          email: userEmail,
+          phone: userPhone,
+        },
+        itemDetails: [
+          {
+            id: subscription.id,
+            name: `${params.tier} - ${params.duration}`,
+            price: finalAmount,
+            quantity: 1,
+          },
+        ],
+      });
+
+      console.log('✅ Midtrans Snap token created');
+
+      revalidatePath('/dashboard/student');
+
+      return {
+        success: true,
+        data: {
+          token,
+          orderId,
+        },
+      };
+    } catch (midtransError: any) {
+      console.error('❌ Midtrans Snap token error:', midtransError);
+      
+      // Rollback both payment and subscription
+      await supabase.from('payments').delete().eq('order_id', orderId);
+      await supabase.from('subscriptions').delete().eq('id', subscription.id);
+      
+      return { 
+        success: false, 
+        error: `Gagal membuat token pembayaran: ${midtransError.message || 'Midtrans error'}` 
+      };
+    }
+  } catch (error: any) {
+    console.error('❌ Create subscription payment error:', error);
+    return { success: false, error: `Internal error: ${error.message || 'Unknown error'}` };
   }
 }
 
@@ -227,16 +282,7 @@ export async function getPaymentHistory(): Promise<ActionResult<any[]>> {
 
     const { data: payments, error } = await supabase
       .from('payments')
-      .select(`
-        *,
-        subscriptions (
-          plan_id,
-          subscription_plans (
-            name,
-            duration_days
-          )
-        )
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 

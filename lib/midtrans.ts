@@ -18,9 +18,13 @@ const MIDTRANS_CLIENT_KEY = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY!;
 const MIDTRANS_IS_PRODUCTION = process.env.MIDTRANS_IS_PRODUCTION === 'true';
 
 // Base URLs
-const MIDTRANS_BASE_URL = MIDTRANS_IS_PRODUCTION
+const MIDTRANS_API_URL = MIDTRANS_IS_PRODUCTION
   ? 'https://api.midtrans.com'
   : 'https://api.sandbox.midtrans.com';
+
+const MIDTRANS_SNAP_BASE_URL = MIDTRANS_IS_PRODUCTION
+  ? 'https://app.midtrans.com'
+  : 'https://app.sandbox.midtrans.com';
 
 const MIDTRANS_SNAP_URL = MIDTRANS_IS_PRODUCTION
   ? 'https://app.midtrans.com/snap/snap.js'
@@ -54,6 +58,11 @@ export async function createSnapToken(params: {
   }>;
 }): Promise<{ token: string; redirectUrl: string }> {
   try {
+    // Validate environment variables
+    if (!MIDTRANS_SERVER_KEY) {
+      throw new Error('MIDTRANS_SERVER_KEY is not configured');
+    }
+
     const payload = {
       transaction_details: {
         order_id: params.orderId,
@@ -67,34 +76,67 @@ export async function createSnapToken(params: {
       },
       item_details: params.itemDetails,
       callbacks: {
-        finish: `${process.env.NEXT_PUBLIC_SITE_URL}/payment/finish`,
-        error: `${process.env.NEXT_PUBLIC_SITE_URL}/payment/error`,
-        pending: `${process.env.NEXT_PUBLIC_SITE_URL}/payment/pending`,
+        finish: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/finish`,
+        error: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/error`,
+        pending: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/pending`,
       },
     };
 
-    const response = await fetch(`${MIDTRANS_BASE_URL}/v2/snap/transactions`, {
+    console.log('🔄 Creating Midtrans Snap token...');
+    console.log('📍 Endpoint:', `${MIDTRANS_SNAP_BASE_URL}/snap/v1/transactions`);
+    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
+    const response = await fetch(`${MIDTRANS_SNAP_BASE_URL}/snap/v1/transactions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: getAuthHeader(),
+        'Authorization': getAuthHeader(),
+        'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
     });
 
+    console.log('📡 Response status:', response.status, response.statusText);
+
+    // Get response text first
+    const responseText = await response.text();
+    console.log('📄 Response body:', responseText);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error_messages?.join(', ') || 'Failed to create transaction');
+      let errorMessage = 'Failed to create Midtrans transaction';
+      
+      try {
+        const error = JSON.parse(responseText);
+        errorMessage = error.error_messages?.join(', ') || error.message || errorMessage;
+      } catch (e) {
+        // Response is not JSON, use status text
+        errorMessage = `Midtrans API error: ${response.status} ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
     }
 
-    const data = await response.json();
+    // Parse JSON response
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('❌ Failed to parse Midtrans response as JSON');
+      throw new Error('Invalid response from Midtrans API');
+    }
+
+    if (!data.token) {
+      throw new Error('Midtrans response missing token');
+    }
+
+    console.log('✅ Snap token created successfully');
 
     return {
       token: data.token,
       redirectUrl: data.redirect_url,
     };
-  } catch (error) {
-    console.error('Midtrans create token error:', error);
+  } catch (error: any) {
+    console.error('❌ Midtrans create token error:', error);
     throw error;
   }
 }
@@ -104,7 +146,7 @@ export async function createSnapToken(params: {
  */
 export async function getTransactionStatus(orderId: string): Promise<any> {
   try {
-    const response = await fetch(`${MIDTRANS_BASE_URL}/v2/${orderId}/status`, {
+    const response = await fetch(`${MIDTRANS_API_URL}/v2/${orderId}/status`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -205,7 +247,7 @@ export function getClientKey(): string {
  */
 export async function cancelTransaction(orderId: string): Promise<void> {
   try {
-    const response = await fetch(`${MIDTRANS_BASE_URL}/v2/${orderId}/cancel`, {
+    const response = await fetch(`${MIDTRANS_API_URL}/v2/${orderId}/cancel`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

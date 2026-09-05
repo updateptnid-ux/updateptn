@@ -13,6 +13,8 @@ import {
   Target,
   TrendingUp,
   Award,
+  CreditCard,
+  Clock,
 } from "lucide-react";
 
 // Force dynamic rendering and disable caching
@@ -48,7 +50,8 @@ export default async function StudentDashboardPage() {
   // 2. Parallel data fetching untuk performa optimal
   const [
     { data: resultsData },
-    { data: subData }
+    { data: subData },
+    { data: pendingPayments }
   ] = await Promise.all([
     supabase
       .from("results")
@@ -62,13 +65,23 @@ export default async function StudentDashboardPage() {
       .eq("user_id", user.id)
       .gt("expires_at", new Date().toISOString())
       .order("expires_at", { ascending: false })
-      .limit(1)
+      .limit(1),
+    
+    supabase
+      .from("payments")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: false })
   ]);
 
   // 3. Process results
   const userResultsCount = resultsData?.length || 0;
   const lastResult = resultsData?.[0] || null;
   const activeSubscription = subData?.[0] || null;
+  const hasPendingPayments = (pendingPayments?.length || 0) > 0;
+  const pendingPaymentCount = pendingPayments?.length || 0;
 
   const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
   const targetUniv = user?.user_metadata?.target_univ as string | undefined;
@@ -108,6 +121,14 @@ export default async function StudentDashboardPage() {
               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-8 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
                 <Target className="h-3 w-3 md:h-4 md:w-4" />
                 <span>Cek Peluang PTN</span>
+              </Button>
+            </Link>
+
+            {/* New SNBP Check Link */}
+            <Link href="/snbp/check" className="w-full mt-2">
+              <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg h-8 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
+                <Target className="h-3 w-3 md:h-4 md:w-4" />
+                <span>Cek Peluang SNBP</span>
               </Button>
             </Link>
           </div>
@@ -196,6 +217,34 @@ export default async function StudentDashboardPage() {
           </StaggerItem>
         </StaggerContainer>
 
+        {/* Pending Payment Alert */}
+        {hasPendingPayments && (
+          <MotionCard className="rounded-lg md:rounded-xl">
+            <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 p-3 md:p-4 rounded-lg">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
+                    <Clock className="h-5 w-5 md:h-6 md:w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs md:text-sm font-bold text-amber-900">
+                      {pendingPaymentCount} Pembayaran Pending
+                    </p>
+                    <p className="text-[10px] md:text-xs text-amber-700">
+                      Lanjutkan pembayaran Anda sekarang
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/student/payments">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white h-8 md:h-9 text-[10px] md:text-xs">
+                    Lihat
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </MotionCard>
+        )}
+
         {/* Active Subscription Info */}
         {activeSubscription && (
           <MotionCard className="rounded-lg md:rounded-xl">
@@ -223,6 +272,36 @@ export default async function StudentDashboardPage() {
                 </Badge>
               </div>
             </Card>
+          </MotionCard>
+        )}
+
+        {/* Payment History Link - Always show */}
+        {!hasPendingPayments && (
+          <MotionCard className="rounded-lg md:rounded-xl">
+            <Link href="/dashboard/student/payments">
+              <Card className="bg-white border border-slate-200 p-3 md:p-4 rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-5 w-5 md:h-6 md:w-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs md:text-sm font-bold text-slate-900">
+                        Riwayat Pembayaran
+                      </p>
+                      <p className="text-[10px] md:text-xs text-slate-600">
+                        Lihat transaksi dan invoice
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-slate-400">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </Card>
+            </Link>
           </MotionCard>
         )}
 

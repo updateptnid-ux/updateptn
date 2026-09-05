@@ -1,234 +1,204 @@
-"use server";
+'use server';
 
-import { createClient } from "@/lib/supabase/server";
-import { FREE_TIERS, calculateExpiresAt } from "@/lib/subscription-helpers";
-
-
-export interface SubscriptionData {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  tier: string;          // Nama tier lengkap, mis. "Premium SNBT", "VIP"
-  status: "active" | "expired" | "pending";
-  price_paid: string;    // Format string, mis. "Rp 79.000"
-  duration: string;      // String durasi, mis. "7 hari", "1 bulan", "3 bulan"
-  payment_method?: string;
-  transaction_id?: string;
-}
+import { createClient } from '@/lib/supabase/server';
 
 /**
- * Create a new subscription for a user
+ * Get user's active subscription
  */
-export async function createSubscription(data: SubscriptionData) {
-  try {
-    const supabase = await createClient();
-
-    const expiresAt = calculateExpiresAt(data.duration);
-
-    const payload = {
-      user_id: data.user_id,
-      user_name: data.user_name,
-      user_email: data.user_email,
-      tier: data.tier,
-      status: data.status || "pending",
-      price_paid: data.price_paid,
-      expires_at: expiresAt.toISOString(),
-      payment_method: data.payment_method || null,
-      transaction_id: data.transaction_id || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data: subscription, error } = await supabase
-      .from("subscriptions")
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating subscription:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data: subscription };
-  } catch (error: any) {
-    console.error("Unexpected error creating subscription:", error);
-    return { success: false, error: error.message };
+export async function getUserActiveSubscription() {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { success: false, error: 'Unauthorized', data: null };
   }
+  
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_email', user.email)
+    .eq('status', 'active')
+    .gte('expires_at', new Date().toISOString())
+    .order('expires_at', { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching subscription:', error);
+    return { success: false, error: error.message, data: null };
+  }
+  
+  return { success: true, data, error: null };
 }
 
 /**
- * Get active subscription for a user
+ * Get user subscription by ID
  */
 export async function getUserSubscription(userId: string) {
-  try {
-    const supabase = await createClient();
-    const now = new Date().toISOString();
+  const supabase = await createClient();
+  
+  // Get user email first
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== userId) {
+    return { success: false, error: 'Unauthorized', data: null };
+  }
+  
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_email', user.email)
+    .eq('status', 'active')
+    .gte('expires_at', new Date().toISOString())
+    .order('expires_at', { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching subscription:', error);
+    return { success: false, error: error.message, data: null };
+  }
+  
+  return { success: true, data, error: null };
+}
 
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .gt("expires_at", now)
-      .order("expires_at", { ascending: false })
+/**
+ * Create subscription record
+ */
+export async function createSubscription(subscriptionData: any) {
+  const supabase = await createClient();
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { success: false, error: 'Unauthorized', data: null };
+  }
+  
+  try {
+    // Parse duration to calculate expires_at
+    const durationString = subscriptionData.duration || '30 hari';
+    let durationDays = 30;
+    
+    if (durationString.includes('hari')) {
+      durationDays = parseInt(durationString) || 1;
+    } else if (durationString.includes('bulan')) {
+      durationDays = (parseInt(durationString) || 1) * 30;
+    }
+    
+    // Calculate expiry date
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + durationDays);
+    
+    // Create subscription with correct schema matching the actual table
+    const subscriptionRecord = {
+      user_name: subscriptionData.user_name || user.email?.split('@')[0] || 'User',
+      user_email: subscriptionData.user_email || user.email || '',
+      tier: subscriptionData.tier,
+      status: subscriptionData.status || 'pending',
+      expires_at: expiresAt.toISOString(),
+      price_paid: subscriptionData.price_paid,
+    };
+    
+    const { data: subscription, error: subError } = await supabase
+      .from('subscriptions')
+      .insert([subscriptionRecord])
+      .select()
+      .single();
+    
+    if (subError) {
+      console.error('Error creating subscription:', subError);
+      return { success: false, error: subError.message, data: null };
+    }
+    
+    // Also create a payment record to track the purchase
+    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    const amount = parseInt(subscriptionData.price_paid?.replace(/\D/g, '') || '0');
+    
+    const paymentRecord = {
+      user_id: user.id,
+      order_id: orderId,
+      amount: amount,
+      original_amount: amount,
+      status: 'pending',
+      method: subscriptionData.payment_method || 'manual',
+      metadata: {
+        tier: subscriptionData.tier,
+        duration: subscriptionData.duration,
+        user_name: subscriptionData.user_name,
+        user_email: subscriptionData.user_email,
+        subscription_id: subscription.id,
+      }
+    };
+    
+    await supabase.from('payments').insert([paymentRecord]);
+    
+    return { success: true, data: { ...subscription, order_id: orderId }, error: null };
+  } catch (err: any) {
+    console.error('Error creating subscription:', err);
+    return { success: false, error: err.message || 'Failed to create subscription', data: null };
+  }
+}
+
+/**
+ * Get user tier level based on active subscription
+ */
+export async function getUserTier(userId: string): Promise<"Basic" | "Premium" | "Platinum"> {
+  const supabase = await createClient();
+  
+  try {
+    // Get user email from userId
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== userId) {
+      return "Basic";
+    }
+    
+    // Get user's active subscription
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
+      .select('tier, status, expires_at')
+      .eq('user_email', user.email)
+      .eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
       .limit(1)
       .single();
-
-    if (error && error.code !== "PGRST116") {
-      console.error("Error fetching subscription:", error);
-      return { success: false, error: error.message };
+    
+    if (error || !subscription) {
+      return "Basic"; // Default tier for free users
     }
-
-    return { success: true, data: data || null };
-  } catch (error: any) {
-    console.error("Unexpected error fetching subscription:", error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Check if user has active premium subscription (any non-free tier)
- */
-export async function hasPremiumAccess(userId: string): Promise<boolean> {
-  try {
-    const result = await getUserSubscription(userId);
-    if (!result.success || !result.data) return false;
-
-    const sub = result.data;
-    return (
-      sub.status === "active" &&
-      !FREE_TIERS.includes(sub.tier) &&
-      new Date(sub.expires_at) > new Date()
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get user's subscription tier
- */
-export async function getUserTier(userId: string): Promise<string> {
-  try {
-    const result = await getUserSubscription(userId);
-    if (!result.success || !result.data) return "Basic";
-
-    const sub = result.data;
-    if (sub.status === "active" && new Date(sub.expires_at) > new Date()) {
-      return sub.tier;
+    
+    // Map tier names to tier levels based on your pricing structure
+    const tierName = subscription.tier?.toLowerCase() || '';
+    
+    // Check for platinum/VIP tier
+    if (
+      tierName.includes('platinum') || 
+      tierName.includes('vip') || 
+      tierName.includes('pro') ||
+      tierName.includes('all-in-one') ||
+      tierName.includes('intensif')
+    ) {
+      return "Platinum";
     }
+    
+    // Check for premium tier (any paid subscription except trial)
+    if (
+      tierName.includes('premium') || 
+      tierName.includes('gold') ||
+      tierName.includes('eksklusif') ||
+      tierName.includes('bimbel') ||
+      tierName.includes('snbt') ||
+      tierName.includes('snbp') ||
+      tierName.includes('mandiri')
+    ) {
+      return "Premium";
+    }
+    
+    // Default to Basic
     return "Basic";
-  } catch {
-    return "Basic";
-  }
-}
-
-/**
- * Admin: Activate pending subscription
- */
-export async function activateSubscription(subscriptionId: string) {
-  try {
-    const { requireAdmin } = await import("@/lib/auth-helpers");
-    await requireAdmin();
-
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .update({
-        status: "active",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", subscriptionId)
-      .select()
-      .single();
-
-    if (error) {
-      return { ok: false, message: error.message };
-    }
-
-    return { ok: true, subscription: data, message: "Subscription berhasil diaktifkan" };
-  } catch (error: any) {
-    return { ok: false, message: error.message || "Unauthorized" };
-  }
-}
-
-/**
- * Admin: Reject pending subscription
- */
-export async function rejectSubscription(subscriptionId: string, reason: string) {
-  try {
-    const { requireAdmin } = await import("@/lib/auth-helpers");
-    await requireAdmin();
-
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .update({
-        status: "rejected" as any,
-        rejection_reason: reason,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", subscriptionId)
-      .select()
-      .single();
-
-    if (error) {
-      return { ok: false, message: error.message };
-    }
-
-    return { ok: true, subscription: data, message: "Subscription ditolak" };
-  } catch (error: any) {
-    return { ok: false, message: error.message || "Unauthorized" };
-  }
-}
-
-/**
- * Extend subscription duration
- */
-export async function extendSubscription(
-  subscriptionId: string,
-  additionalDays: number
-) {
-  try {
-    const supabase = await createClient();
-
-    const { data: subscription, error: fetchError } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("id", subscriptionId)
-      .single();
-
-    if (fetchError) {
-      return { success: false, error: fetchError.message };
-    }
-
-    const currentExpiry = new Date(subscription.expires_at);
-    const now = new Date();
-    const baseDate = currentExpiry > now ? currentExpiry : now;
-    baseDate.setDate(baseDate.getDate() + additionalDays);
-
-    const newStatus = baseDate > now ? "active" : "expired";
-
-    const { data, error } = await supabase
-      .from("subscriptions")
-      .update({
-        expires_at: baseDate.toISOString(),
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", subscriptionId)
-      .select()
-      .single();
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (err) {
+    console.error('Error getting user tier:', err);
+    return "Basic"; // Fallback to Basic on error
   }
 }

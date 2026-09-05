@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { createSubscription, getUserSubscription } from "@/actions/subscription";
+import { createSubscriptionPayment } from "@/actions/payment-midtrans";
 import { resolveTierName } from "@/lib/subscription-helpers";
 import {
   Check,
@@ -40,6 +41,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Extend Window type for Midtrans Snap
+declare global {
+  interface Window {
+    snap?: {
+      pay: (token: string, options: {
+        onSuccess?: (result: any) => void;
+        onPending?: (result: any) => void;
+        onError?: (result: any) => void;
+        onClose?: () => void;
+      }) => void;
+    };
+  }
+}
 
 interface PricingPlan {
   id: string;
@@ -840,35 +855,55 @@ export default function PricingPage() {
       // Resolve tier name yang benar sesuai plan ID
       const tierName = resolveTierName(checkoutPlan.id, checkoutPlan.name);
 
-      const subscriptionData = {
-        user_id: currentUser.id,
-        user_name: userProfile?.full_name || currentUser.email?.split("@")[0] || "User",
-        user_email: currentUser.email || "",
+      // Create payment with Midtrans
+      const result = await createSubscriptionPayment({
         tier: tierName,
-        status: "pending" as const,
-        price_paid: `Rp ${finalPrice.toLocaleString("id-ID")}`,
-        duration: checkoutPlan.duration, // String durasi: "7 hari", "1 bulan", "3 bulan"
-        payment_method: selectedPaymentMethod,
-      };
+        duration: checkoutPlan.duration,
+        price: checkoutPlan.price,
+        voucherCode: appliedVoucher?.code,
+      });
 
-      const result = await createSubscription(subscriptionData);
+      if (result.success && result.data) {
+        // Load Midtrans Snap script if not already loaded
+        if (!window.snap) {
+          const script = document.createElement('script');
+          script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || 'https://app.sandbox.midtrans.com/snap/snap.js';
+          script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '');
+          document.head.appendChild(script);
+          
+          await new Promise((resolve) => {
+            script.onload = resolve;
+          });
+        }
 
-      if (result.success) {
-        alert(
-          `Pesanan ${tierName} (${checkoutPlan.duration}) Berhasil Dibuat!\n\n` +
-          `Total Bayar: Rp ${finalPrice.toLocaleString("id-ID")}${appliedVoucher ? ` (Hemat Rp ${appliedVoucher.discountAmount.toLocaleString("id-ID")})` : ""}\n` +
-          `Metode Pembayaran: ${selectedPaymentMethod.toUpperCase()}\n\n` +
-          `Silakan lakukan pembayaran. Akun kamu akan aktif setelah admin konfirmasi.`
-        );
-        setCheckoutPlan(null);
-        window.location.reload();
+        // Open Midtrans Snap popup
+        window.snap?.pay(result.data.token, {
+          onSuccess: function(result: any) {
+            console.log('Payment success:', result);
+            alert('Pembayaran berhasil! Akun Anda akan segera diaktifkan.');
+            setCheckoutPlan(null);
+            window.location.href = '/dashboard/student';
+          },
+          onPending: function(result: any) {
+            console.log('Payment pending:', result);
+            alert('Pembayaran tertunda. Silakan selesaikan pembayaran Anda.');
+            setCheckoutPlan(null);
+          },
+          onError: function(result: any) {
+            console.error('Payment error:', result);
+            alert('Terjadi kesalahan dalam pembayaran. Silakan coba lagi.');
+          },
+          onClose: function() {
+            console.log('Payment popup closed');
+            setProcessingPlan(null);
+          }
+        });
       } else {
-        throw new Error(result.error || "Gagal membuat subscription");
+        throw new Error(result.error || "Gagal membuat transaksi pembayaran");
       }
     } catch (error: any) {
       console.error("Error creating purchase:", error);
       alert(`Terjadi kesalahan: ${error.message}`);
-    } finally {
       setProcessingPlan(null);
     }
   };

@@ -1,37 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { createSubscriptionPayment } from "@/actions/payment-midtrans";
+import { toast } from "sonner";
 
-const PACKAGES = {
-  premium: {
-    name: "Premium",
-    price: 150000,
-    duration: "1 Bulan",
-    color: "blue",
-    icon: "⭐"
-  },
-  gold: {
-    name: "Gold",
-    price: 300000,
-    duration: "3 Bulan",
-    color: "yellow",
-    icon: "👑",
-    badge: "BEST VALUE"
+// Declare Midtrans Snap on window
+declare global {
+  interface Window {
+    snap: any;
   }
-};
+}
+
+interface SubscriptionPlan {
+  tier: string;
+  duration: string;
+  price: number;
+  name: string;
+  description?: string;
+}
 
 export default function BeliPaketClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tier = (searchParams.get("tier") || "premium") as "premium" | "gold";
-  const pkg = PACKAGES[tier];
-
+  const tierParam = searchParams.get("tier") || "Premium SNBT";
+  const durationParam = searchParams.get("duration") || "1 bulan";
+  const priceParam = parseInt(searchParams.get("price") || "79000");
+  
   const [step, setStep] = useState<"payment" | "confirmation">("payment");
+  const [loading, setLoading] = useState(false);
+  const [snapLoaded, setSnapLoaded] = useState(false);
+  const [voucherCode, setVoucherCode] = useState("");
+
+  // Load Midtrans Snap script
+  useEffect(() => {
+    const script = document.createElement('script');
+    const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
+    
+    script.src = isProduction
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    
+    script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '');
+    
+    script.onload = () => {
+      console.log('Midtrans Snap loaded successfully');
+      setSnapLoaded(true);
+    };
+    
+    script.onerror = () => {
+      console.error('Failed to load Midtrans Snap');
+      toast.error('Gagal memuat sistem pembayaran');
+    };
+    
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const handlePayment = async () => {
+    if (!snapLoaded) {
+      toast.error('Sistem pembayaran belum siap, coba lagi');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await createSubscriptionPayment({
+        tier: tierParam,
+        duration: durationParam,
+        price: priceParam,
+        voucherCode: voucherCode || undefined,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Gagal membuat pembayaran');
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Payment created, token:', result.data.token);
+
+      // Open Snap payment modal
+      window.snap.pay(result.data.token, {
+        onSuccess: function(result: any) {
+          console.log('✅ Payment success:', result);
+          toast.success('Pembayaran berhasil!');
+          setStep("confirmation");
+        },
+        onPending: function(result: any) {
+          console.log('⏳ Payment pending:', result);
+          toast.info('Pembayaran menunggu konfirmasi');
+          setStep("confirmation");
+        },
+        onError: function(result: any) {
+          console.error('❌ Payment error:', result);
+          toast.error('Pembayaran gagal, coba lagi');
+          setLoading(false);
+        },
+        onClose: function() {
+          console.log('🚪 Payment modal closed');
+          setLoading(false);
+        }
+      });
+    } catch (error) {
+      console.error('❌ Payment error:', error);
+      toast.error('Terjadi kesalahan: ' + (error as Error).message);
+      setLoading(false);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -83,56 +167,73 @@ export default function BeliPaketClient() {
               <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </Button>
             <div>
-              <h1 className="text-xs md:text-lg font-bold text-slate-900">Beli Paket {pkg.name}</h1>
-              <p className="text-[9px] md:text-xs text-slate-600">Transfer manual ke rekening di bawah</p>
+              <h1 className="text-xs md:text-lg font-bold text-slate-900">Beli {selectedPlan?.name || 'Paket'}</h1>
+              <p className="text-[9px] md:text-xs text-slate-600">Pilih metode pembayaran</p>
             </div>
           </div>
         </Card>
 
         {/* Package Info */}
-        <Card className={`p-3 md:p-5 rounded-lg md:rounded-xl shadow-sm ${
-          pkg.color === "yellow" 
-            ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200" 
-            : "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200"
-        }`}>
+        <Card className={`p-3 md:p-5 rounded-lg md:rounded-xl shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200`}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm md:text-lg font-bold text-slate-900">{pkg.icon} Paket {pkg.name}</h3>
-              <p className="text-[10px] md:text-sm text-slate-600">{pkg.duration} akses premium</p>
+              <h3 className="text-sm md:text-lg font-bold text-slate-900">⭐ {tierParam}</h3>
+              <p className="text-[10px] md:text-sm text-slate-600">{durationParam} akses premium</p>
             </div>
-            <div className="text-base md:text-xl font-extrabold text-slate-900">{formatPrice(pkg.price)}</div>
+            <div className="text-base md:text-xl font-extrabold text-slate-900">
+              {formatPrice(priceParam)}
+            </div>
           </div>
+        </Card>
+
+        {/* Voucher Section */}
+        <Card className="bg-white p-3 md:p-5 space-y-2 rounded-lg md:rounded-xl shadow-sm">
+          <h3 className="text-xs md:text-base font-bold text-slate-900">Kode Voucher (Opsional)</h3>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={voucherCode}
+              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+              placeholder="Masukkan kode voucher"
+              className="flex-1 h-9 md:h-11 px-3 border border-slate-200 rounded-lg text-xs md:text-sm"
+              style={{ fontSize: '16px' }}
+            />
+          </div>
+          <p className="text-[9px] md:text-xs text-slate-500">
+            Punya kode voucher? Masukkan untuk mendapatkan diskon.
+          </p>
         </Card>
 
         {/* Payment Info */}
         <Card className="bg-white p-3 md:p-5 space-y-2.5 md:space-y-4 rounded-lg md:rounded-xl shadow-sm">
-          <h3 className="text-xs md:text-base font-bold text-slate-900">Transfer ke Rekening:</h3>
+          <h3 className="text-xs md:text-base font-bold text-slate-900">Metode Pembayaran:</h3>
           
           <div className="space-y-2 md:space-y-3">
-            <div className="bg-slate-50 p-2.5 md:p-4 rounded-lg border border-slate-200">
-              <p className="text-[9px] md:text-xs text-slate-600 mb-0.5 md:mb-1 font-semibold">Bank BCA</p>
-              <p className="text-sm md:text-xl font-bold font-mono text-slate-900 tracking-wider">1234567890</p>
-              <p className="text-[9px] md:text-xs text-slate-600 mt-0.5">a.n. UpdatePTN Platform</p>
+            <div className="bg-blue-50 border border-blue-200 p-2.5 md:p-4 rounded-lg">
+              <p className="text-[9px] md:text-xs font-bold text-blue-900 mb-1 md:mb-2 flex items-center gap-1">
+                <span className="text-xs md:text-base">💳</span> Pembayaran Online
+              </p>
+              <ul className="text-[9px] md:text-xs text-blue-900 space-y-0.5 md:space-y-1 list-disc list-inside leading-relaxed">
+                <li>Kartu Kredit / Debit</li>
+                <li>Transfer Bank (BCA, Mandiri, BNI, BRI, dll)</li>
+                <li>E-Wallet (GoPay, OVO, DANA, ShopeePay)</li>
+                <li>Convenience Store (Indomaret, Alfamart)</li>
+              </ul>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 md:border-2 p-2.5 md:p-4 rounded-lg">
-              <p className="text-[9px] md:text-xs font-bold text-amber-900 mb-1 md:mb-2 flex items-center gap-1">
-                <span className="text-xs md:text-base">⚠️</span> Instruksi Pembayaran:
+            <div className="bg-amber-50 border border-amber-200 p-2.5 md:p-4 rounded-lg">
+              <p className="text-[9px] md:text-xs text-amber-900">
+                <span className="font-bold">Aman & Terpercaya</span> - Pembayaran diproses oleh Midtrans
               </p>
-              <ol className="text-[9px] md:text-xs text-amber-900 space-y-0.5 md:space-y-1 list-decimal list-inside leading-relaxed">
-                <li>Transfer <span className="font-bold">tepat {formatPrice(pkg.price)}</span></li>
-                <li>Screenshot bukti transfer</li>
-                <li>Kirim ke WhatsApp: <span className="font-bold">081234567890</span></li>
-                <li>Sertakan <span className="font-bold">email akun</span> untuk verifikasi</li>
-              </ol>
             </div>
           </div>
 
           <Button 
-            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 h-9 md:h-11 text-xs md:text-base font-bold rounded-lg md:rounded-xl touch-manipulation shadow-sm"
-            onClick={() => setStep("confirmation")}
+            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 h-9 md:h-11 text-xs md:text-base font-bold rounded-lg md:rounded-xl touch-manipulation shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handlePayment}
+            disabled={loading || !snapLoaded}
           >
-            Sudah Transfer
+            {loading ? 'Memproses...' : !snapLoaded ? 'Loading...' : 'Bayar Sekarang'}
           </Button>
         </Card>
       </div>
