@@ -22,7 +22,11 @@ export async function GET() {
       .eq("id", user.id)
       .single();
 
-    if (profile?.role !== "admin") {
+    // Check if admin (from profile role OR hardcoded admin emails)
+    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+    const isAdmin = profile?.role === "admin" || ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
