@@ -232,8 +232,9 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-70 p-6 bg-white/95 backdrop-blur-xl flex flex-col justify-between border-r border-slate-200/80">
-            <div className="space-y-6">
+          <SheetContent side="left" className="w-70 p-0 bg-white/95 backdrop-blur-xl flex flex-col border-r border-slate-200/80">
+            {/* Fixed Header */}
+            <div className="shrink-0 p-6 pb-4 border-b border-slate-200/80">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2 text-left">
                   <Image
@@ -248,7 +249,10 @@ export default function DashboardLayout({
                   </span>
                 </SheetTitle>
               </SheetHeader>
+            </div>
 
+            {/* Scrollable Menu */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4">
               <nav className="space-y-1.5">
                 {navItems.map((item) => {
                   // Render divider
@@ -291,8 +295,8 @@ export default function DashboardLayout({
               </nav>
             </div>
 
-            {/* Mobile: Role Switcher & Logout */}
-            <div className="space-y-3 pt-6 border-t border-slate-200/80">
+            {/* Fixed Footer */}
+            <div className="shrink-0 space-y-3 p-6 pt-4 border-t border-slate-200/80 bg-white/95">
               {(userRole.isAdmin || userRole.isMentor) && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">

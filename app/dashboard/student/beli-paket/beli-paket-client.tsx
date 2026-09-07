@@ -35,6 +35,9 @@ export default function BeliPaketClient() {
   const [loading, setLoading] = useState(false);
   const [snapLoaded, setSnapLoaded] = useState(false);
   const [voucherCode, setVoucherCode] = useState("");
+  const [voucherApplied, setVoucherApplied] = useState(false);
+  const [discount, setDiscount] = useState(0);
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -63,6 +66,65 @@ export default function BeliPaketClient() {
       document.body.removeChild(script);
     };
   }, []);
+
+  // Check voucher/affiliate code
+  async function checkVoucher() {
+    if (!voucherCode.trim()) return;
+    
+    setCheckingVoucher(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      // Check affiliate code first
+      const { data: affiliate } = await supabase
+        .from('affiliates')
+        .select('affiliate_code')
+        .ilike('affiliate_code', voucherCode.trim())
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (affiliate) {
+        // Affiliate code: 10% discount
+        const discountAmount = Math.round((priceParam * 10) / 100);
+        setDiscount(discountAmount);
+        setVoucherApplied(true);
+        toast.success(`Kode promo valid! Diskon Rp ${discountAmount.toLocaleString('id-ID')}`);
+      } else {
+        // Check vouchers table
+        const { data: voucher } = await supabase
+          .from('vouchers')
+          .select('*')
+          .ilike('code', voucherCode.trim())
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (voucher && new Date(voucher.valid_until) > new Date()) {
+          const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
+          let discountAmount = 0;
+          
+          if (voucher.discount_type === 'percentage') {
+            discountAmount = Math.round((priceParam * voucherValue) / 100);
+          } else {
+            discountAmount = voucherValue;
+          }
+          
+          setDiscount(discountAmount);
+          setVoucherApplied(true);
+          toast.success(`Voucher valid! Diskon Rp ${discountAmount.toLocaleString('id-ID')}`);
+        } else {
+          toast.error('Kode tidak valid atau sudah kadaluarsa');
+          setVoucherApplied(false);
+          setDiscount(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking voucher:', error);
+      toast.error('Gagal memvalidasi kode');
+    } finally {
+      setCheckingVoucher(false);
+    }
+  }
 
   const handlePayment = async () => {
     if (!snapLoaded) {
@@ -125,6 +187,8 @@ export default function BeliPaketClient() {
     }).format(price);
   };
 
+  const finalPrice = priceParam - discount;
+
   if (step === "confirmation") {
     return (
       <div className="w-full min-h-screen bg-slate-50">
@@ -175,32 +239,75 @@ export default function BeliPaketClient() {
 
         {/* Package Info */}
         <Card className={`p-3 md:p-5 rounded-lg md:rounded-xl shadow-sm bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm md:text-lg font-bold text-slate-900">⭐ {tierParam}</h3>
-              <p className="text-[10px] md:text-sm text-slate-600">{durationParam} akses premium</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm md:text-lg font-bold text-slate-900">⭐ {tierParam}</h3>
+                <p className="text-[10px] md:text-sm text-slate-600">{durationParam} akses premium</p>
+              </div>
+              <div className="text-right">
+                {discount > 0 && (
+                  <p className="text-xs md:text-sm text-slate-500 line-through">
+                    {formatPrice(priceParam)}
+                  </p>
+                )}
+                <p className="text-base md:text-xl font-extrabold text-slate-900">
+                  {formatPrice(finalPrice)}
+                </p>
+              </div>
             </div>
-            <div className="text-base md:text-xl font-extrabold text-slate-900">
-              {formatPrice(priceParam)}
-            </div>
+            {discount > 0 && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                <p className="text-[10px] md:text-xs text-emerald-700 font-medium">
+                  ✅ Diskon {formatPrice(discount)} diterapkan!
+                </p>
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Voucher Section */}
         <Card className="bg-white p-3 md:p-5 space-y-2 rounded-lg md:rounded-xl shadow-sm">
-          <h3 className="text-xs md:text-base font-bold text-slate-900">Kode Voucher (Opsional)</h3>
+          <h3 className="text-xs md:text-base font-bold text-slate-900">Kode Promo / Voucher</h3>
           <div className="flex gap-2">
             <input
               type="text"
               value={voucherCode}
-              onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-              placeholder="Masukkan kode voucher"
+              onChange={(e) => {
+                setVoucherCode(e.target.value.toUpperCase());
+                setVoucherApplied(false);
+                setDiscount(0);
+              }}
+              placeholder="Masukkan kode"
               className="flex-1 h-9 md:h-11 px-3 border border-slate-200 rounded-lg text-xs md:text-sm"
               style={{ fontSize: '16px' }}
+              disabled={voucherApplied}
             />
+            {!voucherApplied ? (
+              <Button
+                onClick={checkVoucher}
+                disabled={checkingVoucher || !voucherCode.trim()}
+                variant="outline"
+                className="h-9 md:h-11 px-3 md:px-4 text-xs md:text-sm font-bold"
+              >
+                {checkingVoucher ? "Cek..." : "Terapkan"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setVoucherCode("");
+                  setVoucherApplied(false);
+                  setDiscount(0);
+                }}
+                variant="outline"
+                className="h-9 md:h-11 px-3 md:px-4 text-xs md:text-sm font-bold text-rose-600"
+              >
+                Hapus
+              </Button>
+            )}
           </div>
           <p className="text-[9px] md:text-xs text-slate-500">
-            Punya kode voucher? Masukkan untuk mendapatkan diskon.
+            Punya kode promo affiliate atau voucher? Masukkan untuk mendapatkan diskon.
           </p>
         </Card>
 

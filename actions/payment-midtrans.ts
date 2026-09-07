@@ -52,27 +52,49 @@ export async function createSubscriptionPayment(params: {
     let finalAmount = params.price;
     let discountAmount = 0;
     let appliedVoucherCode = null;
+    let affiliateId = null;
 
-    // Apply voucher if provided
+    // Apply voucher/affiliate code if provided
     if (params.voucherCode) {
-      const { data: voucher } = await supabase
-        .from('vouchers')
-        .select('*')
-        .ilike('code', params.voucherCode)
+      // First, try to find affiliate code (promo code model)
+      const { data: affiliate } = await supabase
+        .from('affiliates')
+        .select('id, affiliate_code')
+        .ilike('affiliate_code', params.voucherCode)
         .eq('status', 'active')
         .single();
 
-      if (voucher && new Date(voucher.valid_until) > new Date()) {
-        const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
+      if (affiliate) {
+        // Affiliate code found - apply 10% discount
+        discountAmount = Math.round((params.price * 10) / 100);
+        finalAmount = params.price - discountAmount;
+        appliedVoucherCode = affiliate.affiliate_code;
+        affiliateId = affiliate.id;
         
-        if (voucher.discount_type === 'percentage') {
-          discountAmount = Math.round((finalAmount * voucherValue) / 100);
-        } else {
-          discountAmount = voucherValue;
+        console.log(`✅ Affiliate code applied: ${affiliate.affiliate_code}, discount: Rp ${discountAmount.toLocaleString('id-ID')}`);
+      } else {
+        // Not affiliate code, try vouchers table
+        const { data: voucher } = await supabase
+          .from('vouchers')
+          .select('*')
+          .ilike('code', params.voucherCode)
+          .eq('status', 'active')
+          .single();
+
+        if (voucher && new Date(voucher.valid_until) > new Date()) {
+          const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
+          
+          if (voucher.discount_type === 'percentage') {
+            discountAmount = Math.round((finalAmount * voucherValue) / 100);
+          } else {
+            discountAmount = voucherValue;
+          }
+          
+          finalAmount = Math.max(0, finalAmount - discountAmount);
+          appliedVoucherCode = voucher.code;
+          
+          console.log(`✅ Voucher applied: ${voucher.code}, discount: Rp ${discountAmount.toLocaleString('id-ID')}`);
         }
-        
-        finalAmount = Math.max(0, finalAmount - discountAmount);
-        appliedVoucherCode = voucher.code;
       }
     }
 
@@ -142,6 +164,11 @@ export async function createSubscriptionPayment(params: {
       paymentData.voucher_code = appliedVoucherCode;
     }
 
+    // Add affiliate_id for commission tracking
+    if (affiliateId) {
+      paymentData.affiliate_id = affiliateId;
+    }
+
     const { error: paymentError } = await supabase
       .from('payments')
       .insert(paymentData);
@@ -157,6 +184,27 @@ export async function createSubscriptionPayment(params: {
     }
 
     console.log('✅ Payment record created for order:', orderId);
+
+    // If affiliate code was used, create commission record (pending status)
+    if (affiliateId && finalAmount > 0) {
+      const commissionAmount = Math.round((finalAmount * 10) / 100); // 10% commission from DISCOUNTED price
+      
+      const { error: commissionError } = await supabase
+        .from('commissions')
+        .insert({
+          affiliate_id: affiliateId,
+          payment_id: orderId, // Store order_id for reference
+          commission_amount: commissionAmount,
+          status: 'pending', // Will be updated to 'approved' when payment settles
+          created_at: new Date().toISOString(),
+        });
+
+      if (commissionError) {
+        console.error('⚠️ Commission record error (non-critical):', commissionError);
+      } else {
+        console.log(`✅ Commission record created: Rp ${commissionAmount.toLocaleString('id-ID')} for affiliate ${affiliateId}`);
+      }
+    }
 
     // Create Midtrans transaction
     try {
