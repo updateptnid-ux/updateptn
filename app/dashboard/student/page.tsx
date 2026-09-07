@@ -95,8 +95,8 @@ export default async function StudentDashboardPage() {
       : targetUniv || targetProdi || null;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50">
-      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-3 md:space-y-4">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
+      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-3 md:space-y-4 pb-20">
         {/* Header Banner - Compact */}
         <MotionCard className="rounded-lg md:rounded-xl">
           <div className="flex flex-col gap-3 bg-white p-3 md:p-4 rounded-lg md:rounded-xl border border-slate-200">

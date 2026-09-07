@@ -92,25 +92,18 @@ export default function AffiliatePage() {
 
       if (!affiliate) {
         setStatus("notApplied");
+        setLoading(false);
       } else if (affiliate.status === "pending") {
         setStatus("pending");
+        setLoading(false);
       } else if (affiliate.status === "active") {
-        setStatus("active");
-        // Load dashboard data
-        const result = await getAffiliateDashboardAction();
-        if (result.success) {
-          setDashboardData(result);
-          setBankInfo({
-            bankName: result.affiliate.bank_name || "",
-            bankAccountNumber: result.affiliate.bank_account_number || "",
-            bankAccountName: result.affiliate.bank_account_name || "",
-          });
-        }
+        // REDIRECT TO DASHBOARD IF ALREADY ACTIVE
+        router.push("/dashboard/affiliate");
+        return;
       } else if (affiliate.status === "rejected") {
         setStatus("rejected");
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     checkStatus();
@@ -556,7 +549,6 @@ export default function AffiliatePage() {
   // ===========================================
   // APPLICATION FORM (NOT APPLIED YET)
   // ===========================================
-  const socialPlatforms = [
   const socialPlatforms = [
     { 
       id: "instagram", 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 
 export default function AffiliateDashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -58,6 +60,12 @@ export default function AffiliateDashboardPage() {
         bankAccountName: result.affiliate.bank_account_name || "",
       });
     } else {
+      // If not affiliate or not active, redirect to registration page
+      if (result.error === "NotAffiliate" || result.error === "NotActiveAffiliate") {
+        toast.error(result.message || "Anda belum terdaftar sebagai mitra afiliasi");
+        router.push("/dashboard/student/affiliate");
+        return;
+      }
       toast.error(result.message || "Gagal memuat data");
     }
     setLoading(false);
@@ -130,8 +138,13 @@ export default function AffiliateDashboardPage() {
         <Card className="p-8 text-center">
           <p className="text-slate-600 mb-4">Anda belum terdaftar sebagai mitra afiliasi.</p>
           <Link href="/dashboard/student/affiliate">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-blue-600 hover:bg-blue-700 mr-3">
               Daftar Sekarang
+            </Button>
+          </Link>
+          <Link href="/dashboard/student">
+            <Button variant="outline">
+              Kembali ke Dashboard
             </Button>
           </Link>
         </Card>
@@ -143,7 +156,7 @@ export default function AffiliateDashboardPage() {
   const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${affiliate.affiliate_code}`;
 
   return (
-    <div className="max-w-7xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+    <div className="max-w-7xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

@@ -55,8 +55,8 @@ export default async function TryoutMandiriPage() {
   const activeSubscription = subData?.[0] || null;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50">
-      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-4 md:space-y-6">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
+      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-4 md:space-y-6 pb-20">
         {/* Header */}
         <MotionCard className="rounded-lg md:rounded-xl">
           <div className="bg-blue-50 border-2 border-blue-200 p-5 md:p-8 rounded-lg md:rounded-xl">

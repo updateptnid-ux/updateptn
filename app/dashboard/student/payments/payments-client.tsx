@@ -253,8 +253,8 @@ export default function PaymentsClient() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50">
-      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-3 md:space-y-4">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
+      <div className="max-w-4xl mx-auto p-3 md:p-4 space-y-3 md:space-y-4 pb-20">
         {/* Header */}
         <Card className="bg-white p-3 md:p-4 rounded-lg md:rounded-xl shadow-sm">
           <div className="flex items-center gap-2 mb-3 md:mb-4">

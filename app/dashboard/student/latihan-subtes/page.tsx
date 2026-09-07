@@ -146,7 +146,7 @@ export default function LatihanSubtesPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 md:space-y-8">
+    <div className="max-w-6xl mx-auto space-y-4 md:space-y-8 pb-20 overflow-y-auto overscroll-contain">
       {/* Header Section */}
       <div className="space-y-3 md:space-y-4">
         <div>

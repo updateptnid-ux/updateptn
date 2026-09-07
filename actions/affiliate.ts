@@ -199,6 +199,15 @@ export async function getAffiliateDashboardAction() {
       return { success: false, error: "NotAffiliate", message: "Anda belum terdaftar sebagai mitra afiliasi" };
     }
 
+    // CRITICAL: Check if affiliate is ACTIVE
+    if (affiliate.status !== "active") {
+      return { 
+        success: false, 
+        error: "NotActiveAffiliate", 
+        message: "Akun affiliate Anda belum diaktifkan atau sedang pending review" 
+      };
+    }
+
     // Get referrals
     const { data: referrals } = await supabase
       .from("referrals")

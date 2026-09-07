@@ -41,7 +41,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isMentor: false });
-  const [isActiveAffiliate, setIsActiveAffiliate] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -109,15 +108,6 @@ export default function DashboardLayout({
           isAdmin: isAdminEmail || isAdminRole,
           isMentor: !!mentorRecord,
         });
-
-        // Check if user is active affiliate
-        const { data: affiliate } = await supabase
-          .from("affiliates")
-          .select("status")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        setIsActiveAffiliate(affiliate?.status === "active");
       } catch (err) {
         console.error("Error checking user role:", err);
       }
@@ -191,12 +181,6 @@ export default function DashboardLayout({
     },
     // SECTION DIVIDER
     { divider: "LAINNYA" },
-    // Conditional: Only show if user is active affiliate
-    ...(isActiveAffiliate ? [{
-      name: "Program Affiliasi",
-      href: "/dashboard/student/affiliate",
-      icon: Users,
-    }] : []),
     {
       name: "Berikan Feedback",
       href: "/dashboard/student/feedback",
@@ -232,7 +216,7 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-70 p-0 bg-white/95 backdrop-blur-xl flex flex-col border-r border-slate-200/80">
+          <SheetContent side="left" className="w-72 p-0 bg-white/95 backdrop-blur-xl flex flex-col border-r border-slate-200/80">
             {/* Fixed Header */}
             <div className="shrink-0 p-6 pb-4 border-b border-slate-200/80">
               <SheetHeader>
@@ -252,13 +236,13 @@ export default function DashboardLayout({
             </div>
 
             {/* Scrollable Menu */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-              <nav className="space-y-1.5">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 custom-scrollbar-thin smooth-scroll min-h-0">
+              <nav className="space-y-1 pb-4">
                 {navItems.map((item) => {
                   // Render divider
                   if ('divider' in item) {
                     return (
-                      <div key={item.divider} className="pt-4 pb-2 px-3">
+                      <div key={item.divider} className="pt-4 pb-2 px-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           {item.divider}
                         </p>
@@ -278,7 +262,7 @@ export default function DashboardLayout({
                       <Link
                         href={item.href}
                         onClick={() => setIsMobileOpen(false)}
-                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                           isActive
                             ? "bg-blue-600/10 text-blue-600 shadow-xs border border-blue-600/20"
                             : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
@@ -296,7 +280,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Fixed Footer */}
-            <div className="shrink-0 space-y-3 p-6 pt-4 border-t border-slate-200/80 bg-white/95">
+            <div className="shrink-0 space-y-3 p-4 border-t border-slate-200/80 bg-white/95">
               {(userRole.isAdmin || userRole.isMentor) && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
@@ -339,8 +323,8 @@ export default function DashboardLayout({
 
       {/* Desktop Sidebar (Glassmorphic Layering & Pseudo-3D Depth) */}
       <aside className="hidden md:flex flex-col w-64 bg-white/80 backdrop-blur-md border-r border-slate-200/80 shrink-0 sticky top-0 h-screen shadow-xs">
-        <div className="p-4 space-y-4 flex-1">
-          {/* Logo */}
+        {/* Fixed Header with Logo */}
+        <div className="p-4 border-b border-slate-200/80 shrink-0">
           <Link href="/dashboard/student" className="flex items-center gap-2 group">
             <Image
               src="/logo.svg"
@@ -353,52 +337,52 @@ export default function DashboardLayout({
               Update<span className="text-blue-600">PTN</span>
             </span>
           </Link>
-
-          {/* Navigation Links */}
-          <div className="space-y-1">
-            <nav className="space-y-0.5">
-              {navItems.map((item) => {
-                // Render divider
-                if ('divider' in item) {
-                  return (
-                    <div key={item.divider} className="pt-3 pb-1 px-2">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                        {item.divider}
-                      </p>
-                    </div>
-                  );
-                }
-
-                const Icon = item.icon;
-                const isActive = isMenuItemActive(item);
-                return (
-                  <motion.div
-                    key={item.href}
-                    whileHover={{ scale: 1.01, x: 1 }}
-                    whileTap={{ scale: 0.99 }}
-                    transition={{ duration: 0.15, ease: PREMIUM_EASE }}
-                  >
-                    <Link
-                      href={item.href}
-                      className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-                        isActive
-                          ? "bg-blue-600/10 text-blue-600 shadow-xs border border-blue-600/20"
-                          : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className={`h-3.5 w-3.5 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
-                        <span>{item.name}</span>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </nav>
-          </div>
         </div>
 
-        {/* User Footer: Role Switcher, Profile & Sign Out */}
+        {/* Scrollable Navigation Links */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 custom-scrollbar-thin smooth-scroll min-h-0">
+          <nav className="space-y-0.5 pb-4">
+            {navItems.map((item) => {
+              // Render divider
+              if ('divider' in item) {
+                return (
+                  <div key={item.divider} className="pt-3 pb-1 px-2">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      {item.divider}
+                    </p>
+                  </div>
+                );
+              }
+
+              const Icon = item.icon;
+              const isActive = isMenuItemActive(item);
+              return (
+                <motion.div
+                  key={item.href}
+                  whileHover={{ scale: 1.01, x: 1 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ duration: 0.15, ease: PREMIUM_EASE }}
+                >
+                  <Link
+                    href={item.href}
+                    className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      isActive
+                        ? "bg-blue-600/10 text-blue-600 shadow-xs border border-blue-600/20"
+                        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`h-3.5 w-3.5 ${isActive ? "text-blue-600" : "text-slate-400"}`} />
+                      <span>{item.name}</span>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Fixed Footer: User Info & Sign Out */}
         <div className="p-4 space-y-3 border-t border-slate-200/80 shrink-0">
           <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-50/60 border border-slate-200/60">
             <Avatar className="h-8 w-8 border border-slate-200">
@@ -450,9 +434,11 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 overflow-visible p-4 sm:p-8">
-        {children}
+      {/* Main Content Viewport - Fixed Scrolling */}
+      <main className="flex-1 overflow-y-auto overscroll-contain h-screen md:h-screen custom-scrollbar smooth-scroll">
+        <div className="p-0">
+          {children}
+        </div>
       </main>
     </div>
   );

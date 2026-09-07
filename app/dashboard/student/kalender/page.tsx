@@ -144,7 +144,7 @@ export default function StudentKalenderPage() {
   const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
       {/* Header - Mobile Sticky, Desktop Static */}
       <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 md:py-4 sticky md:static top-0 z-10 shadow-sm md:shadow-none">
         <h1 className="text-base md:text-2xl font-bold text-slate-900">Kalender Akademik</h1>

@@ -187,7 +187,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-75 p-4 bg-white flex flex-col justify-between overflow-y-auto">
+          <SheetContent side="left" className="w-75 p-4 bg-white flex flex-col justify-between overflow-y-auto custom-scrollbar-thin smooth-scroll">
             <div className="space-y-6">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2 text-left">
@@ -273,7 +273,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 justify-between shrink-0 sticky top-0 h-screen overflow-y-auto p-4 space-y-6">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 justify-between shrink-0 sticky top-0 h-screen overflow-y-auto p-4 space-y-6 custom-scrollbar-thin smooth-scroll">
         <div className="space-y-6">
           {/* Admin Brand */}
           <Link href="/hq-core-updateptn" className="flex items-center gap-2.5 px-2 pt-2">
@@ -418,7 +418,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar smooth-scroll">
           {children}
         </main>
       </div>

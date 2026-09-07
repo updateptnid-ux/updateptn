@@ -188,6 +188,69 @@
     letter-spacing: 0.01em;
   }
   
+  /* ============================================ */
+  /* CUSTOM SCROLLBAR STYLING - Better UX */
+  /* ============================================ */
+  
+  /* Custom Scrollbar for Webkit (Chrome, Safari, Edge, Android) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4); /* slate-400 with opacity */
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6); /* slate-500 with opacity */
+  }
+  
+  /* Thin scrollbar variant for sidebar */
+  .custom-scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  
+  .custom-scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+  
+  .custom-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.5);
+  }
+  
+  /* Firefox Scrollbar Styling */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  }
+  
+  .custom-scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+  }
+  
+  /* Smooth Scrolling Enhancement */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
   /* TipTap Editor Styles */
   .ProseMirror {
     outline: none;
