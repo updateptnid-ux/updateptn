@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 /**
  * Check if current user is admin
- * Only updateptnid@gmail.com has admin access
+ * Checks both hardcoded super admins and database role
  */
 export async function checkAdminAccess() {
   const supabase = await createClient();
@@ -17,15 +18,37 @@ export async function checkAdminAccess() {
     redirect("/login?redirect=/hq-core-updateptn");
   }
 
-  // Check if user is admin
-  const ADMIN_EMAILS = ["updateptnid@gmail.com"];
+  // Check hardcoded super admins first
+  const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
+    return user;
+  }
 
-  if (!ADMIN_EMAILS.includes(user.email || "")) {
-    // Not admin, redirect to student dashboard
+  // Check database role using service role client
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    console.error("❌ SUPABASE_SERVICE_ROLE_KEY not configured");
     redirect("/dashboard/student");
   }
 
-  return user;
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  );
+
+  const { data: profile } = await serviceClient
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.role === "admin") {
+    return user;
+  }
+
+  // Not admin, redirect to student dashboard
+  redirect("/dashboard/student");
 }
 
 /**
@@ -42,8 +65,21 @@ export async function isAdmin(): Promise<boolean> {
 
     if (!user) return false;
 
-    const ADMIN_EMAILS = ["updateptnid@gmail.com"];
-    return ADMIN_EMAILS.includes(user.email || "");
+    // Check hardcoded super admins
+    const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+    if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
+      return true;
+    }
+
+    // Check database role (client-side can't use service role, so use regular client)
+    // This will work if RLS policy allows users to read their own role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    return profile?.role === "admin";
   } catch {
     return false;
   }

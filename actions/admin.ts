@@ -11,16 +11,32 @@ export async function checkIsAdmin() {
   
   if (!user) return false;
 
-  const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-  const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+  // Check hardcoded super admins first
+  const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
+    return true;
+  }
 
-  const { data: profile } = await supabase
+  // Check database role using service role client (can bypass RLS)
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    console.error("❌ SUPABASE_SERVICE_ROLE_KEY not configured");
+    return false;
+  }
+
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  );
+
+  const { data: profile } = await serviceClient
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
   
-  return isAdminEmail || profile?.role === "admin";
+  return profile?.role === "admin";
 }
 
 // Get all admins

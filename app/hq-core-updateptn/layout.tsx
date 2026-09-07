@@ -35,64 +35,73 @@ export default async function AdminLayout({
     user.email?.split("@")[0] ||
     "Super Admin";
 
-  // ✅ DATABASE-ONLY ADMIN CHECK - No hardcoded emails
-  // Check profiles.role in database with service role (bypass RLS)
-  try {
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    
-    console.log("🔍 Checking admin role for:", user.email);
-    console.log("📧 Service role key exists:", !!serviceRoleKey);
-    
-    if (!serviceRoleKey) {
-      console.error("❌ SUPABASE_SERVICE_ROLE_KEY not found in environment variables!");
-      console.error("⚠️  Add it to .env.local to enable admin access");
-      // Without service role key, cannot check role - deny access
-      redirect("/hq-core-updateptn/login");
+  // ✅ HYBRID ADMIN CHECK: Hardcoded emails (super admin) + Database role
+  
+  // 1. Check hardcoded super admin emails first (only system admins)
+  const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  const isSuperAdmin = SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
+  if (isSuperAdmin) {
+    isAdmin = true;
+    console.log("✅ Super Admin access granted via hardcoded email:", user.email);
+  }
+
+  // 2. If not super admin, check database role
+  if (!isAdmin) {
+    try {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      console.log("\n=== ADMIN CHECK DEBUG ===");
+      console.log("🔍 Checking admin role for:", user.email);
+      console.log("👤 User ID:", user.id);
+      console.log("📧 Service role key exists:", !!serviceRoleKey);
+      console.log("🌍 Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+      
+      if (!serviceRoleKey) {
+        console.error("❌ SUPABASE_SERVICE_ROLE_KEY not found in environment variables!");
+        console.error("⚠️  Add it to .env.local to enable database-driven admin access");
+      } else {
+        const serviceClient = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceRoleKey,
+          { auth: { persistSession: false } }
+        );
+
+        console.log("🔄 Querying profiles table...");
+
+        const { data: profile, error } = await serviceClient
+          .from("profiles")
+          .select("role, full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        console.log("📊 Query result:");
+        console.log("   - Profile found:", !!profile);
+        console.log("   - Role:", profile?.role || "null");
+        console.log("   - Full name:", profile?.full_name || "null");
+        console.log("   - Error:", error?.message || "none");
+
+        if (!error && profile) {
+          if (profile.full_name) {
+            adminName = profile.full_name;
+          }
+          
+          if (profile.role === "admin") {
+            isAdmin = true;
+            console.log("✅ Admin access granted via database role");
+          } else {
+            console.log("❌ Role is not admin, got:", profile.role);
+          }
+        } else if (error) {
+          console.error("❌ Database error:", error);
+        } else if (!profile) {
+          console.log("⚠️  Profile not found for user:", user.email);
+        }
+      }
+      console.log("=== END DEBUG ===\n");
+    } catch (err) {
+      console.error("❌ AdminLayout profile check error:", err);
     }
-
-    const serviceClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      { auth: { persistSession: false } }
-    );
-
-    const { data: profile, error } = await serviceClient
-      .from("profiles")
-      .select("role, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    console.log("👤 Profile data:", { 
-      userId: user.id,
-      email: user.email,
-      role: profile?.role, 
-      full_name: profile?.full_name, 
-      error: error?.message 
-    });
-
-    if (error) {
-      console.error("❌ Database error:", error);
-      redirect("/hq-core-updateptn/login");
-    }
-
-    if (!profile) {
-      console.error("❌ Profile not found for user:", user.email);
-      redirect("/hq-core-updateptn/login");
-    }
-
-    if (profile.full_name) {
-      adminName = profile.full_name;
-    }
-
-    if (profile.role === "admin") {
-      isAdmin = true;
-      console.log("✅ Admin access granted via database role");
-    } else {
-      console.log("🚫 Access denied - User role:", profile.role);
-    }
-  } catch (err) {
-    console.error("❌ AdminLayout profile check error:", err);
-    redirect("/hq-core-updateptn/login");
   }
 
   // If unauthorized, redirect to /hq-core-updateptn/login
