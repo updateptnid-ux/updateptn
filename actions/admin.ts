@@ -4,241 +4,161 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
-/**
- * Admin Action: Delete User Account Permanently
- * 
- * This uses Service Role Key to bypass RLS and delete:
- * - User's auth account
- * - Profile data
- * - All related data (results, subscriptions, payments, etc.)
- * 
- * ⚠️ WARNING: This action is IRREVERSIBLE!
- * 
- * @param userId - UUID of the user to delete
- * @returns Success or error message
- */
-export async function deleteUserByAdminAction(userId: string) {
-  try {
-    // 1. Verify admin is making this request
-    const supabase = await createClient();
-    const { data: { user: adminUser }, error: adminError } = await supabase.auth.getUser();
+// Check if current user is admin
+export async function checkIsAdmin() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return false;
 
-    if (adminError || !adminUser) {
-      return { error: "Unauthorized: Admin authentication required" };
-    }
+  const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
 
-    // Check if user is admin
-    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    const isAdmin = ADMIN_EMAILS.includes(adminUser.email?.toLowerCase() || "");
-
-    if (!isAdmin) {
-      return { error: "Forbidden: Admin access required" };
-    }
-
-    // 2. Get user info before deletion (for logging)
-    const { data: userProfile } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", userId)
-      .single();
-
-    const userName = userProfile?.full_name || userProfile?.email || userId;
-
-    // 3. Create Service Role client for deletion
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      return { error: "Service Role Key not configured in environment variables" };
-    }
-
-    const supabaseAdmin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-
-    // 4. Delete related data (in order to avoid foreign key constraints)
-    
-    // Delete tryout results
-    const { error: resultsError } = await supabaseAdmin
-      .from("results")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (resultsError) {
-      console.error("Error deleting results:", resultsError);
-    }
-
-    // Delete tryout results mandiri (if table exists)
-    const { error: resultsMandiriError } = await supabaseAdmin
-      .from("results_mandiri")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (resultsMandiriError && resultsMandiriError.code !== "42P01") { // Ignore if table doesn't exist
-      console.error("Error deleting results_mandiri:", resultsMandiriError);
-    }
-
-    // Delete subscriptions
-    const { error: subsError } = await supabaseAdmin
-      .from("subscriptions")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (subsError) {
-      console.error("Error deleting subscriptions:", subsError);
-    }
-
-    // Delete payments
-    const { error: paymentsError } = await supabaseAdmin
-      .from("payments")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (paymentsError) {
-      console.error("Error deleting payments:", paymentsError);
-    }
-
-    // Delete free claims
-    const { error: freeClaimsError } = await supabaseAdmin
-      .from("free_claims")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (freeClaimsError) {
-      console.error("Error deleting free_claims:", freeClaimsError);
-    }
-
-    // Delete affiliate data
-    const { error: affiliateError } = await supabaseAdmin
-      .from("affiliates")
-      .delete()
-      .eq("user_id", userId);
-    
-    if (affiliateError && affiliateError.code !== "42P01") {
-      console.error("Error deleting affiliate data:", affiliateError);
-    }
-
-    // Delete affiliate referrals (where user was referred)
-    const { error: referralsError } = await supabaseAdmin
-      .from("affiliate_referrals")
-      .delete()
-      .eq("referred_user_id", userId);
-    
-    if (referralsError && referralsError.code !== "42P01") {
-      console.error("Error deleting referrals:", referralsError);
-    }
-
-    // 5. Delete profile
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .delete()
-      .eq("id", userId);
-
-    if (profileError) {
-      console.error("Error deleting profile:", profileError);
-      return { error: `Failed to delete profile: ${profileError.message}` };
-    }
-
-    // 6. Delete auth user (this is the final step)
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-
-    if (authError) {
-      console.error("Error deleting auth user:", authError);
-      return { error: `Failed to delete auth user: ${authError.message}` };
-    }
-
-    // 7. Log the action (optional - if you have audit_logs table)
-    try {
-      await supabaseAdmin.from("audit_logs").insert({
-        admin_id: adminUser.id,
-        admin_email: adminUser.email,
-        action: "DELETE_USER",
-        target_user_id: userId,
-        target_user_name: userName,
-        details: `Deleted user account and all related data`,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (logError) {
-      // Ignore logging errors, don't fail the delete operation
-      console.warn("Could not log deletion (audit_logs table might not exist):", logError);
-    }
-
-    // 8. Revalidate the users page
-    revalidatePath("/hq-core-updateptn/users");
-
-    return { 
-      success: true, 
-      message: `User account "${userName}" has been permanently deleted along with all related data.` 
-    };
-
-  } catch (err: any) {
-    console.error("Unexpected error in deleteUserByAdminAction:", err);
-    return { error: `Unexpected error: ${err.message}` };
-  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  
+  return isAdminEmail || profile?.role === "admin";
 }
 
-/**
- * Admin Action: Get User Details
- * Fetch comprehensive user information for admin review
- */
-export async function getUserDetailsByAdmin(userId: string) {
-  try {
-    const supabase = await createClient();
-    
-    // Verify admin
-    const { data: { user: adminUser } } = await supabase.auth.getUser();
-    if (!adminUser) {
-      return { error: "Unauthorized" };
-    }
-
-    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    const isAdmin = ADMIN_EMAILS.includes(adminUser.email?.toLowerCase() || "");
-    if (!isAdmin) {
-      return { error: "Forbidden: Admin access required" };
-    }
-
-    // Fetch user profile
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    // Fetch subscription
-    const { data: subscription } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-
-    // Count tryout results
-    const { count: resultsCount } = await supabase
-      .from("results")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    // Count payments
-    const { count: paymentsCount } = await supabase
-      .from("payments")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    return {
-      success: true,
-      data: {
-        profile,
-        subscription,
-        resultsCount: resultsCount || 0,
-        paymentsCount: paymentsCount || 0,
-      }
-    };
-
-  } catch (err: any) {
-    return { error: err.message };
+// Get all admins
+export async function getAllAdmins() {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { error: "Unauthorized" };
   }
+
+  const supabase = await createClient();
+  
+  const { data: admins, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, created_at")
+    .eq("role", "admin")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  // Get emails from auth.users
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    return { error: "Service role key not configured" };
+  }
+
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  );
+
+  const adminIds = admins?.map((a) => a.id) || [];
+  const { data: authUsers } = await serviceClient.auth.admin.listUsers();
+  
+  const adminsWithEmail = admins?.map((admin) => {
+    const authUser = authUsers?.users.find((u) => u.id === admin.id);
+    return {
+      ...admin,
+      email: authUser?.email || "N/A",
+    };
+  });
+
+  return { data: adminsWithEmail };
+}
+
+// Add admin by email
+export async function addAdminByEmail(email: string) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { error: "Unauthorized" };
+  }
+
+  if (!email || !email.includes("@")) {
+    return { error: "Email tidak valid" };
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    return { error: "Service role key not configured" };
+  }
+
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  );
+
+  // Find user by email
+  const { data: authUsers } = await serviceClient.auth.admin.listUsers();
+  const targetUser = authUsers?.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+
+  if (!targetUser) {
+    return { error: "User dengan email tersebut tidak ditemukan" };
+  }
+
+  // Check if already admin
+  const { data: existingProfile } = await serviceClient
+    .from("profiles")
+    .select("role")
+    .eq("id", targetUser.id)
+    .maybeSingle();
+
+  if (existingProfile?.role === "admin") {
+    return { error: "User sudah menjadi admin" };
+  }
+
+  // Update role to admin
+  const { error: updateError } = await serviceClient
+    .from("profiles")
+    .update({ role: "admin", updated_at: new Date().toISOString() })
+    .eq("id", targetUser.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/hq-core-updateptn/admins");
+  return { success: true, message: `${email} berhasil ditambahkan sebagai admin` };
+}
+
+// Remove admin by user ID
+export async function removeAdmin(userId: string) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { error: "Unauthorized" };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Prevent self-removal
+  if (user?.id === userId) {
+    return { error: "Tidak dapat menghapus admin sendiri" };
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    return { error: "Service role key not configured" };
+  }
+
+  const serviceClient = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  );
+
+  // Update role back to student
+  const { error: updateError } = await serviceClient
+    .from("profiles")
+    .update({ role: "student", updated_at: new Date().toISOString() })
+    .eq("id", userId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/hq-core-updateptn/admins");
+  return { success: true };
 }

@@ -47,7 +47,15 @@ export async function updateProfileAction(formData: FormData) {
     return { error: authError.message };
   }
 
-  // 2. Update profiles table directly agar leaderboard langsung realtime
+  // 2. Get current profile to preserve role field
+  const { data: currentProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // 3. Update profiles table directly agar leaderboard langsung realtime
+  // IMPORTANT: Preserve role field to prevent reset to default
   await supabase.from("profiles").upsert({
     id: user.id,
     full_name: fullName.trim(),
@@ -56,6 +64,7 @@ export async function updateProfileAction(formData: FormData) {
     target_prodi: targetProdi?.trim() || "",
     bio: bio?.trim() || "",
     provinsi: provinsi?.trim() || "",
+    role: currentProfile?.role || "student", // Preserve existing role
   }, { onConflict: "id" });
 
   revalidatePath("/profile");

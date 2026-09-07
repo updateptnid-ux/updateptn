@@ -374,9 +374,35 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
                             <span>Lihat Detail Profile</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => {
-                              const newRole = user.role === "admin" ? "student" : "admin";
-                              setUsers(users.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
+                            onClick={async () => {
+                              if (!confirm(`Ubah role ${user.full_name || user.email} menjadi ${user.role === "admin" ? "STUDENT" : "ADMIN"}?`)) return;
+                              
+                              try {
+                                const response = await fetch('/hq-core-updateptn/api/change-role', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ 
+                                    userId: user.id,
+                                    newRole: user.role === "admin" ? "student" : "admin"
+                                  })
+                                });
+
+                                const data = await response.json();
+
+                                if (!response.ok) {
+                                  throw new Error(data.error || 'Failed to change role');
+                                }
+
+                                // Update local state
+                                const newRole = user.role === "admin" ? "student" : "admin";
+                                setUsers(users.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
+                                
+                                alert(`✅ Role berhasil diubah menjadi ${newRole.toUpperCase()}`);
+                                router.refresh();
+                              } catch (error: any) {
+                                alert(`❌ Error: ${error.message}`);
+                                console.error('Change role error:', error);
+                              }
                             }}
                             className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
                           >
