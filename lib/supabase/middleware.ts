@@ -40,7 +40,8 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Admin route protection
+  // Admin route protection - Only check if user is logged in
+  // Role verification is done in layout.tsx with service role client
   if (pathname.startsWith("/hq-core-updateptn")) {
     if (pathname === "/hq-core-updateptn/login") {
       if (user) {
@@ -49,18 +50,13 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // SIMPLIFIED: Only check whitelist in middleware
-    // Role check will be done in layout.tsx with service role
-    const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    const isAdminEmail = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
-
-    // If not in whitelist, let it through to layout.tsx for role check
-    // Layout will do proper check with service role and redirect if needed
+    // Just check if user is logged in
+    // Layout will verify admin role from database
     if (!user) {
       return NextResponse.redirect(new URL("/hq-core-updateptn/login", request.url));
     }
 
-    // Allow access - final check in layout.tsx
+    // Let layout.tsx handle role verification
   }
 
   // Student & Protected Route Protection
