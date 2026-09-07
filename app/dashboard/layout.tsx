@@ -27,6 +27,7 @@ import {
   UserCog,
   FileText,
   MessageSquare,
+  Users,
 } from "lucide-react";
 
 interface UserRole {
@@ -40,6 +41,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isMentor: false });
+  const [isActiveAffiliate, setIsActiveAffiliate] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -107,6 +109,15 @@ export default function DashboardLayout({
           isAdmin: isAdminEmail || isAdminRole,
           isMentor: !!mentorRecord,
         });
+
+        // Check if user is active affiliate
+        const { data: affiliate } = await supabase
+          .from("affiliates")
+          .select("status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        setIsActiveAffiliate(affiliate?.status === "active");
       } catch (err) {
         console.error("Error checking user role:", err);
       }
@@ -180,6 +191,12 @@ export default function DashboardLayout({
     },
     // SECTION DIVIDER
     { divider: "LAINNYA" },
+    // Conditional: Only show if user is active affiliate
+    ...(isActiveAffiliate ? [{
+      name: "Program Affiliasi",
+      href: "/dashboard/student/affiliate",
+      icon: Users,
+    }] : []),
     {
       name: "Berikan Feedback",
       href: "/dashboard/student/feedback",
