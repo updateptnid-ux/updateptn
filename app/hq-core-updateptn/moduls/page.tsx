@@ -68,7 +68,7 @@ export default function AdminModulsPage() {
 
   const [formData, setFormData] = useState({
     type: "video" as "video" | "pdf",
-    category: "PENALARAN UMUM",
+    category: "PU",
     title: "",
     thumbnail_url: "",
     content_url: "",
@@ -105,7 +105,7 @@ export default function AdminModulsPage() {
     setEditingModul(null);
     setFormData({
       type: "video",
-      category: "PENALARAN UMUM",
+      category: "PU",
       title: "",
       thumbnail_url: "",
       content_url: "",
@@ -352,11 +352,12 @@ export default function AdminModulsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PENALARAN UMUM">Penalaran Umum</SelectItem>
-                    <SelectItem value="PENGETAHUAN KUANTITATIF">Pengetahuan Kuantitatif</SelectItem>
-                    <SelectItem value="LITERASI INDONESIA">Literasi Indonesia</SelectItem>
-                    <SelectItem value="LITERASI INGGRIS">Literasi Inggris</SelectItem>
-                    <SelectItem value="PENALARAN MATEMATIKA">Penalaran Matematika</SelectItem>
+                    <SelectItem value="PU">Penalaran Umum (PU)</SelectItem>
+                    <SelectItem value="PK">Pengetahuan Kuantitatif (PK)</SelectItem>
+                    <SelectItem value="PM">Penalaran Matematika (PM)</SelectItem>
+                    <SelectItem value="PBM">Literasi Bahasa Indonesia (LBI)</SelectItem>
+                    <SelectItem value="LBI">Literasi Bahasa Inggris (LBE)</SelectItem>
+                    <SelectItem value="PPU">Pemahaman Bacaan (PB)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

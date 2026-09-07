@@ -171,13 +171,12 @@ export async function getUserTier(userId: string): Promise<"Basic" | "Premium" |
     // Map tier names to tier levels based on your pricing structure
     const tierName = subscription.tier?.toLowerCase() || '';
     
-    // Check for platinum/VIP tier
+    // Check for platinum/VIP tier - AKSES SEMUA FITUR
     if (
-      tierName.includes('platinum') || 
       tierName.includes('vip') || 
-      tierName.includes('pro') ||
       tierName.includes('all-in-one') ||
-      tierName.includes('intensif')
+      tierName.includes('platinum') || 
+      tierName.includes('pro')
     ) {
       return "Platinum";
     }
@@ -190,7 +189,8 @@ export async function getUserTier(userId: string): Promise<"Basic" | "Premium" |
       tierName.includes('bimbel') ||
       tierName.includes('snbt') ||
       tierName.includes('snbp') ||
-      tierName.includes('mandiri')
+      tierName.includes('mandiri') ||
+      tierName.includes('intensif')
     ) {
       return "Premium";
     }
@@ -200,5 +200,84 @@ export async function getUserTier(userId: string): Promise<"Basic" | "Premium" |
   } catch (err) {
     console.error('Error getting user tier:', err);
     return "Basic"; // Fallback to Basic on error
+  }
+}
+
+/**
+ * Check if user has access to specific feature type (SNBP, SNBT, or Mandiri)
+ * Returns true if user has VIP All-in-One OR specific premium subscription for that feature
+ */
+export async function hasFeatureAccess(
+  userId: string, 
+  featureType: "snbp" | "snbt" | "mandiri"
+): Promise<{ hasAccess: boolean; tier: string | null; message?: string }> {
+  const supabase = await createClient();
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== userId) {
+      return { 
+        hasAccess: false, 
+        tier: null, 
+        message: "User tidak terautentikasi" 
+      };
+    }
+    
+    // Check active subscription
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
+      .select('tier, status, expires_at')
+      .eq('user_email', user.email)
+      .eq('status', 'active')
+      .gte('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error || !subscription) {
+      return { 
+        hasAccess: false, 
+        tier: null, 
+        message: "Tidak ada subscription aktif" 
+      };
+    }
+    
+    const tierName = subscription.tier?.toLowerCase() || '';
+    
+    // VIP All-in-One can access ALL features
+    if (
+      tierName.includes('vip') || 
+      tierName.includes('all-in-one')
+    ) {
+      return { 
+        hasAccess: true, 
+        tier: subscription.tier,
+        message: "Akses VIP All-in-One (Semua Fitur)" 
+      };
+    }
+    
+    // Check specific feature access
+    const featureLower = featureType.toLowerCase();
+    if (tierName.includes(featureLower)) {
+      return { 
+        hasAccess: true, 
+        tier: subscription.tier,
+        message: `Akses Premium ${featureType.toUpperCase()}` 
+      };
+    }
+    
+    // No access for this specific feature
+    return { 
+      hasAccess: false, 
+      tier: subscription.tier,
+      message: `Subscription ${subscription.tier} tidak mencakup fitur ${featureType.toUpperCase()}` 
+      };
+  } catch (err) {
+    console.error('Error checking feature access:', err);
+    return { 
+      hasAccess: false, 
+      tier: null, 
+      message: "Error saat memeriksa akses" 
+    };
   }
 }

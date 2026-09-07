@@ -1,24 +1,30 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getBaseUrl } from '@/lib/url-helpers';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const error = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
+  
+  // Get dynamic base URL (works for both localhost and production)
+  const baseUrl = getBaseUrl();
 
   console.log('🔍 Auth Callback Debug:', {
     code: code ? 'exists' : 'missing',
     error,
     errorDescription,
-    fullUrl: request.url
+    baseUrl,
+    fullUrl: request.url,
+    headers: Object.fromEntries(request.headers.entries())
   });
 
   // Handle OAuth error
   if (error) {
     console.error('❌ OAuth error:', error, errorDescription);
     return NextResponse.redirect(
-      `${requestUrl.origin}/register?error=${encodeURIComponent(error)}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`
+      `${baseUrl}/register?error=${encodeURIComponent(error)}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`
     );
   }
 
@@ -27,57 +33,61 @@ export async function GET(request: NextRequest) {
     try {
       const supabase = await createClient();
       
-      // Exchange code for session
+      // Exchange code for session - this automatically sets cookies via middleware
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
         console.error('❌ Exchange error:', exchangeError);
         return NextResponse.redirect(
-          `${requestUrl.origin}/register?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`
+          `${baseUrl}/register?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`
         );
       }
 
       if (!data.session || !data.user) {
         console.error('❌ No session or user created');
-        return NextResponse.redirect(`${requestUrl.origin}/register?error=no_session`);
+        return NextResponse.redirect(`${baseUrl}/register?error=no_session`);
       }
 
-      console.log('✅ Session created for user:', data.user.email);
+      console.log('✅ Session created for user:', data.user.email, 'Session expires:', data.session.expires_at);
 
-      // Wait for profile trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for profile trigger to complete (2 seconds to be safe)
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Redirect to success page with countdown (instead of direct dashboard redirect)
-      const response = NextResponse.redirect(`${requestUrl.origin}/auth/success?email=${encodeURIComponent(data.user.email || '')}`);
+      // Check if profile needs completion
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, provinsi")
+        .eq("id", data.user.id)
+        .single();
+
+      console.log('📊 Profile check result:', { 
+        hasProfile: !!profile, 
+        fullName: profile?.full_name, 
+        provinsi: profile?.provinsi,
+        error: profileError 
+      });
+
+      // If profile is incomplete (no name or provinsi), redirect to complete-profile
+      const needsCompletion = !profile?.full_name || !profile?.provinsi;
       
-      // Ensure cookies are set properly for the session
-      const { cookies } = await import('next/headers');
-      const cookieStore = await cookies();
+      const redirectUrl = needsCompletion 
+        ? `${baseUrl}/complete-profile` 
+        : `${baseUrl}/dashboard/student`;
       
-      // Get all supabase cookies and set them on the response
-      const allCookies = cookieStore.getAll();
-      for (const cookie of allCookies) {
-        if (cookie.name.startsWith('sb-')) {
-          response.cookies.set(cookie.name, cookie.value, {
-            path: '/',
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
-          });
-        }
-      }
+      console.log(needsCompletion ? '📝 Profile incomplete, redirecting to complete-profile' : '✅ Profile complete, redirecting to dashboard');
 
-      return response;
+      // Simple redirect - let the middleware handle session cookies
+      return NextResponse.redirect(redirectUrl);
+      
     } catch (err: any) {
       console.error('❌ Unexpected error in callback:', err);
       return NextResponse.redirect(
-        `${requestUrl.origin}/register?error=unexpected&message=${encodeURIComponent(err.message || 'Unknown error')}`
+        `${baseUrl}/register?error=unexpected&message=${encodeURIComponent(err.message || 'Unknown error')}`
       );
     }
   }
 
   // No code provided - redirect to register
   console.error('❌ No code provided in callback');
-  return NextResponse.redirect(`${requestUrl.origin}/register?error=no_code`);
+  return NextResponse.redirect(`${baseUrl}/register?error=no_code`);
 }

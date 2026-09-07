@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { calculateProbabilityAction } from "@/actions/predict";
+import { hasFeatureAccess } from "@/lib/subscription-helpers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,15 +23,28 @@ import {
   Search,
   ChevronDown,
   Check,
+  Calculator,
+  ArrowRight,
 } from "lucide-react";
 
 interface ProdiReferenceItem {
   id: string | number;
-  univ: string;
-  prodi: string;
+  univ?: string;
+  prodi?: string;
   jenjang?: string;
   kelompok?: string;
   passing_grade_est?: number | string;
+  // SNBP specific fields
+  ptn_name?: string;
+  nama_prodi?: string;
+  kategori?: string;
+  kode_prodi?: string;
+  daya_tampung?: number;
+  peminat?: number;
+  rasio_keketatan?: number;
+  nilai_raport?: number;
+  estimasi_nilai_raport?: number;
+  jenis_portofolio?: string;
 }
 
 interface PredictionResult {
@@ -44,6 +59,15 @@ interface PredictionResult {
 }
 
 export default function CekPeluangPage() {
+  const searchParams = useSearchParams();
+  const predictionType = searchParams.get("type") === "snbp" ? "snbp" : "snbt"; // Default to SNBT
+  
+  // Get score from URL parameter if exists
+  const urlScore = searchParams.get("score");
+  const initialScore = urlScore 
+    ? parseFloat(urlScore) 
+    : (predictionType === "snbt" ? 720 : 85);
+  
   const [universities, setUniversities] = useState<string[]>([]);
   const [selectedUniv, setSelectedUniv] = useState<string>("");
   const [univSearch, setUnivSearch] = useState<string>("");
@@ -54,7 +78,7 @@ export default function CekPeluangPage() {
   const [majorSearch, setMajorSearch] = useState<string>("");
   const [isMajorOpen, setIsMajorOpen] = useState<boolean>(false);
 
-  const [score, setScore] = useState<string | number>(720);
+  const [score, setScore] = useState<string | number>(initialScore);
   const [result, setResult] = useState<PredictionResult | null>(null);
   
   const [loadingUnivs, setLoadingUnivs] = useState(true);
@@ -63,20 +87,27 @@ export default function CekPeluangPage() {
 
   // Quota tracking states
   const [remainingPredictions, setRemainingPredictions] = useState<number | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
+  const [hasAccess, setHasAccess] = useState<boolean>(false);
+  const [accessMessage, setAccessMessage] = useState<string>("");
   const [userTier, setUserTier] = useState<string>("Basic");
   const [quotaError, setQuotaError] = useState<string>("");
+  const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true); // NEW: loading state
 
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  // Fetch user quota on mount
+  // Fetch user quota on mount + AUTH GUARD + FEATURE ACCESS CHECK
   useEffect(() => {
     async function fetchUserQuota() {
+      setIsCheckingAccess(true); // Start loading
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          window.location.href = "/login?redirect=/dashboard/student/cek-peluang";
+          return;
+        }
 
         const now = new Date().toISOString();
 
@@ -84,42 +115,78 @@ export default function CekPeluangPage() {
         const { data: subscription } = await supabase
           .from("subscriptions")
           .select("tier, status, expires_at")
-          .eq("user_id", user.id)
+          .eq("user_email", user.email)
           .eq("status", "active")
           .gt("expires_at", now)
           .order("expires_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        const subscribed =
-          !!subscription &&
-          subscription.status === "active" &&
-          subscription.tier !== "Trial / Gratis" &&
-          subscription.tier !== "Basic" &&
-          new Date(subscription.expires_at) > new Date();
-
-        const tier = subscription?.tier || "Basic";
-
-        // Baca prediction_count dari profiles
-        const { data: profile } = await supabase
+        // Check if user is admin (admins bypass all restrictions)
+        const { data: profileData } = await supabase
           .from("profiles")
           .select("prediction_count, role")
           .eq("id", user.id)
           .maybeSingle();
 
-        const isAdminUser = profile?.role === "admin";
-        const count = profile?.prediction_count ?? 0;
+        const isAdminUser = profileData?.role === "admin";
+        const count = profileData?.prediction_count ?? 0;
 
-        setIsSubscribed(subscribed || isAdminUser);
-        setUserTier(tier);
-        setRemainingPredictions(subscribed || isAdminUser ? 999 : Math.max(0, 2 - count));
+        // Determine feature type based on prediction type (SNBP or SNBT)
+        const featureType = predictionType === "snbp" ? "snbp" : "snbt";
+        
+        // Check feature access using new helper function
+        const accessCheck = hasFeatureAccess(subscription, featureType);
+        
+        const tier = subscription?.tier || "Basic";
+        
+        // Admins always have access
+        if (isAdminUser) {
+          setHasAccess(true);
+          setAccessMessage("Akses Admin (Unlimited)");
+          setUserTier("Admin");
+          setRemainingPredictions(999);
+        } else if (accessCheck.hasAccess) {
+          // User has valid subscription for this specific feature
+          setHasAccess(true);
+          setAccessMessage(accessCheck.message || "");
+          setUserTier(tier);
+          setRemainingPredictions(999); // Unlimited for premium users
+        } else {
+          // User does NOT have access to this feature
+          setHasAccess(false);
+          setAccessMessage(accessCheck.message || `Fitur ${featureType.toUpperCase()} membutuhkan subscription`);
+          setUserTier(tier);
+          setRemainingPredictions(0);
+        }
       } catch (err) {
         console.error("Error fetching quota:", err);
+        setHasAccess(false);
+        setRemainingPredictions(0);
+      } finally {
+        setIsCheckingAccess(false); // Stop loading
       }
     }
 
     fetchUserQuota();
-  }, []);
+  }, [predictionType]); // Re-run when prediction type changes
+
+
+  // Clear result and reset score when switching between SNBP and SNBT
+  useEffect(() => {
+    // Clear previous result when type changes
+    setResult(null);
+    setQuotaError("");
+    
+    // Reset score to default for the new type
+    const defaultScore = predictionType === "snbt" ? 720 : 85;
+    setScore(defaultScore);
+    
+    // Reset selected university and major to first available
+    if (universities.length > 0 && selectedUniv === "") {
+      setSelectedUniv(universities[0]);
+    }
+  }, [predictionType]); // Trigger when switching SNBP ↔ SNBT
 
 
   // Close dropdowns on outside click
@@ -141,63 +208,78 @@ export default function CekPeluangPage() {
     async function loadUniversities() {
       try {
         setLoadingUnivs(true);
-        const supabase = createClient();
-
-        let allData: any[] = [];
-        let from = 0;
-        const batchSize = 1000;
-        let hasMore = true;
-
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from("prodi_reference")
-            .select("univ")
-            .order("univ", { ascending: true })
-            .range(from, from + batchSize - 1);
-
-          if (error) {
-            console.error("DB error:", error);
-            break;
-          }
-
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            from += batchSize;
-            if (data.length < batchSize) hasMore = false;
-          } else {
-            hasMore = false;
-          }
-        }
-
-        if (allData.length > 0) {
-          const uniqueUnivs = Array.from(new Set(allData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
-          setUniversities(uniqueUnivs);
-          if (uniqueUnivs.length > 0) {
-            setSelectedUniv(uniqueUnivs[0]);
-          }
-        } else {
-          // Fallback to local /data_snbt.json
-          const res = await fetch("/data_snbt.json");
+        
+        if (predictionType === "snbp") {
+          // Load from SNBP JSON
+          const res = await fetch("/data_snbp.json");
           if (res.ok) {
             const localData = await res.json();
-            const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
+            const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.ptn_name).filter(Boolean))).sort() as string[];
+            setUniversities(uniqueUnivs);
+            if (uniqueUnivs.length > 0) {
+              setSelectedUniv(uniqueUnivs[0]);
+            }
+          }
+        } else {
+          // Load from SNBT (existing logic)
+          const supabase = createClient();
+
+          let allData: any[] = [];
+          let from = 0;
+          const batchSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabase
+              .from("prodi_reference")
+              .select("univ")
+              .order("univ", { ascending: true })
+              .range(from, from + batchSize - 1);
+
+            if (error) {
+              console.error("DB error:", error);
+              break;
+            }
+
+            if (data && data.length > 0) {
+              allData = [...allData, ...data];
+              from += batchSize;
+              if (data.length < batchSize) hasMore = false;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          if (allData.length > 0) {
+            const uniqueUnivs = Array.from(new Set(allData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
             setUniversities(uniqueUnivs);
             if (uniqueUnivs.length > 0) {
               setSelectedUniv(uniqueUnivs[0]);
             }
           } else {
-            const fallbackUnivs = [
-              "UNIVERSITAS INDONESIA",
-              "INSTITUT TEKNOLOGI BANDUNG",
-              "UNIVERSITAS GADJAH MADA",
-              "UNIVERSITAS BRAWIJAYA",
-              "UNIVERSITAS AIRLANGGA",
-              "UNIVERSITAS DIPONEGORO",
-              "UNIVERSITAS PADJADJARAN",
-              "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
-            ];
-            setUniversities(fallbackUnivs);
-            setSelectedUniv(fallbackUnivs[0]);
+            // Fallback to local /data_snbt.json
+            const res = await fetch("/data_snbt.json");
+            if (res.ok) {
+              const localData = await res.json();
+              const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
+              setUniversities(uniqueUnivs);
+              if (uniqueUnivs.length > 0) {
+                setSelectedUniv(uniqueUnivs[0]);
+              }
+            } else {
+              const fallbackUnivs = [
+                "UNIVERSITAS INDONESIA",
+                "INSTITUT TEKNOLOGI BANDUNG",
+                "UNIVERSITAS GADJAH MADA",
+                "UNIVERSITAS BRAWIJAYA",
+                "UNIVERSITAS AIRLANGGA",
+                "UNIVERSITAS DIPONEGORO",
+                "UNIVERSITAS PADJADJARAN",
+                "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
+              ];
+              setUniversities(fallbackUnivs);
+              setSelectedUniv(fallbackUnivs[0]);
+            }
           }
         }
       } catch (err) {
@@ -208,7 +290,7 @@ export default function CekPeluangPage() {
     }
 
     loadUniversities();
-  }, []);
+  }, [predictionType]);
 
   // 2. Fetch majors — JSON lokal sebagai primary source (passing_grade_est verified)
   useEffect(() => {
@@ -218,39 +300,53 @@ export default function CekPeluangPage() {
       try {
         setLoadingMajors(true);
 
-        // PRIMARY: local data_snbt.json — data verified & selalu sinkron
-        const res = await fetch("/data_snbt.json");
-        if (res.ok) {
-          const localData = await res.json();
-          const filtered = localData.filter((item: any) => item.univ === selectedUniv);
-          if (filtered.length > 0) {
-            setMajors(filtered);
-            setSelectedProdiId(String(filtered[0].id));
-            return;
+        if (predictionType === "snbp") {
+          // Load from SNBP JSON
+          const res = await fetch("/data_snbp.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv);
+            if (filtered.length > 0) {
+              setMajors(filtered);
+              setSelectedProdiId(String(filtered[0].id));
+              return;
+            }
           }
-        }
-
-        // FALLBACK: Supabase jika JSON tidak ada data untuk universitas ini
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("prodi_reference")
-          .select("id, univ, prodi, jenjang, kelompok, passing_grade_est")
-          .eq("univ", selectedUniv)
-          .limit(1000)
-          .order("prodi", { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          setMajors(data as ProdiReferenceItem[]);
-          setSelectedProdiId(String(data[0].id));
         } else {
-          // Last resort sample data
-          const sample = [
-            { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
-            { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
-            { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
-          ];
-          setMajors(sample);
-          setSelectedProdiId("1");
+          // Load from SNBT — PRIMARY: local data_snbt.json — data verified & selalu sinkron
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.univ === selectedUniv);
+            if (filtered.length > 0) {
+              setMajors(filtered);
+              setSelectedProdiId(String(filtered[0].id));
+              return;
+            }
+          }
+
+          // FALLBACK: Supabase jika JSON tidak ada data untuk universitas ini
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from("prodi_reference")
+            .select("id, univ, prodi, jenjang, kelompok, passing_grade_est")
+            .eq("univ", selectedUniv)
+            .limit(1000)
+            .order("prodi", { ascending: true });
+
+          if (!error && data && data.length > 0) {
+            setMajors(data as ProdiReferenceItem[]);
+            setSelectedProdiId(String(data[0].id));
+          } else {
+            // Last resort sample data
+            const sample = [
+              { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
+              { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
+              { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
+            ];
+            setMajors(sample);
+            setSelectedProdiId("1");
+          }
         }
       } catch (err) {
         console.error("Error loading majors:", err);
@@ -260,83 +356,147 @@ export default function CekPeluangPage() {
     }
 
     loadMajorsForUniv();
-  }, [selectedUniv]);
+  }, [selectedUniv, predictionType]);
 
   // Submit Handler for Prediction Calculation
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // PREVENT AUTO-SCROLL: Save scroll position before state changes
+    const scrollY = window.scrollY;
+    
     setQuotaError("");
     setResult(null); // Clear previous result
     
+    // Restore scroll position immediately to prevent jump
+    setTimeout(() => {
+      window.scrollTo(0, scrollY);
+    }, 0);
+    
     if (!selectedUniv || !selectedProdiId) return;
-    const numScore = Number(score) || 720;
+    const numScore = Number(score) || (predictionType === "snbt" ? 720 : 85);
 
     startTransition(async () => {
       try {
         // Find selected prodi object
         let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
         
-        const res = await calculateProbabilityAction({
-          score: numScore,
-          universityName: selectedUniv,
-          prodiId: selectedProdiId,
-        });
+        if (predictionType === "snbp") {
+          // SNBP Logic: Based on nilai raport (grade-based)
+          if (!currentProdi) return;
+          
+          const estimasiNilai = currentProdi.estimasi_nilai_raport || 80;
+          const rasioKeketatan = currentProdi.rasio_keketatan || 1;
+          const diff = numScore - estimasiNilai;
+          
+          let percentage = 75;
+          let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+          let recommendation = "";
 
-        console.log("Prediction response:", res); // Debug log
-
-        // Handle quota exceeded error
-        if (!res.success && res.error === "QuotaExceeded") {
-          setQuotaError(res.message || "Quota habis. Upgrade untuk unlimited!");
-          setRemainingPredictions(0);
-          return;
-        }
-
-        // Handle other errors
-        if (!res.success) {
-          setQuotaError(res.message || "Terjadi kesalahan. Silakan coba lagi.");
-          return;
-        }
-
-        if (res?.success) {
-          // Update remaining predictions from response
-          if (typeof res.remainingPredictions === "number") {
-            setRemainingPredictions(res.remainingPredictions);
+          // SNBP calculation logic
+          if (diff >= 5) {
+            status = "AMAN";
+            percentage = Math.min(98, Math.round(85 + diff * 2));
+            recommendation = `Rata-rata raport kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi (${estimasiNilai}). Dengan rasio keketatan ${rasioKeketatan.toFixed(2)}:1, peluang kamu di ${currentProdi.nama_prodi} - ${currentProdi.ptn_name} SANGAT TINGGI!`;
+          } else if (diff >= 0) {
+            status = "BERSAING";
+            percentage = Math.round(60 + (diff / 5) * 24);
+            recommendation = `Rata-rata raport kamu (${numScore}) melampaui estimasi (${estimasiNilai}) sebesar +${diff.toFixed(1)} poin. Rasio keketatan ${rasioKeketatan.toFixed(2)}:1. Berada di zona kompetisi aktif.`;
+          } else {
+            status = "RENTAN";
+            percentage = Math.max(25, Math.round(60 + diff * 4));
+            recommendation = `Rata-rata raport kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${estimasiNilai}). Dengan rasio keketatan ${rasioKeketatan.toFixed(2)}:1, pertimbangkan jurusan ini di pilihan ke-2 atau tingkatkan nilai raport.`;
           }
 
-          // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
-          if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
-            const pg = Number(currentProdi.passing_grade_est);
-            const diff = numScore - pg;
-            let percentage = 75;
-            let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
-            let recommendation = "";
+          setResult({
+            score: numScore,
+            passingGrade: estimasiNilai,
+            diff,
+            percentage,
+            status,
+            majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.nama_prodi}`,
+            universityName: currentProdi.ptn_name || "",
+            recommendation,
+          });
+          
+          // Maintain scroll position after result is set
+          setTimeout(() => {
+            window.scrollTo(0, scrollY);
+          }, 10);
+        } else {
+          // SNBT Logic: Existing logic with server action
+          const res = await calculateProbabilityAction({
+            score: numScore,
+            universityName: selectedUniv,
+            prodiId: selectedProdiId,
+          });
 
-            if (diff >= 20) {
-              status = "AMAN";
-              percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
-              recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
-            } else if (diff >= 0) {
-              status = "BERSAING";
-              percentage = Math.round(60 + (diff / 20) * 24);
-              recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
-            } else {
-              status = "RENTAN";
-              percentage = Math.max(25, Math.round(60 + diff * 1.2));
-              recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
+          console.log("Prediction response:", res); // Debug log
+
+          // Handle quota exceeded error
+          if (!res.success && res.error === "QuotaExceeded") {
+            setQuotaError(res.message || "Quota habis. Upgrade untuk unlimited!");
+            setRemainingPredictions(0);
+            return;
+          }
+
+          // Handle other errors
+          if (!res.success) {
+            setQuotaError(res.message || "Terjadi kesalahan. Silakan coba lagi.");
+            return;
+          }
+
+          if (res?.success) {
+            // Update remaining predictions from response
+            if (typeof res.remainingPredictions === "number") {
+              setRemainingPredictions(res.remainingPredictions);
             }
 
-            setResult({
-              score: numScore,
-              passingGrade: pg,
-              diff,
-              percentage,
-              status,
-              majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
-              universityName: selectedUniv,
-              recommendation,
-            });
-          } else {
-            setResult(res as PredictionResult);
+            // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
+            if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
+              const pg = Number(currentProdi.passing_grade_est);
+              const diff = numScore - pg;
+              let percentage = 75;
+              let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+              let recommendation = "";
+
+              if (diff >= 20) {
+                status = "AMAN";
+                percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+                recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
+              } else if (diff >= 0) {
+                status = "BERSAING";
+                percentage = Math.round(60 + (diff / 20) * 24);
+                recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
+              } else {
+                status = "RENTAN";
+                percentage = Math.max(25, Math.round(60 + diff * 1.2));
+                recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
+              }
+
+              setResult({
+                score: numScore,
+                passingGrade: pg,
+                diff,
+                percentage,
+                status,
+                majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
+                universityName: selectedUniv,
+                recommendation,
+              });
+              
+              // Maintain scroll position after result is set
+              setTimeout(() => {
+                window.scrollTo(0, scrollY);
+              }, 10);
+            } else {
+              setResult(res as PredictionResult);
+              
+              // Maintain scroll position after result is set
+              setTimeout(() => {
+                window.scrollTo(0, scrollY);
+              }, 10);
+            }
           }
         }
       } catch (error) {
@@ -389,16 +549,20 @@ export default function CekPeluangPage() {
       // If no search, return all with neutral score
       if (!searchTerm) return { major: m, score: 1 };
       
+      // Get prodi name based on type
+      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
+      
       // Calculate scores for different fields
-      const prodiScore = getRelevanceScore(m.prodi, searchTerm);
+      const prodiScore = getRelevanceScore(prodiName, searchTerm);
       const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
       const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
+      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
       
       // Combined full text score
-      const fullText = `${m.prodi} ${m.jenjang || ''} ${m.kelompok || ''}`;
+      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
       const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
       
-      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore;
+      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
       
       return { major: m, score: totalScore };
     })
@@ -410,48 +574,80 @@ export default function CekPeluangPage() {
 
   return (
     <div className="max-w-4xl w-full mx-auto space-y-8 py-4 font-sans">
-      {/* Header Title */}
-      <div className="text-center space-y-3">
-        <Badge variant="outline" className="px-3.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 inline-block">
-          Rasionalisasi Algoritma PTN
-        </Badge>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-blue-900">
-          Cek Peluang Kelulusan PTN
-        </h1>
-        <p className="text-blue-400 text-sm sm:text-base max-w-xl mx-auto">
-          Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian secara presisi.
-        </p>
-      </div>
+      {/* Loading State - Show while checking access */}
+      {isCheckingAccess && (
+        <div className="max-w-2xl mx-auto space-y-6 text-center py-24">
+          <div className="flex justify-center">
+            <Loader2 className="h-12 w-12 text-blue-500 animate-spin" />
+          </div>
+          <p className="text-sm text-slate-600 font-medium">
+            Memeriksa akses fitur...
+          </p>
+        </div>
+      )}
 
-      {/* Quota Display Banner */}
-      {remainingPredictions !== null && !isSubscribed && (
-        <div className={`border rounded-2xl p-4 ${remainingPredictions === 0 ? "bg-rose-50 border-rose-200" : "bg-blue-50 border-blue-200"}`}>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${remainingPredictions === 0 ? "bg-rose-100" : "bg-blue-100"}`}>
-                <Target className={`h-5 w-5 ${remainingPredictions === 0 ? "text-rose-600" : "text-blue-600"}`} />
-              </div>
-              <div>
-                <p className={`text-sm font-bold ${remainingPredictions === 0 ? "text-rose-900" : "text-blue-900"}`}>
-                  {remainingPredictions === 0 ? "Quota Gratis Habis!" : `Sisa ${remainingPredictions}x Cek Gratis`}
-                </p>
-                <p className={`text-xs ${remainingPredictions === 0 ? "text-rose-600" : "text-blue-600"}`}>
-                  {remainingPredictions === 0 
-                    ? "Upgrade ke Premium/Plus untuk unlimited cek peluang" 
-                    : "Setelah habis, upgrade untuk unlimited analisis"}
-                </p>
+      {/* No Access - Simple blocking UI */}
+      {!isCheckingAccess && remainingPredictions !== null && !hasAccess && (
+        <div className="max-w-2xl mx-auto space-y-6 text-center py-12">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="h-20 w-20 rounded-full bg-amber-100 flex items-center justify-center">
+                <Target className="h-10 w-10 text-amber-600" />
               </div>
             </div>
-            {remainingPredictions === 0 && (
-              <Link href="/pricing">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-10 px-6 shrink-0">
-                  Upgrade Sekarang
-                </Button>
-              </Link>
-            )}
+            
+            <div className="space-y-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                Subscription {predictionType.toUpperCase()} Diperlukan
+              </h1>
+              <p className="text-slate-600 text-sm sm:text-base max-w-lg mx-auto">
+                {accessMessage || `Untuk mengakses Cek Peluang ${predictionType.toUpperCase()}, kamu perlu berlangganan Premium ${predictionType.toUpperCase()} atau VIP All-in-One.`}
+              </p>
+              
+              {userTier !== "Basic" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm max-w-md mx-auto">
+                  <p className="text-amber-900 font-semibold">
+                    Subscription Aktif: <span className="font-bold">{userTier}</span>
+                  </p>
+                  <p className="text-amber-700 text-xs mt-1">
+                    Paket ini tidak mencakup {predictionType.toUpperCase()}. Upgrade untuk akses fitur ini.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
+            <Link href={`/pricing?feature=cek-peluang-${predictionType}`} className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
+                Lihat Paket Premium {predictionType.toUpperCase()}
+              </Button>
+            </Link>
+            <Link href="/dashboard/student" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto h-11 px-6 border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Kembali
+              </Button>
+            </Link>
           </div>
         </div>
       )}
+
+      {/* Main Content - Clean UI for users with access */}
+      {!isCheckingAccess && hasAccess && (
+        <>
+      {/* Header Title */}
+      <div className="text-center space-y-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+          Cek Peluang Kelulusan {predictionType === "snbp" ? "SNBP" : "SNBT"}
+        </h1>
+        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
+          {predictionType === "snbp" 
+            ? "Bandingkan rata-rata nilai raport kamu dengan estimasi keketatan 5.100+ Jurusan SNBP 2026."
+            : "Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian."
+          }
+        </p>
+      </div>
 
       {/* Quota Error Alert */}
       {quotaError && (
@@ -483,16 +679,22 @@ export default function CekPeluangPage() {
             <div className="bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-blue-700 block mb-1">
-                  Skor IRT UTBK / Try Out Kamu
+                  {predictionType === "snbp" ? "Rata-rata Nilai Raport (Semester 1-5)" : "Skor IRT UTBK / Try Out Kamu"}
                 </Label>
-                <p className="text-xs text-blue-400">Masukkan total skor hasil Try Out atau latihan subtes</p>
+                <p className="text-xs text-blue-400">
+                  {predictionType === "snbp" 
+                    ? "Masukkan rata-rata nilai raport kamu (skala 0-100)"
+                    : "Masukkan total skor hasil Try Out atau latihan subtes"
+                  }
+                </p>
               </div>
               <div className="w-full sm:w-48">
                 <Input
                   id="score"
                   type="number"
-                  min={300}
-                  max={1000}
+                  min={predictionType === "snbp" ? 0 : 300}
+                  max={predictionType === "snbp" ? 100 : 1000}
+                  step={predictionType === "snbp" ? 0.01 : 1}
                   value={score}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -503,6 +705,36 @@ export default function CekPeluangPage() {
                 />
               </div>
             </div>
+
+            {/* SNBP Calculator Link Button */}
+            {predictionType === "snbp" && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                      <Calculator className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 mb-1">
+                        Belum tahu rata-rata nilai raport kamu?
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        Gunakan kalkulator detail untuk menghitung nilai per mata pelajaran dari semester 1-5
+                      </p>
+                    </div>
+                  </div>
+                  <Link href="/dashboard/student/kalkulator-snbp">
+                    <Button
+                      type="button"
+                      className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm whitespace-nowrap"
+                    >
+                      Buka Kalkulator
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Selection Grid: PTN & Jurusan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ overflow: "visible" }}>
@@ -597,7 +829,9 @@ export default function CekPeluangPage() {
                     <BookOpen className="h-5 w-5 text-blue-500 shrink-0" />
                     <span className="truncate">
                       {selectedProdiObj
-                        ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
+                        ? predictionType === "snbp"
+                          ? `${selectedProdiObj.nama_prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kategori ? ` - ${selectedProdiObj.kategori}` : ""}`
+                          : `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
                         : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
                     </span>
                   </div>
@@ -629,7 +863,9 @@ export default function CekPeluangPage() {
                       {filteredMajors.length > 0 ? (
                         filteredMajors.map((m) => {
                           const isSelected = String(m.id) === String(selectedProdiId);
-                          const label = `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kelompok ? ` - ${m.kelompok}` : ""}`;
+                          const label = predictionType === "snbp"
+                            ? `${m.nama_prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kategori ? ` - ${m.kategori}` : ""}`
+                            : `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kelompok ? ` - ${m.kelompok}` : ""}`;
                           return (
                             <button
                               key={m.id}
@@ -727,11 +963,15 @@ export default function CekPeluangPage() {
           {/* Score Comparison Grid */}
           <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
             <div>
-              <span className="text-xs text-blue-400 block font-medium">Skor Kamu</span>
+              <span className="text-xs text-blue-400 block font-medium">
+                {predictionType === "snbp" ? "Nilai Raport" : "Skor Kamu"}
+              </span>
               <span className="text-xl font-extrabold text-slate-900">{result.score}</span>
             </div>
             <div>
-              <span className="text-xs text-blue-400 block font-medium">Passing Grade</span>
+              <span className="text-xs text-blue-400 block font-medium">
+                {predictionType === "snbp" ? "Estimasi Nilai" : "Passing Grade"}
+              </span>
               <span className="text-xl font-extrabold text-slate-900">{result.passingGrade}</span>
             </div>
             <div>
@@ -750,6 +990,8 @@ export default function CekPeluangPage() {
             </p>
           </div>
         </Card>
+      )}
+        </>
       )}
     </div>
   );

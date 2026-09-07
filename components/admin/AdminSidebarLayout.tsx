@@ -137,6 +137,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
         { name: "Universitas (PTN)", href: "/hq-core-updateptn/universities", icon: Building2 },
         { name: "Program Studi", href: "/hq-core-updateptn/majors", icon: BookOpen },
         { name: "Kuota & Keketatan", href: "/hq-core-updateptn/quotas", icon: PieChart },
+        { name: "Data SNBP 2026", href: "/hq-core-updateptn/snbp-data", icon: FileJson },
       ],
     },
     {

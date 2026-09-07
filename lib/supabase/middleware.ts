@@ -35,8 +35,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Allow public auth routes
-  if (pathname === '/auth/success' || pathname === '/auth/callback') {
+  // Allow public auth routes and profile completion
+  if (pathname === '/auth/success' || pathname === '/auth/callback' || pathname === '/complete-profile') {
     return supabaseResponse;
   }
 

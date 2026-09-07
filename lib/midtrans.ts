@@ -76,9 +76,9 @@ export async function createSnapToken(params: {
       },
       item_details: params.itemDetails,
       callbacks: {
-        finish: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/finish`,
-        error: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/error`,
-        pending: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/pending`,
+        finish: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/status`,
+        error: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/status`,
+        pending: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/status`,
       },
     };
 

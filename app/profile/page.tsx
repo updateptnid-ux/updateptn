@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { updateProfileAction, changePasswordAction } from "@/actions/profile";
+import { updateProfileAction, changePasswordAction, deleteAccountAction } from "@/actions/profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   User, School, Target, Lock, CheckCircle2, AlertCircle,
-  Loader2, BookOpen, Search, X, Eye, EyeOff, Save, KeyRound, MapPin, Building2, Check, Sparkles, Upload, Image as ImageIcon,
+  Loader2, BookOpen, Search, X, Eye, EyeOff, Save, KeyRound, MapPin, Building2, Check, Sparkles, Upload, Image as ImageIcon, Trash2, AlertTriangle,
 } from "lucide-react";
 
 // ─── 34 Provinsi Indonesia ────────────────────────────────────────────────────
@@ -148,6 +148,12 @@ export default function ProfilePage() {
   const [profilePending, startProfileTransition] = useTransition();
   const [pwPending, startPwTransition] = useTransition();
 
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteMsg, setDeleteMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [deletePending, startDeleteTransition] = useTransition();
+
   // Subscription state
   const [isPremium, setIsPremium] = useState(false);
   const [subTier, setSubTier] = useState("");
@@ -159,14 +165,35 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login?redirect=/profile"); return; }
 
+      // Load from auth metadata first
       const meta = user.user_metadata as Record<string, string>;
+      
+      // Then load from profiles table as source of truth
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, asal_sekolah, target_ptn, target_prodi, bio, provinsi")
+        .eq("id", user.id)
+        .single();
+      
+      // Use profile data as priority, fallback to metadata
+      const fullNameValue = profile?.full_name || meta.full_name || "";
+      const asalSekolahValue = profile?.asal_sekolah || meta.asal_sekolah || "";
+      const bioValue = profile?.bio || meta.bio || "";
+      const provinsiValue = profile?.provinsi || meta.provinsi || "";
+      const avatarUrlValue = meta.avatar_url || "";
+      const univValue = profile?.target_ptn || meta.target_univ || meta.target_ptn || "";
+      const prodiValue = profile?.target_prodi || meta.target_prodi || "";
+      
       setUserData(meta);
       setEmail(user.email || "");
-      setFullName(meta.full_name || "");
-      setAsalSekolah(meta.asal_sekolah || "");
-      setBio(meta.bio || "");
-      setProvinsi(meta.provinsi || "");
-      setAvatarUrl(meta.avatar_url || "");
+      setFullName(fullNameValue);
+      setAsalSekolah(asalSekolahValue);
+      setBio(bioValue);
+      setProvinsi(provinsiValue);
+      setAvatarUrl(avatarUrlValue);
+      setSelectedUniv(univValue);
+      setTargetUnivValue(univValue);
+      setTargetProdiValue(prodiValue);
 
       // Load subscription status
       const { data: sub } = await supabase
@@ -182,19 +209,12 @@ export default function ProfilePage() {
         setSubExpiry(sub.expires_at ? new Date(sub.expires_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "");
       }
       
-      const univ = meta.target_univ || meta.target_ptn || "";
-      const prodi = meta.target_prodi || "";
-      
-      setSelectedUniv(univ);
-      setTargetUnivValue(univ);
-      setTargetProdiValue(prodi);
-      
       // Load universities list
       loadUniversities();
       
       // If user has existing prodi data, load majors for that univ
-      if (univ) {
-        loadMajorsForUniv(univ, prodi);
+      if (univValue) {
+        loadMajorsForUniv(univValue, prodiValue);
       }
       
       setAuthLoading(false);
@@ -403,6 +423,24 @@ export default function ProfilePage() {
         setPwMsg({ type: "success", text: "Kata sandi berhasil diubah!" });
         setNewPassword("");
         setConfirmPassword("");
+      }
+    });
+  };
+
+  // Submit delete account
+  const handleDeleteAccount = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setDeleteMsg(null);
+    const fd = new FormData(e.currentTarget);
+    startDeleteTransition(async () => {
+      const res = await deleteAccountAction(fd);
+      if (res?.error) {
+        setDeleteMsg({ type: "error", text: res.error });
+      } else {
+        setDeleteMsg({ type: "success", text: "Akun berhasil dihapus. Redirecting..." });
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
       }
     });
   };
@@ -851,6 +889,131 @@ export default function ProfilePage() {
             </Button>
           </Link>
         </Card>
+      )}
+
+      {/* ── CARD: Hapus Akun (DANGER ZONE) ────────────────────── */}
+      <Card className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 md:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 border-b border-rose-200 pb-4">
+          <div className="h-8 w-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-rose-900">Zona Berbahaya</p>
+            <p className="text-[11px] text-rose-700">Tindakan ini tidak dapat dibatalkan</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 border border-rose-200">
+          <div className="flex items-start gap-3">
+            <Trash2 className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <h3 className="text-sm font-bold text-slate-900">Hapus Akun Permanen</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Menghapus akun akan menghapus <strong>semua data</strong> termasuk hasil Try Out, subscription, pembayaran, dan data profile. 
+                Tindakan ini <strong>tidak dapat dibatalkan</strong>.
+              </p>
+              <Button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                variant="destructive"
+                className="mt-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl h-10 px-6 text-xs gap-2"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Hapus Akun Saya
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <Card className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-rose-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Konfirmasi Hapus Akun</h2>
+                <p className="text-xs text-slate-600">Tindakan ini permanen dan tidak dapat dibatalkan</p>
+              </div>
+            </div>
+
+            {deleteMsg && (
+              <div className={`p-3 rounded-xl flex items-center gap-2 text-xs font-medium ${
+                deleteMsg.type === "success"
+                  ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                  : "bg-rose-50 border border-rose-200 text-rose-700"
+              }`}>
+                {deleteMsg.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+                {deleteMsg.text}
+              </div>
+            )}
+
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-bold text-rose-900">Data yang akan dihapus:</p>
+              <ul className="text-xs text-rose-800 space-y-1 pl-4">
+                <li className="list-disc">Semua hasil Try Out dan progres belajar</li>
+                <li className="list-disc">Data subscription dan pembayaran</li>
+                <li className="list-disc">Profile dan pengaturan akun</li>
+                <li className="list-disc">Akun login (email/Google)</li>
+              </ul>
+            </div>
+
+            <form onSubmit={handleDeleteAccount} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="deleteConfirm" className="text-xs font-bold text-slate-700">
+                  Ketik <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-rose-600">HAPUS AKUN SAYA</span> untuk konfirmasi:
+                </Label>
+                <Input
+                  id="deleteConfirm"
+                  name="confirmText"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Ketik: HAPUS AKUN SAYA"
+                  className="h-11 rounded-xl border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 font-mono text-sm"
+                  disabled={deletePending}
+                  style={{ fontSize: '16px' }}
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteConfirmText("");
+                    setDeleteMsg(null);
+                  }}
+                  variant="outline"
+                  className="flex-1 h-11 rounded-xl border-slate-300 font-bold text-sm"
+                  disabled={deletePending}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={deleteConfirmText !== "HAPUS AKUN SAYA" || deletePending}
+                  className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm gap-2 disabled:opacity-50"
+                >
+                  {deletePending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Hapus Akun Permanen
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
       )}
     </div>
   );

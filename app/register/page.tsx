@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -18,16 +19,29 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { recordReferralAction, trackReferralClickAction } from "@/actions/affiliate";
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
 
-  // Check for OAuth errors in URL params
+  // Check for OAuth errors in URL params & Track Affiliate Referral
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const errorParam = params.get('error');
-    const messageParam = params.get('message');
+    // Check for referral code
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      // Store in localStorage for tracking
+      localStorage.setItem("affiliate_ref", refCode);
+      setAffiliateCode(refCode);
+      
+      // Track the click
+      trackReferralClickAction(refCode, "direct");
+    }
+
+    const errorParam = searchParams.get('error');
+    const messageParam = searchParams.get('message');
     
     if (errorParam) {
       let errorMsg = 'Terjadi kesalahan saat login dengan Google.';
@@ -47,7 +61,7 @@ export default function RegisterPage() {
       // Clear URL params without reload
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,6 +90,17 @@ export default function RegisterPage() {
           },
         },
       });
+
+      // Record affiliate referral if exists
+      const storedRef = localStorage.getItem("affiliate_ref") || affiliateCode;
+      if (storedRef && data.user) {
+        await recordReferralAction({
+          affiliateCode: storedRef,
+          referredEmail: email,
+          source: "direct",
+        });
+        localStorage.removeItem("affiliate_ref"); // Clean up
+      }
 
       if (signUpErr) {
         setError(signUpErr.message);

@@ -7,6 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 /**
+ * Force dynamic rendering to ensure page works even if DB is empty
+ * This prevents build-time errors on Vercel
+ */
+export const dynamic = 'force-dynamic';
+export const revalidate = 60; // Revalidate every 60 seconds
+
+/**
  * Mobile-optimized viewport configuration
  */
 export const viewport: Viewport = {
@@ -46,10 +53,21 @@ export const metadata: Metadata = {
 };
 
 export default async function ArticlesPage() {
+  // Add logging for debugging on Vercel
+  console.log('[Articles Page] Fetching published articles...');
+  
   const result = await getPublishedArticles({ limit: 50 });
+  
+  console.log('[Articles Page] Result:', {
+    success: result.success,
+    articlesCount: result.data?.articles?.length || 0,
+    error: result.error,
+  });
   
   // Handle errors gracefully
   if (!result.success || !result.data) {
+    console.error('[Articles Page] Failed to load articles:', result.error);
+    
     return (
       <div className="min-h-screen bg-white">
         <header className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-b border-blue-500/20 safe-top">

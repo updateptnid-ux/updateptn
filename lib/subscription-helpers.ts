@@ -1,70 +1,161 @@
 /**
- * Subscription helpers — pure functions, no "use server"
- * Aman diimport dari client maupun server
+ * Helper functions for subscription tier checking with feature-specific access control
  */
 
-// Tier-tier yang dianggap GRATIS (bukan premium)
-export const FREE_TIERS = ["Trial / Gratis", "Basic", "trial", "basic"];
+// List of free/non-premium tiers
+const FREE_TIERS = ['Basic', 'Trial / Gratis', 'Gratis', 'gratis', 'Trial', 'trial'];
+
+// VIP tiers that have access to ALL features (SNBP + SNBT + Mandiri)
+const VIP_ALL_ACCESS_TIERS = ['VIP All-in-One', 'VIP', 'vip', 'Platinum', 'platinum'];
 
 /**
- * Hitung expires_at dari string durasi plan
- * Contoh: "7 hari", "1 bulan", "3 bulan", "1 hari"
+ * Check if a subscription tier is premium (any paid subscription)
+ * @param tier - The subscription tier string
+ * @returns true if tier is premium, false otherwise
  */
-export function calculateExpiresAt(duration: string): Date {
-  const now = new Date();
-  const d = duration.toLowerCase().trim();
-
-  if (d.includes("3 bulan")) {
-    const date = new Date(now);
-    date.setMonth(date.getMonth() + 3);
-    return date;
-  }
-  if (d.includes("1 bulan") || (d.includes("bulan") && !d.includes("3"))) {
-    const date = new Date(now);
-    date.setMonth(date.getMonth() + 1);
-    return date;
-  }
-  if (d.includes("7 hari")) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + 7);
-    return date;
-  }
-  if (d.includes("1 hari") || (d.includes("hari") && !d.includes("7"))) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + 1);
-    return date;
-  }
-  // Try Out / Bimbel / Cek Peluang → default 180 hari (akses panjang)
-  if (d.includes("try out") || d.includes("x to") || d.includes("bimbel") || d.includes("cek")) {
-    const date = new Date(now);
-    date.setDate(date.getDate() + 180);
-    return date;
-  }
-  // Default fallback: 30 hari
-  const date = new Date(now);
-  date.setDate(date.getDate() + 30);
-  return date;
+export function isPremiumTier(tier: string | null | undefined): boolean {
+  if (!tier) return false;
+  
+  const normalizedTier = tier.trim().toLowerCase();
+  
+  // Check if it's a free tier
+  const isFree = FREE_TIERS.some(freeTier => 
+    normalizedTier === freeTier.toLowerCase()
+  );
+  
+  if (isFree) return false;
+  
+  // Any other tier with 'premium', 'snbt', 'snbp', 'mandiri', etc. is considered premium
+  return (
+    normalizedTier.includes('premium') ||
+    normalizedTier.includes('snbt') ||
+    normalizedTier.includes('snbp') ||
+    normalizedTier.includes('mandiri') ||
+    normalizedTier.includes('vip') ||
+    normalizedTier.includes('gold') ||
+    normalizedTier.includes('plus') ||
+    normalizedTier.includes('bimbel') ||
+    normalizedTier.includes('eksklusif') ||
+    normalizedTier.includes('intensif')
+  );
 }
 
 /**
- * Mapping plan ID → nama tier yang disimpan ke DB
+ * Check if a subscription tier is free/non-premium
+ * @param tier - The subscription tier string
+ * @returns true if tier is free, false otherwise
  */
-export function resolveTierName(planId: string, planName: string): string {
-  if (planId.startsWith("vip")) return "VIP";
-  if (planId.startsWith("premium-snbt")) return "Premium SNBT";
-  if (planId.startsWith("premium-snbp")) return "Premium SNBP";
-  if (planId.startsWith("premium-mandiri")) return "Premium Mandiri";
-  if (planId.startsWith("bimbel-hemat")) return "Bimbel 2027 (Paket Hemat)";
-  if (planId.startsWith("bimbel-eksklusif")) return "Bimbel 2027 (Paket Eksklusif)";
-  if (planId.startsWith("bimbel-intensif")) return "Bimbel 2027 (Premium Intensif)";
-  if (planId.startsWith("bimbel-mandiri")) return "Bimbel 2027 (Bimbel Mandiri)";
-  if (planId.startsWith("to-1x")) return "Try Out (1x Paket Satuan)";
-  if (planId.startsWith("to-4x")) return "Try Out (4x Paket Hemat)";
-  if (planId.startsWith("to-8x")) return "Try Out (8x Paket Ambiss)";
-  if (planId.startsWith("to-10x")) return "Try Out (10x Paket Super)";
-  if (planId.startsWith("cek-peluang-3x")) return "Cek Peluang PTN (3x Cek)";
-  if (planId.startsWith("cek-peluang-5x")) return "Cek Peluang PTN (5x Cek)";
-  if (planId.startsWith("cek-peluang-10x")) return "Cek Peluang PTN (10x Cek)";
-  if (planId === "trial") return "Trial / Gratis";
-  return planName;
+export function isFreeTier(tier: string | null | undefined): boolean {
+  if (!tier) return true; // No tier = free
+  
+  const normalizedTier = tier.trim().toLowerCase();
+  
+  return FREE_TIERS.some(freeTier => 
+    normalizedTier === freeTier.toLowerCase()
+  );
+}
+
+/**
+ * Check if user has active premium subscription (any paid plan)
+ * @param subscription - Subscription object from database
+ * @returns true if user has active premium subscription
+ */
+export function hasActivePremiumSubscription(subscription: {
+  tier: string;
+  status: string;
+  expires_at: string;
+} | null | undefined): boolean {
+  if (!subscription) return false;
+  
+  // Check status is active
+  if (subscription.status !== 'active') return false;
+  
+  // Check not expired
+  if (new Date(subscription.expires_at) <= new Date()) return false;
+  
+  // Check tier is premium
+  return isPremiumTier(subscription.tier);
+}
+
+/**
+ * Check if subscription has VIP All-Access (can use ALL features)
+ * @param tier - The subscription tier string
+ * @returns true if tier is VIP All-Access
+ */
+export function isVIPAllAccess(tier: string | null | undefined): boolean {
+  if (!tier) return false;
+  
+  const normalizedTier = tier.trim().toLowerCase();
+  
+  return VIP_ALL_ACCESS_TIERS.some(vipTier => 
+    normalizedTier.includes(vipTier.toLowerCase())
+  );
+}
+
+/**
+ * Check if user has access to a specific feature (SNBP, SNBT, or Mandiri)
+ * Returns true if:
+ * 1. User has VIP All-in-One subscription, OR
+ * 2. User has specific Premium subscription for that feature
+ * 
+ * @param subscription - Subscription object from database
+ * @param featureType - Type of feature: "snbp" | "snbt" | "mandiri"
+ * @returns object with hasAccess boolean and message
+ */
+export function hasFeatureAccess(
+  subscription: {
+    tier: string;
+    status: string;
+    expires_at: string;
+  } | null | undefined,
+  featureType: "snbp" | "snbt" | "mandiri"
+): { hasAccess: boolean; message?: string } {
+  // No subscription = no access
+  if (!subscription) {
+    return { 
+      hasAccess: false, 
+      message: `Fitur ${featureType.toUpperCase()} membutuhkan subscription Premium ${featureType.toUpperCase()} atau VIP All-in-One` 
+    };
+  }
+  
+  // Check status is active
+  if (subscription.status !== 'active') {
+    return { 
+      hasAccess: false, 
+      message: "Subscription tidak aktif" 
+    };
+  }
+  
+  // Check not expired
+  if (new Date(subscription.expires_at) <= new Date()) {
+    return { 
+      hasAccess: false, 
+      message: "Subscription sudah kadaluarsa" 
+    };
+  }
+  
+  const tierLower = subscription.tier?.toLowerCase() || '';
+  
+  // VIP All-in-One has access to EVERYTHING
+  if (isVIPAllAccess(subscription.tier)) {
+    return { 
+      hasAccess: true, 
+      message: `Akses VIP All-in-One (Semua Fitur)` 
+    };
+  }
+  
+  // Check specific feature subscription
+  const featureLower = featureType.toLowerCase();
+  if (tierLower.includes(featureLower)) {
+    return { 
+      hasAccess: true, 
+      message: `Akses Premium ${featureType.toUpperCase()}` 
+    };
+  }
+  
+  // User has subscription but not for this specific feature
+  return { 
+    hasAccess: false, 
+    message: `Subscription ${subscription.tier} tidak mencakup fitur ${featureType.toUpperCase()}. Upgrade ke Premium ${featureType.toUpperCase()} atau VIP All-in-One.` 
+  };
 }

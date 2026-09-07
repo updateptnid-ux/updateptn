@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminSupabase } from "@supabase/supabase-js";
-import { FREE_TIERS } from "@/lib/subscription-helpers";
+import { isFreeTier } from "@/lib/subscription-helpers";
 
 const FREE_PREDICTION_LIMIT = 2;
 const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
@@ -51,7 +51,7 @@ export async function calculateProbabilityAction(payload: {
   const isSubscribed =
     !!subscription &&
     subscription.status === "active" &&
-    !FREE_TIERS.includes(subscription.tier) &&
+    !isFreeTier(subscription.tier) &&
     new Date(subscription.expires_at) > new Date();
 
   const tier = subscription?.tier || "Basic";

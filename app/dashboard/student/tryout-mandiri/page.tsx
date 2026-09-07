@@ -60,7 +60,7 @@ export default async function TryoutMandiriPage() {
         {/* Header */}
         <MotionCard className="rounded-lg md:rounded-xl">
           <div className="bg-blue-50 border-2 border-blue-200 p-5 md:p-8 rounded-lg md:rounded-xl">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge className="bg-blue-600 text-white text-[10px] md:text-xs font-bold">
                   <Building2 className="h-3 w-3 mr-1" />
@@ -68,12 +68,34 @@ export default async function TryoutMandiriPage() {
                 </Badge>
               </div>
               <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-slate-900">
-                Try Out Mandiri
+                Try Out Mandiri PTN
               </h1>
-              <p className="text-sm md:text-base text-slate-600 max-w-xl leading-relaxed">
-                Simulasi ujian mandiri berbagai universitas ternama. Persiapkan dirimu untuk
-                seleksi mandiri PTN favoritmu!
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm md:text-base text-slate-600 leading-relaxed">
+                  Simulasi ujian mandiri berbagai universitas ternama. Persiapkan dirimu untuk seleksi mandiri PTN favoritmu!
+                </p>
+                <div className="bg-white/80 rounded-xl p-4 space-y-2.5 border border-blue-200">
+                  <p className="text-xs md:text-sm font-bold text-slate-900">📚 Apa itu Ujian Mandiri?</p>
+                  <ul className="space-y-1.5 text-xs md:text-sm text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 font-bold shrink-0">•</span>
+                      <span><strong>Jalur ketiga</strong> masuk PTN setelah SNBP dan SNBT</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 font-bold shrink-0">•</span>
+                      <span>Setiap PTN punya <strong>format soal sendiri</strong> (beda kampus, beda soal)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 font-bold shrink-0">•</span>
+                      <span>Biasanya ujian berlangsung <strong>Juli - Agustus</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-600 font-bold shrink-0">•</span>
+                      <span>Contoh: Ujian Mandiri UI (SIMAK UI), UGM (UM UGM), ITB (UM ITB)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </MotionCard>

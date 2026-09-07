@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StaggerContainer, StaggerItem, MotionCard } from "@/components/ui/fade-in";
 import { getUnivLogoUrl, getUnivInitials } from "@/lib/univ-logo";
+import { isPremiumTier } from "@/lib/subscription-helpers";
 import ImprovementChart from "@/components/student/ImprovementChart";
 import {
   GraduationCap,
@@ -117,20 +118,30 @@ export default async function StudentDashboardPage() {
               )}
             </div>
 
-            <Link href="/dashboard/student/cek-peluang" className="w-full">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-8 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
-                <Target className="h-3 w-3 md:h-4 md:w-4" />
-                <span>Cek Peluang PTN</span>
-              </Button>
-            </Link>
-
-            {/* New SNBP Check Link */}
-            <Link href="/snbp/check" className="w-full mt-2">
-              <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg h-8 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
-                <Target className="h-3 w-3 md:h-4 md:w-4" />
-                <span>Cek Peluang SNBP</span>
-              </Button>
-            </Link>
+            {/* Cek Peluang Buttons - Show based on subscription */}
+            {activeSubscription && isPremiumTier(activeSubscription.tier) ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/dashboard/student/cek-peluang" className="w-full">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-9 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
+                    <Target className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span>Cek Peluang SNBT</span>
+                  </Button>
+                </Link>
+                <Link href="/dashboard/student/cek-peluang?type=snbp" className="w-full">
+                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg h-9 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
+                    <Target className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span>Cek Peluang SNBP</span>
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <Link href="/pricing?feature=cek-peluang" className="w-full">
+                <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg h-10 md:h-11 gap-2 text-xs md:text-sm touch-manipulation">
+                  <Target className="h-4 w-4" />
+                  <span>🔒 Unlock Cek Peluang SNBT & SNBP</span>
+                </Button>
+              </Link>
+            )}
           </div>
         </MotionCard>
 

@@ -1,0 +1,494 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  getAffiliateDashboardAction, 
+  updateAffiliateBankInfoAction,
+  createWithdrawalRequestAction 
+} from "@/actions/affiliate";
+import {
+  Users,
+  DollarSign,
+  TrendingUp,
+  Loader2,
+  Copy,
+  Check,
+  Link as LinkIcon,
+  ArrowUpRight,
+  Wallet,
+  Calendar,
+  CreditCard,
+} from "lucide-react";
+import { toast } from "sonner";
+import Link from "next/link";
+
+export default function AffiliateDashboardPage() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  const [showBankForm, setShowBankForm] = useState(false);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  const [bankInfo, setBankInfo] = useState({
+    bankName: "",
+    bankAccountNumber: "",
+    bankAccountName: "",
+  });
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  async function loadDashboard() {
+    setLoading(true);
+    const result = await getAffiliateDashboardAction();
+    
+    if (result.success && result.affiliate) {
+      setData(result);
+      setBankInfo({
+        bankName: result.affiliate.bank_name || "",
+        bankAccountNumber: result.affiliate.bank_account_number || "",
+        bankAccountName: result.affiliate.bank_account_name || "",
+      });
+    } else {
+      toast.error(result.message || "Gagal memuat data");
+    }
+    setLoading(false);
+  }
+
+  async function handleCopyLink() {
+    const link = `${window.location.origin}/register?ref=${data?.affiliate?.affiliate_code}`;
+    await navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast.success("Link referral disalin!");
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleUpdateBank() {
+    if (!bankInfo.bankName || !bankInfo.bankAccountNumber || !bankInfo.bankAccountName) {
+      toast.error("Harap isi semua field bank");
+      return;
+    }
+
+    setProcessing(true);
+    const result = await updateAffiliateBankInfoAction(bankInfo);
+    
+    if (result.success) {
+      toast.success("Info bank berhasil diperbarui!");
+      setShowBankForm(false);
+      loadDashboard();
+    } else {
+      toast.error(result.message || "Gagal memperbarui info bank");
+    }
+    setProcessing(false);
+  }
+
+  async function handleWithdraw() {
+    const amount = parseInt(withdrawAmount);
+    if (!amount || amount < 100000) {
+      toast.error("Minimal penarikan Rp 100.000");
+      return;
+    }
+
+    if (amount > Number(data?.affiliate?.pending_balance)) {
+      toast.error("Saldo tidak cukup");
+      return;
+    }
+
+    setProcessing(true);
+    const result = await createWithdrawalRequestAction(amount);
+    
+    if (result.success) {
+      toast.success("Permintaan penarikan berhasil dibuat!");
+      setShowWithdrawForm(false);
+      setWithdrawAmount("");
+      loadDashboard();
+    } else {
+      toast.error(result.message || "Gagal membuat permintaan");
+    }
+    setProcessing(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!data || !data.affiliate) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <Card className="p-8 text-center">
+          <p className="text-slate-600 mb-4">Anda belum terdaftar sebagai mitra afiliasi.</p>
+          <Link href="/dashboard/student/affiliate">
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              Daftar Sekarang
+            </Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
+  const { affiliate, stats, referrals, commissions, withdrawals } = data;
+  const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${affiliate.affiliate_code}`;
+
+  return (
+    <div className="max-w-7xl mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg md:text-2xl font-bold">Dashboard Afiliasi</h1>
+            <p className="text-xs md:text-sm text-purple-100 mt-1">
+              Selamat datang, {affiliate.full_name}!
+            </p>
+          </div>
+          <Badge className="bg-white/20 text-white border-white/30 text-xs">
+            {affiliate.affiliate_code}
+          </Badge>
+        </div>
+
+        {/* Referral Link */}
+        <div className="mt-4 bg-white/10 backdrop-blur rounded-lg p-3 md:p-4">
+          <p className="text-xs font-bold mb-2 flex items-center gap-2">
+            <LinkIcon className="h-3.5 w-3.5" />
+            LINK REFERRAL ANDA
+          </p>
+          <div className="flex gap-2">
+            <Input
+              value={referralLink}
+              readOnly
+              className="bg-white/90 text-slate-900 border-0 text-xs md:text-sm"
+              style={{ fontSize: "14px" }}
+            />
+            <Button
+              onClick={handleCopyLink}
+              className="bg-white text-purple-600 hover:bg-white/90 shrink-0 h-10"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] md:text-xs font-bold text-slate-400">TOTAL REFERRAL</span>
+            <Users className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="text-xl md:text-2xl font-black text-slate-900">{stats.totalReferrals}</p>
+          <p className="text-[10px] md:text-xs text-slate-600 mt-1">
+            {stats.convertedReferrals} konversi • {stats.conversionRate}%
+          </p>
+        </Card>
+
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] md:text-xs font-bold text-slate-400">TOTAL KOMISI</span>
+            <DollarSign className="h-4 w-4 text-emerald-600" />
+          </div>
+          <p className="text-xl md:text-2xl font-black text-slate-900">
+            Rp {stats.totalCommissions.toLocaleString("id-ID")}
+          </p>
+          <p className="text-[10px] md:text-xs text-slate-600 mt-1">
+            {stats.approvedCommissions} transaksi
+          </p>
+        </Card>
+
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] md:text-xs font-bold text-slate-400">SALDO TERSEDIA</span>
+            <Wallet className="h-4 w-4 text-purple-600" />
+          </div>
+          <p className="text-xl md:text-2xl font-black text-slate-900">
+            Rp {Number(affiliate.pending_balance || 0).toLocaleString("id-ID")}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setShowWithdrawForm(true)}
+            disabled={Number(affiliate.pending_balance) < 100000}
+            className="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white h-8 text-xs"
+          >
+            Tarik Saldo
+          </Button>
+        </Card>
+
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] md:text-xs font-bold text-slate-400">CONVERSION RATE</span>
+            <TrendingUp className="h-4 w-4 text-amber-600" />
+          </div>
+          <p className="text-xl md:text-2xl font-black text-slate-900">{stats.conversionRate}%</p>
+          <p className="text-[10px] md:text-xs text-slate-600 mt-1">
+            {stats.convertedReferrals}/{stats.totalReferrals} konversi
+          </p>
+        </Card>
+      </div>
+
+      {/* Bank Info Card */}
+      <Card className="p-4 md:p-6 bg-blue-50/50 border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+            <h3 className="text-sm md:text-base font-bold text-slate-900">Informasi Bank</h3>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowBankForm(!showBankForm)}
+            className="text-xs h-8"
+          >
+            {showBankForm ? "Batal" : "Edit"}
+          </Button>
+        </div>
+
+        {showBankForm ? (
+          <div className="space-y-3">
+            <Input
+              placeholder="Nama Bank (contoh: BCA)"
+              value={bankInfo.bankName}
+              onChange={(e) => setBankInfo({ ...bankInfo, bankName: e.target.value })}
+              className="text-sm"
+              style={{ fontSize: "14px" }}
+            />
+            <Input
+              placeholder="Nomor Rekening"
+              value={bankInfo.bankAccountNumber}
+              onChange={(e) => setBankInfo({ ...bankInfo, bankAccountNumber: e.target.value })}
+              className="text-sm"
+              style={{ fontSize: "14px" }}
+            />
+            <Input
+              placeholder="Nama Pemilik Rekening"
+              value={bankInfo.bankAccountName}
+              onChange={(e) => setBankInfo({ ...bankInfo, bankAccountName: e.target.value })}
+              className="text-sm"
+              style={{ fontSize: "14px" }}
+            />
+            <Button
+              onClick={handleUpdateBank}
+              disabled={processing}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-10"
+            >
+              {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simpan"}
+            </Button>
+          </div>
+        ) : (
+          <div className="text-xs md:text-sm text-slate-700 space-y-1">
+            {affiliate.bank_name ? (
+              <>
+                <p>🏦 <strong>{affiliate.bank_name}</strong></p>
+                <p>💳 {affiliate.bank_account_number}</p>
+                <p>👤 {affiliate.bank_account_name}</p>
+              </>
+            ) : (
+              <p className="text-slate-500 italic">Belum ada info bank. Klik Edit untuk menambahkan.</p>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Withdraw Form Modal */}
+      {showWithdrawForm && (
+        <Card className="p-4 md:p-6 bg-emerald-50/50 border-emerald-200">
+          <h3 className="text-sm md:text-base font-bold text-slate-900 mb-3">Tarik Saldo</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs md:text-sm font-semibold text-slate-700 mb-1 block">
+                Jumlah Penarikan (Min. Rp 100.000)
+              </label>
+              <Input
+                type="number"
+                placeholder="100000"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                className="text-sm"
+                style={{ fontSize: "16px" }}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Saldo tersedia: Rp {Number(affiliate.pending_balance || 0).toLocaleString("id-ID")}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleWithdraw}
+                disabled={processing}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white h-10"
+              >
+                {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajukan Penarikan"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowWithdrawForm(false);
+                  setWithdrawAmount("");
+                }}
+                className="h-10 px-6"
+              >
+                Batal
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <Tabs defaultValue="referrals" className="space-y-3 md:space-y-4">
+        <TabsList className="bg-white border w-full grid grid-cols-3">
+          <TabsTrigger value="referrals" className="text-xs md:text-sm">
+            Referral ({referrals.length})
+          </TabsTrigger>
+          <TabsTrigger value="commissions" className="text-xs md:text-sm">
+            Komisi ({commissions.length})
+          </TabsTrigger>
+          <TabsTrigger value="withdrawals" className="text-xs md:text-sm">
+            Penarikan ({withdrawals.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="referrals">
+          <Card className="p-3 md:p-4">
+            <h3 className="text-sm md:text-base font-bold text-slate-900 mb-3">Daftar Referral</h3>
+            {referrals.length === 0 ? (
+              <p className="text-xs md:text-sm text-slate-500 text-center py-8">
+                Belum ada referral. Bagikan link Anda untuk mendapatkan komisi!
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {referrals.map((ref: any) => (
+                  <div
+                    key={ref.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs md:text-sm font-bold text-slate-900 truncate">
+                        {ref.referred_email}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Calendar className="h-3 w-3 text-slate-400" />
+                        <p className="text-[10px] md:text-xs text-slate-500">
+                          {new Date(ref.created_at).toLocaleDateString("id-ID")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        ref.status === "converted"
+                          ? "bg-emerald-100 text-emerald-700 text-[10px] md:text-xs"
+                          : "bg-amber-100 text-amber-700 text-[10px] md:text-xs"
+                      }
+                    >
+                      {ref.status === "converted" ? "Konversi ✓" : "Pending"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="commissions">
+          <Card className="p-3 md:p-4">
+            <h3 className="text-sm md:text-base font-bold text-slate-900 mb-3">Riwayat Komisi</h3>
+            {commissions.length === 0 ? (
+              <p className="text-xs md:text-sm text-slate-500 text-center py-8">
+                Belum ada komisi
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {commissions.map((comm: any) => (
+                  <div
+                    key={comm.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm md:text-base font-bold text-slate-900">
+                        Rp {Number(comm.commission_amount).toLocaleString("id-ID")}
+                      </p>
+                      <p className="text-[10px] md:text-xs text-slate-600 mt-1 truncate">
+                        {comm.customer_email}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Calendar className="h-3 w-3 text-slate-400" />
+                        <p className="text-[10px] md:text-xs text-slate-400">
+                          {new Date(comm.created_at).toLocaleDateString("id-ID")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        comm.status === "approved" || comm.status === "paid"
+                          ? "bg-emerald-100 text-emerald-700 text-[10px] md:text-xs"
+                          : "bg-amber-100 text-amber-700 text-[10px] md:text-xs"
+                      }
+                    >
+                      {comm.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="withdrawals">
+          <Card className="p-3 md:p-4">
+            <h3 className="text-sm md:text-base font-bold text-slate-900 mb-3">Riwayat Penarikan</h3>
+            {withdrawals.length === 0 ? (
+              <p className="text-xs md:text-sm text-slate-500 text-center py-8">
+                Belum ada riwayat penarikan
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {withdrawals.map((wd: any) => (
+                  <div
+                    key={wd.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm md:text-base font-bold text-slate-900">
+                        Rp {Number(wd.amount).toLocaleString("id-ID")}
+                      </p>
+                      <p className="text-[10px] md:text-xs text-slate-600 mt-1">
+                        {wd.bank_name} - {wd.bank_account_number}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Calendar className="h-3 w-3 text-slate-400" />
+                        <p className="text-[10px] md:text-xs text-slate-400">
+                          {new Date(wd.created_at).toLocaleDateString("id-ID")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        wd.status === "completed"
+                          ? "bg-emerald-100 text-emerald-700 text-[10px] md:text-xs"
+                          : wd.status === "rejected"
+                          ? "bg-rose-100 text-rose-700 text-[10px] md:text-xs"
+                          : "bg-amber-100 text-amber-700 text-[10px] md:text-xs"
+                      }
+                    >
+                      {wd.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

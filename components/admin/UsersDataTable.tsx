@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -31,7 +39,10 @@ import {
   ChevronRight,
   RefreshCw,
   Plus,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export interface UserRecord {
   id: string;
@@ -48,11 +59,19 @@ interface UsersDataTableProps {
 }
 
 export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTableProps) {
+  const router = useRouter();
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "admin">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Delete user state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserRecord | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Filter users based on search and role
   const filteredUsers = useMemo(() => {
@@ -99,6 +118,60 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
 
   const totalStudents = users.filter((u) => u.role !== "admin").length;
   const totalAdmins = users.filter((u) => u.role === "admin").length;
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    // Validation: must type exact confirmation
+    if (deleteConfirmText !== "HAPUS PERMANEN") {
+      setDeleteError("Ketik 'HAPUS PERMANEN' untuk konfirmasi");
+      return;
+    }
+
+    setDeleteError(null);
+
+    startDeleteTransition(async () => {
+      try {
+        const response = await fetch('/hq-core-updateptn/api/delete-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userToDelete.id })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to delete user');
+        }
+
+        // Remove user from local state
+        setUsers(users.filter(u => u.id !== userToDelete.id));
+        
+        // Close dialog and reset
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        setDeleteConfirmText("");
+        
+        // Show success (you can add toast notification here)
+        alert(`✅ Akun ${userToDelete.full_name || userToDelete.email} berhasil dihapus`);
+        
+        // Refresh page to get updated data
+        router.refresh();
+        
+      } catch (error: any) {
+        setDeleteError(error.message || 'Gagal menghapus akun');
+        console.error('Delete error:', error);
+      }
+    });
+  };
+
+  const openDeleteDialog = (user: UserRecord) => {
+    setUserToDelete(user);
+    setDeleteConfirmText("");
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6 font-sans">
@@ -312,11 +385,11 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => alert(`Suspend akun ${user.email}`)}
+                            onClick={() => openDeleteDialog(user)}
                             className="text-xs font-semibold text-rose-600 cursor-pointer rounded-lg gap-2 focus:bg-rose-50"
                           >
                             <UserX className="h-3.5 w-3.5 text-rose-600" />
-                            <span>Suspend Akun</span>
+                            <span>Hapus Akun Permanen</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -365,6 +438,116 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
           </div>
         </div>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-white border-2 border-rose-200 rounded-2xl max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-6 w-6 text-rose-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-extrabold text-slate-900">
+                  Hapus Akun Permanen
+                </DialogTitle>
+                <p className="text-xs text-slate-500 font-medium">
+                  Tindakan ini tidak dapat dibatalkan
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* User Info */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-slate-200">
+                  <AvatarFallback className="bg-blue-50 text-blue-700 font-bold text-sm">
+                    {getInitials(userToDelete?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">
+                    {userToDelete?.full_name || "User"}
+                  </p>
+                  <p className="text-xs text-slate-500">{userToDelete?.email}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <div className="text-xs text-slate-700 space-y-2">
+              <p className="font-bold text-rose-600">⚠️ Data yang akan dihapus:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-600 ml-2">
+                <li>Profil & akun login</li>
+                <li>Semua hasil Try Out & latihan</li>
+                <li>Data subscription & pembayaran</li>
+                <li>Riwayat prediksi peluang</li>
+                <li>Data afiliasi (jika ada)</li>
+                <li>Semua data terkait akun ini</li>
+              </ul>
+            </div>
+
+            {/* Confirmation Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700">
+                Ketik <span className="text-rose-600 font-black">HAPUS PERMANEN</span> untuk konfirmasi:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => {
+                  setDeleteConfirmText(e.target.value);
+                  setDeleteError(null);
+                }}
+                placeholder="HAPUS PERMANEN"
+                className="border-slate-300 focus:border-rose-500 focus:ring-rose-500 font-mono text-sm"
+                disabled={isDeleting}
+                style={{ fontSize: '16px' }}
+              />
+              {deleteError && (
+                <p className="text-xs text-rose-600 font-semibold flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {deleteError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setUserToDelete(null);
+                setDeleteConfirmText("");
+                setDeleteError(null);
+              }}
+              disabled={isDeleting}
+              className="rounded-xl border-slate-200 font-bold"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDeleteUser}
+              disabled={isDeleting || deleteConfirmText !== "HAPUS PERMANEN"}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Menghapus...</span>
+                </>
+              ) : (
+                <>
+                  <UserX className="h-4 w-4" />
+                  <span>Hapus Permanen</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

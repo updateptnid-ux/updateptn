@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   PieChart,
   BarChart3,
+  Share2,
+  DollarSign,
 } from "lucide-react";
 
 export default async function AdminDashboardPage() {
@@ -119,6 +121,45 @@ export default async function AdminDashboardPage() {
     pendingClaims = [];
   }
 
+  // 6. Fetch affiliate stats
+  let affiliatesCount = 0;
+  let pendingAffiliates = 0;
+  let activeAffiliates = 0;
+  let pendingWithdrawals = 0;
+  let totalCommissions = 0;
+  try {
+    const { count: totalAff } = await supabase
+      .from("affiliates")
+      .select("*", { count: "exact", head: true });
+    affiliatesCount = totalAff || 0;
+
+    const { count: pending } = await supabase
+      .from("affiliates")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending");
+    pendingAffiliates = pending || 0;
+
+    const { count: active } = await supabase
+      .from("affiliates")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active");
+    activeAffiliates = active || 0;
+
+    const { count: pendingWithdraw } = await supabase
+      .from("withdrawals")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending");
+    pendingWithdrawals = pendingWithdraw || 0;
+
+    const { data: commissions } = await supabase
+      .from("commissions")
+      .select("commission_amount")
+      .in("status", ["approved", "paid"]);
+    totalCommissions = commissions?.reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0;
+  } catch {
+    // Affiliate tables might not exist yet
+  }
+
   const formatRupiah = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -157,6 +198,14 @@ export default async function AdminDashboardPage() {
       color: "text-emerald-600 bg-emerald-50 border-emerald-100",
     },
     {
+      title: "Mitra Afiliasi",
+      value: affiliatesCount.toString(),
+      change: `${activeAffiliates} Aktif • ${pendingAffiliates} Pending`,
+      isPositive: true,
+      icon: Share2,
+      color: "text-purple-600 bg-purple-50 border-purple-100",
+    },
+    {
       title: "Total Try Out",
       value: tryoutsCount > 0 ? tryoutsCount.toString() : "0",
       change: "Paket Aktif",
@@ -179,14 +228,6 @@ export default async function AdminDashboardPage() {
       isPositive: true,
       icon: Building2,
       color: "text-sky-600 bg-sky-50 border-sky-100",
-    },
-    {
-      title: "Administrator",
-      value: totalAdmins.toString(),
-      change: "Tim Pengelola",
-      isPositive: true,
-      icon: ShieldCheck,
-      color: "text-teal-600 bg-teal-50 border-teal-100",
     },
     {
       title: "Live Class Sesi",
@@ -336,6 +377,84 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
 
+      {/* Affiliate Management Section */}
+      {(pendingAffiliates > 0 || pendingWithdrawals > 0 || affiliatesCount > 0) && (
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200 shadow-xs rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-purple-600" />
+                <span>Program Afiliasi</span>
+              </h3>
+              <p className="text-xs text-slate-600">Kelola mitra afiliasi, komisi, dan penarikan</p>
+            </div>
+            <Link href="/hq-core-updateptn/affiliates">
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs h-9 px-4">
+                Kelola Semua
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-4 border border-purple-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-400">TOTAL MITRA</span>
+                <Users className="h-4 w-4 text-purple-600" />
+              </div>
+              <p className="text-2xl font-black text-slate-900">{affiliatesCount}</p>
+              <p className="text-xs text-slate-600 mt-1">
+                {activeAffiliates} aktif • {pendingAffiliates} pending
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 border border-amber-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-400">PERLU REVIEW</span>
+                <Badge className="bg-amber-100 text-amber-700 text-xs">
+                  {pendingAffiliates}
+                </Badge>
+              </div>
+              <p className="text-lg font-black text-slate-900">
+                {pendingAffiliates} Aplikasi
+              </p>
+              <Link href="/hq-core-updateptn/affiliates">
+                <p className="text-xs text-amber-600 hover:text-amber-700 font-semibold mt-1">
+                  Tinjau sekarang →
+                </p>
+              </Link>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 border border-emerald-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-400">PENARIKAN</span>
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+              </div>
+              <p className="text-lg font-black text-slate-900">
+                {pendingWithdrawals} Pending
+              </p>
+              {pendingWithdrawals > 0 && (
+                <Link href="/hq-core-updateptn/affiliates">
+                  <p className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold mt-1">
+                    Proses penarikan →
+                  </p>
+                </Link>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl p-4 border border-blue-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-400">TOTAL KOMISI</span>
+                <DollarSign className="h-4 w-4 text-blue-600" />
+              </div>
+              <p className="text-lg font-black text-slate-900">
+                {formatRupiah(totalCommissions)}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">Dibayarkan ke mitra</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Quick Action Shortcuts Grid */}
       <div className="space-y-4">
         <h3 className="text-base font-bold text-slate-900">Akses Cepat Modul Admin</h3>
@@ -384,6 +503,18 @@ export default async function AdminDashboardPage() {
               <div>
                 <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600">Master PTN</p>
                 <p className="text-[11px] text-slate-500">{ptnCount > 0 ? ptnCount : 85} PTN</p>
+              </div>
+            </Card>
+          </Link>
+
+          <Link href="/hq-core-updateptn/affiliates">
+            <Card className="bg-white border border-slate-200 hover:border-purple-300 hover:shadow-md transition-all p-4 rounded-2xl flex items-center gap-3 group cursor-pointer">
+              <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <Share2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 group-hover:text-purple-600">Afiliasi</p>
+                <p className="text-[11px] text-slate-500">{affiliatesCount} Mitra</p>
               </div>
             </Card>
           </Link>

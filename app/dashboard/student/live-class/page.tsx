@@ -85,36 +85,36 @@ export default async function LiveClassPage() {
   return (
     <div className="min-h-screen bg-slate-50/70 text-slate-900 flex flex-col font-sans">
       {/* Header Bar (Glassmorphic) */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-40 shadow-xs">
-        <Link href="/dashboard/student" className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
-            <GraduationCap className="h-5 w-5" />
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 h-14 md:h-16 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+        <Link href="/dashboard/student" className="flex items-center gap-2">
+          <div className="h-8 w-8 md:h-9 md:w-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
+            <GraduationCap className="h-4 w-4 md:h-5 md:w-5" />
           </div>
-          <span className="font-extrabold text-lg tracking-tight text-slate-900">
+          <span className="font-extrabold text-base md:text-lg tracking-tight text-slate-900">
             Update<span className="text-blue-600">PTN</span>
           </span>
         </Link>
 
         <Link href="/dashboard/student">
-          <Button variant="outline" size="sm" className="rounded-xl gap-2 font-semibold border-slate-200/80 bg-white/50 backdrop-blur-xs hover:bg-slate-100">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Kembali ke Dashboard</span>
+          <Button variant="outline" size="sm" className="rounded-lg md:rounded-xl gap-1.5 md:gap-2 font-semibold border-slate-200/80 bg-white/50 backdrop-blur-xs hover:bg-slate-100 h-8 md:h-9 text-[10px] md:text-xs">
+            <ArrowLeft className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Kembali</span>
           </Button>
         </Link>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8 space-y-8 my-2">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-4 md:p-8 space-y-6 md:space-y-8 my-2">
         {/* Banner Header */}
-        <div className="text-center space-y-3">
-          <Badge variant="outline" className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
-            <Video className="h-3.5 w-3.5 mr-1.5 text-blue-600 animate-pulse" />
-            Bimbel Online & Master Tutor
+        <div className="text-center space-y-2 md:space-y-3">
+          <Badge variant="outline" className="px-2 md:px-3.5 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+            <Video className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1 md:mr-1.5 text-blue-600 animate-pulse" />
+            Live Streaming & Rekaman
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
             Live Class & Rekaman Sesi
           </h1>
-          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto">
+          <p className="text-slate-500 text-xs sm:text-sm md:text-base max-w-xl mx-auto">
             Ikuti siaran langsung bedah soal bersama Master Tutor lulusan PTN favorit atau tonton ulang rekaman videonya 24/7.
           </p>
         </div>

@@ -24,8 +24,9 @@ import { MotionCard, StaggerContainer, StaggerItem } from "@/components/ui/fade-
 
 interface ProdiRecord {
   id: string | number;
-  univ: string;
-  prodi: string;
+  // SNBT fields
+  univ?: string;
+  prodi?: string;
   jenjang?: string;
   kelompok?: string;
   keketatan?: number | string;
@@ -34,6 +35,16 @@ interface ProdiRecord {
   peminat?: number;
   ukt_min?: number;
   ukt_max?: number;
+  // SNBP fields
+  ptn_id?: string;
+  ptn_name?: string;
+  kategori?: string;
+  kode_prodi?: string;
+  nama_prodi?: string;
+  rasio_keketatan?: number;
+  nilai_raport?: number;
+  estimasi_nilai_raport?: number;
+  jenis_portofolio?: string;
 }
 
 // ---------------- UNIVERSITY DOMAIN MAPPING DICTIONARY ----------------
@@ -105,6 +116,7 @@ const getInitials = (name?: string) => {
 };
 
 export default function DirektoriProdiPage() {
+  const [jalurType, setJalurType] = useState<"SNBT" | "SNBP">("SNBT"); // Tab selection
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKelompok, setSelectedKelompok] = useState("ALL");
   const [selectedJenjang, setSelectedJenjang] = useState("ALL");
@@ -234,15 +246,15 @@ export default function DirektoriProdiPage() {
     return aliases;
   };
 
-  // Helper: Calculate search relevance score
+  // Helper: Calculate search relevance score (support both SNBT & SNBP)
   const getSearchScore = (item: ProdiRecord, searchTerms: string[]): number => {
-    const prodiNorm = normalizeText(item.prodi);
-    const univNorm = normalizeText(item.univ);
+    const prodiNorm = normalizeText(item.prodi || item.nama_prodi || '');
+    const univNorm = normalizeText(item.univ || item.ptn_name || '');
     const jenjangNorm = normalizeText(item.jenjang || '');
-    const kelompokNorm = normalizeText(item.kelompok || '');
+    const kelompokNorm = normalizeText(item.kelompok || item.kategori || '');
     
     // Get university aliases
-    const univAliases = getUnivAliases(item.univ);
+    const univAliases = getUnivAliases(item.univ || item.ptn_name || '');
     
     const fullText = `${prodiNorm} ${univNorm} ${jenjangNorm} ${kelompokNorm} ${univAliases.join(' ')}`;
     
@@ -296,9 +308,10 @@ export default function DirektoriProdiPage() {
         const searchNormalized = normalizeText(searchQuery);
         const searchTerms = searchNormalized.split(' ').filter(t => t.length > 0);
 
-        // PRIMARY: local data_snbt.json (verified, always up-to-date)
+        // PRIMARY: Pilih JSON sesuai jalur type
         try {
-          const res = await fetch("/data_snbt.json");
+          const jsonFile = jalurType === "SNBP" ? "/data_snbp.json" : "/data_snbt.json";
+          const res = await fetch(jsonFile);
           if (res.ok) {
             const localData: ProdiRecord[] = await res.json();
             
@@ -315,33 +328,32 @@ export default function DirektoriProdiPage() {
             results = scoredResults;
           }
         } catch {
-          // JSON gagal → coba Supabase RPC
-        }
-
-        // FALLBACK: Supabase RPC jika JSON tidak menghasilkan data
-        if (results.length === 0) {
-          try {
-            const supabase = createClient();
-            const { data, error } = await supabase.rpc("search_kampus_pintar", {
-              keyword: searchQuery.trim(),
-            });
-            if (!error && data && data.length > 0) {
-              results = data as ProdiRecord[];
+          // JSON gagal → coba Supabase RPC hanya untuk SNBT
+          if (jalurType === "SNBT") {
+            try {
+              const supabase = createClient();
+              const { data, error } = await supabase.rpc("search_kampus_pintar", {
+                keyword: searchQuery.trim(),
+              });
+              if (!error && data && data.length > 0) {
+                results = data as ProdiRecord[];
+              }
+            } catch {
+              // Supabase juga gagal — biarkan kosong
             }
-          } catch {
-            // Supabase juga gagal — biarkan kosong
           }
         }
 
         // Apply pre-filter constraints
         if (selectedKelompok !== "ALL") {
           results = results.filter((item) =>
-            item.kelompok?.toUpperCase().includes(selectedKelompok)
+            item.kelompok?.toUpperCase().includes(selectedKelompok) ||
+            item.kategori?.toUpperCase().includes(selectedKelompok)
           );
         }
         if (selectedJenjang !== "ALL") {
           results = results.filter(
-            (item) => item.jenjang?.toUpperCase() === selectedJenjang
+            (item) => item.jenjang?.toUpperCase() === selectedJenjang || item.jenjang?.toUpperCase().includes(selectedJenjang)
           );
         }
 
@@ -358,7 +370,7 @@ export default function DirektoriProdiPage() {
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedKelompok, selectedJenjang, selectedProdi]);
+  }, [searchQuery, selectedKelompok, selectedJenjang, selectedProdi, jalurType]); // Tambah jalurType dependency
 
   const handleSelectSuggestion = async (item: ProdiRecord) => {
     // Check quota for non-subscribers
@@ -444,16 +456,111 @@ export default function DirektoriProdiPage() {
   };
 
   return (
-    <div className="w-full min-h-screen px-4 py-4 md:py-6 max-w-2xl mx-auto">
-      <div className="space-y-4 md:space-y-6">
+    <div className="w-full min-h-screen bg-slate-50">
+      <div className="max-w-2xl mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-950">
-            Cari Kampus & Jurusan
+            Direktori Jurusan & Kampus PTN
           </h1>
           <p className="text-xs md:text-sm text-slate-500">
-            Cari informasi lengkap jurusan dan universitas
+            Temukan informasi lengkap jalur SNBT & SNBP
           </p>
+        </div>
+
+        {/* Tab Selection: SNBT vs SNBP */}
+        <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setJalurType("SNBT");
+              setSelectedProdi(null);
+              setSearchQuery("");
+              setSuggestions([]);
+            }}
+            className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all touch-manipulation ${
+              jalurType === "SNBT"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-transparent text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            📝 SNBT (Tes)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setJalurType("SNBP");
+              setSelectedProdi(null);
+              setSearchQuery("");
+              setSuggestions([]);
+            }}
+            className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all touch-manipulation ${
+              jalurType === "SNBP"
+                ? "bg-emerald-600 text-white shadow-md"
+                : "bg-transparent text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            🎓 SNBP (Rapor)
+          </button>
+        </div>
+
+        {/* CTA Box after tab selection (only show for SNBP) */}
+        {jalurType === "SNBP" && (
+          <div className="bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 border-2 border-emerald-200 rounded-2xl p-4 shadow-lg">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-emerald-100 rounded-xl shrink-0">
+                  <Target className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base md:text-lg font-bold text-slate-900 mb-1">
+                    Cek Peluang Lolos SNBP 2026!
+                  </h3>
+                  <p className="text-xs md:text-sm text-slate-600 mb-3">
+                    Hitung estimasi peluang lolos ke jurusan impian berdasarkan nilai rapor, rasio keketatan, dan daya tampung real 2025. Data 5.100+ jurusan PTN!
+                  </p>
+                  <Link href="/dashboard/student/cek-peluang?type=snbp">
+                    <Button className="h-10 md:h-11 px-5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl text-sm md:text-base w-full sm:w-auto touch-manipulation shadow-md">
+                      🎯 Cek Peluang SNBP Sekarang
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info Banner berdasarkan jalur */}
+        <div className={`border rounded-2xl p-4 ${
+          jalurType === "SNBP" 
+            ? "bg-emerald-50 border-emerald-200" 
+            : "bg-blue-50 border-blue-200"
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl shrink-0 ${
+              jalurType === "SNBP" ? "bg-emerald-100" : "bg-blue-100"
+            }`}>
+              <BookOpen className={`h-5 w-5 ${
+                jalurType === "SNBP" ? "text-emerald-600" : "text-blue-600"
+              }`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-bold mb-0.5 ${
+                jalurType === "SNBP" ? "text-emerald-900" : "text-blue-900"
+              }`}>
+                {jalurType === "SNBP" 
+                  ? "Data SNBP 2025 (Jalur Rapor)" 
+                  : "Database SNBT 2025 (Jalur Tes)"}
+              </p>
+              <p className={`text-xs ${
+                jalurType === "SNBP" ? "text-emerald-600" : "text-blue-600"
+              }`}>
+                {jalurType === "SNBP"
+                  ? "5.100+ jurusan dengan data keketatan, daya tampung & estimasi nilai rapor"
+                  : "4.900+ jurusan dengan passing grade & keketatan real"}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Quota Display Banner */}
@@ -461,26 +568,26 @@ export default function DirektoriProdiPage() {
           <div className={`border rounded-2xl p-4 ${
             searchCount >= maxFreeSearches 
               ? "bg-rose-50 border-rose-200" 
-              : "bg-blue-50 border-blue-200"
+              : jalurType === "SNBP" ? "bg-emerald-50 border-emerald-200" : "bg-blue-50 border-blue-200"
           }`}>
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-xl ${
                   searchCount >= maxFreeSearches 
                     ? "bg-rose-100" 
-                    : "bg-blue-100"
+                    : jalurType === "SNBP" ? "bg-emerald-100" : "bg-blue-100"
                 }`}>
                   <Search className={`h-5 w-5 ${
                     searchCount >= maxFreeSearches 
                       ? "text-rose-600" 
-                      : "text-blue-600"
+                      : jalurType === "SNBP" ? "text-emerald-600" : "text-blue-600"
                   }`} />
                 </div>
                 <div>
                   <p className={`text-sm font-bold ${
                     searchCount >= maxFreeSearches 
                       ? "text-rose-900" 
-                      : "text-blue-900"
+                      : jalurType === "SNBP" ? "text-emerald-900" : "text-blue-900"
                   }`}>
                     {searchCount >= maxFreeSearches 
                       ? "Quota Gratis Habis!" 
@@ -489,11 +596,11 @@ export default function DirektoriProdiPage() {
                   <p className={`text-xs ${
                     searchCount >= maxFreeSearches 
                       ? "text-rose-600" 
-                      : "text-blue-600"
+                      : jalurType === "SNBP" ? "text-emerald-600" : "text-blue-600"
                   }`}>
                     {searchCount >= maxFreeSearches 
-                      ? "Upgrade ke Premium untuk unlimited akses direktori PTN" 
-                      : "Akses data lengkap 4.900+ jurusan"}
+                      ? `Upgrade ke Premium untuk unlimited akses direktori ${jalurType}` 
+                      : `Akses data lengkap ${jalurType === "SNBP" ? "5.100+" : "4.900+"} jurusan`}
                   </p>
                 </div>
               </div>
@@ -604,28 +711,58 @@ export default function DirektoriProdiPage() {
           <div className="flex flex-wrap items-center gap-2 justify-center">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter:</span>
             
-            {/* Kelompok Chips */}
-            {[
-              { id: "ALL", label: "Semua" },
-              { id: "SAINTEK", label: "Saintek" },
-              { id: "SOSHUM", label: "Soshum" },
-            ].map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => {
-                  setSelectedKelompok(chip.id);
-                  if (selectedProdi) setSelectedProdi(null);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation ${
-                  selectedKelompok === chip.id
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                {chip.label}
-              </button>
-            ))}
+            {/* Kelompok Chips - berubah untuk SNBP */}
+            {jalurType === "SNBP" ? (
+              // SNBP menggunakan "kategori" bukan "kelompok"
+              <>
+                {[
+                  { id: "ALL", label: "Semua" },
+                  { id: "AKADEMIK", label: "Akademik" },
+                  { id: "VOKASI", label: "Vokasi" },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedKelompok(chip.id);
+                      if (selectedProdi) setSelectedProdi(null);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation ${
+                      selectedKelompok === chip.id
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </>
+            ) : (
+              // SNBT menggunakan "kelompok"
+              <>
+                {[
+                  { id: "ALL", label: "Semua" },
+                  { id: "SAINTEK", label: "Saintek" },
+                  { id: "SOSHUM", label: "Soshum" },
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedKelompok(chip.id);
+                      if (selectedProdi) setSelectedProdi(null);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation ${
+                      selectedKelompok === chip.id
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </>
+            )}
 
             <span className="text-slate-300 text-xs">|</span>
 
@@ -708,7 +845,9 @@ export default function DirektoriProdiPage() {
                   </div>
                 ) : (
                   suggestions.map((item) => {
-                    const domain = getUnivDomain(item.univ);
+                    const univName = item.univ || item.ptn_name || '';
+                    const prodiName = item.prodi || item.nama_prodi || '';
+                    const domain = getUnivDomain(univName);
                     return (
                       <button
                         key={item.id}
@@ -720,16 +859,16 @@ export default function DirektoriProdiPage() {
                           <Avatar className="h-10 w-10 rounded-xl border border-slate-200 shrink-0">
                             <AvatarImage
                               src={domain ? `https://logo.clearbit.com/${domain}` : undefined}
-                              alt={item.univ}
+                              alt={univName}
                             />
                             <AvatarFallback className="bg-blue-600 text-white font-bold text-xs">
-                              {getInitials(item.univ)}
+                              {getInitials(univName)}
                             </AvatarFallback>
                           </Avatar>
 
                           <div className="space-y-1 flex-1 min-w-0">
                             <p className="text-sm font-bold text-slate-900 leading-tight truncate">
-                              {highlightMatch(item.prodi, searchQuery)}
+                              {highlightMatch(prodiName, searchQuery)}
                             </p>
                             <p className="text-xs text-slate-500 font-medium truncate">
                               {highlightMatch(item.univ, searchQuery)}

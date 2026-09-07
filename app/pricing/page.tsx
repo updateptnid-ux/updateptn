@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { createSubscription, getUserSubscription } from "@/actions/subscription";
 import { createSubscriptionPayment } from "@/actions/payment-midtrans";
-import { resolveTierName } from "@/lib/subscription-helpers";
 import {
   Check,
   ArrowRight,
@@ -852,8 +851,8 @@ export default function PricingPage() {
         ? Math.max(0, checkoutPlan.price - appliedVoucher.discountAmount)
         : checkoutPlan.price;
 
-      // Resolve tier name yang benar sesuai plan ID
-      const tierName = resolveTierName(checkoutPlan.id, checkoutPlan.name);
+      // Use tier name from plan directly
+      const tierName = checkoutPlan.name;
 
       // Create payment with Midtrans
       const result = await createSubscriptionPayment({

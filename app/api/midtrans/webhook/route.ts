@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       // Get payment details with metadata
       const { data: payment } = await supabase
         .from('payments')
-        .select('user_id, metadata')
+        .select('user_id, metadata, affiliate_code')
         .eq('order_id', orderId)
         .single();
 
@@ -105,6 +105,77 @@ export async function POST(request: NextRequest) {
             .eq('id', payment.user_id);
           
           console.log(`✅ Subscription ${subscriptionId} activated for user ${payment.user_id}`);
+        }
+
+        // ========================================
+        // AFFILIATE COMMISSION PROCESSING
+        // ========================================
+        if (payment.affiliate_code) {
+          try {
+            // Get affiliate details
+            const { data: affiliate } = await supabase
+              .from('affiliates')
+              .select('id, commission_rate, affiliate_code, full_name')
+              .eq('affiliate_code', payment.affiliate_code)
+              .eq('status', 'active')
+              .single();
+
+            if (affiliate) {
+              // IMPORTANT: Calculate commission from ACTUAL PAID AMOUNT (after discount)
+              // Customer gets 10% discount, affiliate gets 10% commission from discounted price
+              const transactionAmount = parseFloat(grossAmount);
+              const commissionRate = affiliate.commission_rate || 10.00;
+              const commissionAmount = (transactionAmount * commissionRate) / 100;
+
+              console.log(`💰 Commission Calculation:
+                Transaction Amount (after discount): Rp ${transactionAmount.toLocaleString('id-ID')}
+                Commission Rate: ${commissionRate}%
+                Commission Amount: Rp ${commissionAmount.toLocaleString('id-ID')}
+              `);
+
+              // Create commission record with 'pending' status first
+              // Then update to 'approved' to trigger the affiliate earnings update
+              const { data: newCommission, error: commissionError } = await supabase
+                .from('commissions')
+                .insert({
+                  affiliate_id: affiliate.id,
+                  payment_id: payment.user_id,
+                  order_id: orderId,
+                  customer_email: notification.customer_email || metadata.email,
+                  transaction_amount: transactionAmount,
+                  commission_rate: commissionRate,
+                  commission_amount: commissionAmount,
+                  status: 'pending', // Start with pending
+                  created_at: new Date().toISOString(),
+                })
+                .select()
+                .single();
+
+              if (commissionError) {
+                console.error('❌ Error creating commission:', commissionError);
+              } else {
+                // Update to 'approved' - this will trigger the earnings update
+                const { error: approveError } = await supabase
+                  .from('commissions')
+                  .update({
+                    status: 'approved',
+                    approved_at: new Date().toISOString(),
+                  })
+                  .eq('id', newCommission.id);
+
+                if (approveError) {
+                  console.error('❌ Error approving commission:', approveError);
+                } else {
+                  console.log(`✅ Commission Rp ${commissionAmount.toLocaleString('id-ID')} credited to ${affiliate.full_name} (${affiliate.affiliate_code})`);
+                }
+              }
+            } else {
+              console.warn(`⚠️ Affiliate code ${payment.affiliate_code} not found or inactive`);
+            }
+          } catch (affiliateError) {
+            console.error('❌ Error processing affiliate commission:', affiliateError);
+            // Don't fail the webhook - payment already successful
+          }
         }
       }
     } else if (finalStatus === 'failed') {
