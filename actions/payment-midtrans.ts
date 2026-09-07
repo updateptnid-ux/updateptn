@@ -56,45 +56,33 @@ export async function createSubscriptionPayment(params: {
 
     // Apply voucher/affiliate code if provided
     if (params.voucherCode) {
-      // First, try to find affiliate code (promo code model)
-      const { data: affiliate } = await supabase
-        .from('affiliates')
-        .select('id, affiliate_code')
-        .ilike('affiliate_code', params.voucherCode)
+      // Check vouchers table (sudah ada RLS public read)
+      const { data: voucher } = await supabase
+        .from('vouchers')
+        .select('*, affiliate_id')
+        .ilike('code', params.voucherCode)
         .eq('status', 'active')
         .single();
 
-      if (affiliate) {
-        // Affiliate code found - apply 10% discount
-        discountAmount = Math.round((params.price * 10) / 100);
-        finalAmount = params.price - discountAmount;
-        appliedVoucherCode = affiliate.affiliate_code;
-        affiliateId = affiliate.id;
+      if (voucher && new Date(voucher.valid_until) > new Date()) {
+        const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
         
-        console.log(`✅ Affiliate code applied: ${affiliate.affiliate_code}, discount: Rp ${discountAmount.toLocaleString('id-ID')}`);
-      } else {
-        // Not affiliate code, try vouchers table
-        const { data: voucher } = await supabase
-          .from('vouchers')
-          .select('*')
-          .ilike('code', params.voucherCode)
-          .eq('status', 'active')
-          .single();
-
-        if (voucher && new Date(voucher.valid_until) > new Date()) {
-          const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
-          
-          if (voucher.discount_type === 'percentage') {
-            discountAmount = Math.round((finalAmount * voucherValue) / 100);
-          } else {
-            discountAmount = voucherValue;
-          }
-          
-          finalAmount = Math.max(0, finalAmount - discountAmount);
-          appliedVoucherCode = voucher.code;
-          
-          console.log(`✅ Voucher applied: ${voucher.code}, discount: Rp ${discountAmount.toLocaleString('id-ID')}`);
+        if (voucher.discount_type === 'percentage') {
+          discountAmount = Math.round((params.price * voucherValue) / 100);
+        } else {
+          discountAmount = voucherValue;
         }
+        
+        finalAmount = Math.max(0, params.price - discountAmount);
+        appliedVoucherCode = voucher.code;
+        
+        // If voucher has affiliate_id, set it for commission
+        if (voucher.affiliate_id) {
+          affiliateId = voucher.affiliate_id;
+          console.log(`✅ Affiliate voucher applied: ${voucher.code}, affiliate: ${affiliateId}`);
+        }
+        
+        console.log(`✅ Voucher applied: ${voucher.code}, discount: Rp ${discountAmount.toLocaleString('id-ID')}`);
       }
     }
 

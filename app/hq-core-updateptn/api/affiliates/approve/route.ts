@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Generate unique promo code when approving
+    // Generate unique promo code & create voucher when approving
     let promoCode = null;
     if (status === "active") {
       // Call database function to generate unique code
@@ -72,6 +72,34 @@ export async function POST(request: NextRequest) {
       
       promoCode = codeData;
       console.log(`✅ Generated promo code: ${promoCode}`);
+
+      // Create voucher for this affiliate
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1); // Valid 1 year
+
+      const { error: voucherError } = await serviceSupabase
+        .from("vouchers")
+        .insert({
+          code: promoCode,
+          discount_type: "percentage",
+          value: "10", // 10% discount
+          category: "universal",
+          usage_limit: 9999, // Unlimited usage
+          usage_count: 0,
+          status: "active",
+          expires_at: expiresAt.toISOString(),
+          affiliate_id: affiliateId, // Link to affiliate
+        });
+
+      if (voucherError) {
+        console.error("Error creating voucher:", voucherError);
+        return NextResponse.json(
+          { success: false, error: "Gagal membuat voucher affiliate" },
+          { status: 500 }
+        );
+      }
+
+      console.log(`✅ Voucher created: ${promoCode} for affiliate ${affiliateId}`);
     }
 
     // Update affiliate status (and code if active)
