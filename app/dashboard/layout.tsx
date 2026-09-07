@@ -41,6 +41,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isMentor: false });
+  const [isActiveAffiliate, setIsActiveAffiliate] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -108,6 +109,15 @@ export default function DashboardLayout({
           isAdmin: isAdminEmail || isAdminRole,
           isMentor: !!mentorRecord,
         });
+
+        // Check if user is active affiliate
+        const { data: affiliate } = await supabase
+          .from("affiliates")
+          .select("status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        setIsActiveAffiliate(affiliate?.status === "active");
       } catch (err) {
         console.error("Error checking user role:", err);
       }
@@ -281,14 +291,25 @@ export default function DashboardLayout({
 
             {/* Fixed Footer */}
             <div className="shrink-0 space-y-3 p-4 border-t border-slate-200/80 bg-white/95">
-              {(userRole.isAdmin || userRole.isMentor) && (
+              {(userRole.isAdmin || userRole.isMentor || isActiveAffiliate) && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
                     Pindah Menu
                   </p>
+                  {isActiveAffiliate && (
+                    <Link
+                      href="/dashboard/affiliate"
+                      onClick={() => setIsMobileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                    >
+                      <Users className="h-4 w-4 text-slate-400" />
+                      <span>Dashboard Affiliate</span>
+                    </Link>
+                  )}
                   {userRole.isMentor && (
                     <Link
                       href="/mentor"
+                      onClick={() => setIsMobileOpen(false)}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
                     >
                       <UserCog className="h-4 w-4 text-slate-400" />
@@ -298,6 +319,7 @@ export default function DashboardLayout({
                   {userRole.isAdmin && (
                     <Link
                       href="/hq-core-updateptn"
+                      onClick={() => setIsMobileOpen(false)}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
                     >
                       <ShieldCheck className="h-4 w-4 text-slate-400" />
@@ -395,11 +417,20 @@ export default function DashboardLayout({
           </div>
 
           {/* Role Switcher */}
-          {(userRole.isAdmin || userRole.isMentor) && (
+          {(userRole.isAdmin || userRole.isMentor || isActiveAffiliate) && (
             <div className="space-y-0.5">
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">
                 Pindah Menu
               </p>
+              {isActiveAffiliate && (
+                <Link
+                  href="/dashboard/affiliate"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <Users className="h-3 w-3 text-slate-400" />
+                  <span>Dashboard Affiliate</span>
+                </Link>
+              )}
               {userRole.isMentor && (
                 <Link
                   href="/mentor"
