@@ -74,16 +74,22 @@ export default async function AdminDashboardPage() {
   }
 
   let monthlyRevenue = 0;
+  let totalPayments = 0;
   try {
-    const { data: trans } = await supabase
-      .from("transactions")
-      .select("amount")
-      .eq("status", "success");
-    if (trans) {
-      monthlyRevenue = trans.reduce((sum, row) => sum + (row.amount || 0), 0);
+    // Query from payments table (Midtrans integration)
+    const { data: paymentsData, count } = await supabase
+      .from("payments")
+      .select("amount", { count: "exact" })
+      .eq("status", "settlement"); // Midtrans uses "settlement" for success
+
+    if (paymentsData && paymentsData.length > 0) {
+      monthlyRevenue = paymentsData.reduce((sum, row) => sum + (row.amount || 0), 0);
     }
-  } catch {
+    totalPayments = count || 0;
+  } catch (err) {
+    console.error("Error fetching payments:", err);
     monthlyRevenue = 0;
+    totalPayments = 0;
   }
 
   // 5. Fetch pending free access claims
@@ -192,7 +198,7 @@ export default async function AdminDashboardPage() {
     {
       title: "Pendapatan Transaksi",
       value: monthlyRevenue > 0 ? formatRupiah(monthlyRevenue) : "Rp 0",
-      change: "Transaksi Berhasil",
+      change: `${totalPayments} Transaksi Berhasil`,
       isPositive: true,
       icon: CreditCard,
       color: "text-emerald-600 bg-emerald-50 border-emerald-100",

@@ -14,78 +14,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Receipt, Edit, Trash2, Calendar, AlertTriangle, Save, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { MoreHorizontal, Receipt, AlertTriangle, X } from "lucide-react";
 
 interface PaymentRecord {
   id: string;
-  invoice_no: string;
-  user_name: string;
-  user_email: string;
-  amount: string;
-  method: string;
-  status: "success" | "pending" | "failed";
+  order_id: string;
+  user_id: string;
+  amount: number;
+  original_amount: number;
+  discount_amount: number;
+  voucher_code: string | null;
+  status: string; // pending, settlement, cancel, expire, deny
+  payment_method: string;
+  payment_type: string | null;
+  transaction_status: string | null;
+  fraud_status: string | null;
+  metadata: any;
   created_at: string;
+  updated_at: string;
+  // Joined data
+  user_email?: string;
+  user_name?: string;
 }
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const [formData, setFormData] = useState({
-    invoice_no: "",
-    user_name: "",
-    user_email: "",
-    amount: "Rp 149.000",
-    method: "GoPay / Midtrans",
-    status: "pending" as "success" | "pending" | "failed",
-  });
-
-  const mockPayments: PaymentRecord[] = [
-    {
-      id: "p1",
-      invoice_no: "INV-20260801-001",
-      user_name: "Amanda Zevanya",
-      user_email: "amanda.zevanya@gmail.com",
-      amount: "Rp 249.000",
-      method: "GoPay / Midtrans",
-      status: "success",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "p2",
-      invoice_no: "INV-20260801-002",
-      user_name: "Budi Pratama",
-      user_email: "budi.pratama@yahoo.com",
-      amount: "Rp 149.000",
-      method: "VA Mandiri / Midtrans",
-      status: "pending",
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: "p3",
-      invoice_no: "INV-20260730-089",
-      user_name: "Citra Kirana",
-      user_email: "citra.kirana@outlook.com",
-      amount: "Rp 149.000",
-      method: "VA BCA / Midtrans",
-      status: "failed",
-      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    },
-  ];
 
   useEffect(() => {
     fetchPayments();
@@ -95,102 +50,68 @@ export default function AdminPaymentsPage() {
     try {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.from("payments").select("*").order("created_at", { ascending: false });
+      
+      // Fetch payments
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) {
+        console.error("Error fetching payments:", error);
         setIsDemoMode(true);
-        setPayments(mockPayments);
+        setPayments([]);
       } else if (data) {
-        setPayments(data as PaymentRecord[]);
+        // Fetch user emails from profiles
+        const userIds = [...new Set(data.map((p: any) => p.user_id))];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, email, full_name")
+          .in("id", userIds);
+
+        const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
+
+        const enrichedData = data.map((payment: any) => ({
+          ...payment,
+          user_email: profileMap.get(payment.user_id)?.email || "N/A",
+          user_name: profileMap.get(payment.user_id)?.full_name || "Unknown User",
+        }));
+
+        setPayments(enrichedData as PaymentRecord[]);
         setIsDemoMode(false);
       }
     } catch (err) {
       console.error(err);
       setIsDemoMode(true);
-      setPayments(mockPayments);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = () => {
-    setEditingPayment(null);
-    setFormData({
-      invoice_no: `INV-${new Date().toISOString().split("T")[0].replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`,
-      user_name: "",
-      user_email: "",
-      amount: "Rp 149.000",
-      method: "GoPay / Midtrans",
-      status: "success",
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleEdit = (p: PaymentRecord) => {
-    setEditingPayment(p);
-    setFormData({
-      invoice_no: p.invoice_no,
-      user_name: p.user_name,
-      user_email: p.user_email,
-      amount: p.amount,
-      method: p.method,
-      status: p.status,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      const payload = {
-        ...formData,
-        created_at: new Date().toISOString(),
-      };
-
-      if (isDemoMode) {
-        if (editingPayment) {
-          setPayments(prev => prev.map(p => (p.id === editingPayment.id ? { ...p, ...formData } : p)));
-        } else {
-          setPayments(prev => [
-            ...prev,
-            { id: `p_${Date.now()}`, ...payload },
-          ]);
-        }
-        setIsDialogOpen(false);
-        return;
-      }
-
-      const supabase = createClient();
-      if (editingPayment) {
-        const { error } = await supabase.from("payments").update(formData).eq("id", editingPayment.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("payments").insert([payload]);
-        if (error) throw error;
-      }
-
-      setIsDialogOpen(false);
-      fetchPayments();
-    } catch (err) {
-      alert("Gagal menyimpan: " + (err as Error).message);
-    } finally {
-      setIsSaving(false);
+  const handleCancel = async (payment: PaymentRecord) => {
+    if (!confirm(`Batalkan transaksi ${payment.order_id}?\n\nIni akan membatalkan payment di Midtrans dan menandai status sebagai 'cancel'.`)) {
+      return;
     }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Hapus transaksi ini?")) return;
+    
     try {
-      if (isDemoMode) {
-        setPayments(prev => prev.filter(p => p.id !== id));
-        return;
+      // Call Midtrans cancel API
+      const response = await fetch("/api/midtrans/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: payment.order_id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal membatalkan transaksi");
       }
-      const supabase = createClient();
-      const { error } = await supabase.from("payments").delete().eq("id", id);
-      if (error) throw error;
+
+      alert("✅ Transaksi berhasil dibatalkan di Midtrans");
       fetchPayments();
     } catch (err) {
-      alert("Gagal menghapus: " + (err as Error).message);
+      alert("❌ Gagal membatalkan transaksi: " + (err as Error).message);
     }
   };
 
@@ -208,6 +129,47 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  const formatRupiah = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const getStatusBadge = (status: string) => {
+    if (status === "settlement") {
+      return (
+        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-bold text-[11px] px-2.5">
+          SETTLEMENT
+        </Badge>
+      );
+    } else if (status === "pending") {
+      return (
+        <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-bold text-[11px] px-2.5">
+          PENDING
+        </Badge>
+      );
+    } else if (status === "cancel" || status === "expire") {
+      return (
+        <Badge className="bg-rose-100 text-rose-800 border-rose-200 font-bold text-[11px] px-2.5">
+          {status.toUpperCase()}
+        </Badge>
+      );
+    } else if (status === "deny") {
+      return (
+        <Badge className="bg-red-100 text-red-800 border-red-200 font-bold text-[11px] px-2.5">
+          DENIED
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-slate-100 text-slate-800 border-slate-200 font-bold text-[11px] px-2.5">
+        {status.toUpperCase()}
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {isDemoMode && (
@@ -222,10 +184,8 @@ export default function AdminPaymentsPage() {
 
       <CrudLayout
         title="Transaksi Payment"
-        description="Pantau log pembayaran, status billing Midtrans, dan laporan keuangan harian."
-        addButtonLabel="Tambah Transaksi"
-        onAddClick={handleCreate}
-        searchPlaceholder="Cari invoice..."
+        description="Pantau log pembayaran dari Midtrans, status billing, dan laporan keuangan. Payment dibuat otomatis saat user checkout."
+        searchPlaceholder="Cari order ID..."
         totalItems={payments.length}
         currentPage={1}
         totalPages={1}
@@ -233,7 +193,7 @@ export default function AdminPaymentsPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-slate-200 bg-slate-50/50">
-              <TableHead className="font-bold text-slate-700">No. Invoice</TableHead>
+              <TableHead className="font-bold text-slate-700">Order ID</TableHead>
               <TableHead className="font-bold text-slate-700">Siswa</TableHead>
               <TableHead className="font-bold text-slate-700">Metode</TableHead>
               <TableHead className="font-bold text-slate-700">Total Nominal</TableHead>
@@ -249,53 +209,86 @@ export default function AdminPaymentsPage() {
               </TableRow>
             ) : payments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-xs text-slate-500">Belum ada data.</TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-xs text-slate-500">
+                  Belum ada transaksi. Payment akan muncul otomatis saat user melakukan pembelian paket.
+                </TableCell>
               </TableRow>
             ) : (
               payments.map((payment) => (
                 <TableRow key={payment.id} className="border-slate-100 hover:bg-slate-50/60 transition-colors">
-                  <TableCell className="font-mono text-xs font-bold text-slate-900">{payment.invoice_no}</TableCell>
+                  <TableCell className="font-mono text-xs font-bold text-slate-900">{payment.order_id}</TableCell>
                   <TableCell className="py-3">
                     <div>
-                      <p className="text-sm font-bold text-slate-900 leading-tight">{payment.user_name}</p>
-                      <p className="text-xs text-slate-500">{payment.user_email}</p>
+                      <p className="text-sm font-bold text-slate-900 leading-tight">{payment.user_name || "Unknown"}</p>
+                      <p className="text-xs text-slate-500">{payment.user_email || "N/A"}</p>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-600">{payment.method}</TableCell>
-                  <TableCell className="text-xs font-black text-slate-900">{payment.amount}</TableCell>
-                  <TableCell>
-                    {payment.status === "success" ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-bold text-[11px] px-2.5">
-                        SUCCESS
-                      </Badge>
-                    ) : payment.status === "pending" ? (
-                      <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-bold text-[11px] px-2.5">
-                        PENDING
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-rose-100 text-rose-800 border-rose-200 font-bold text-[11px] px-2.5">
-                        FAILED
-                      </Badge>
-                    )}
+                  <TableCell className="text-xs font-semibold text-slate-600">
+                    {payment.payment_type || payment.payment_method || "N/A"}
                   </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="text-xs font-black text-slate-900">{formatRupiah(payment.amount)}</p>
+                      {payment.discount_amount > 0 && (
+                        <p className="text-[10px] text-emerald-600 font-semibold">
+                          Diskon: {formatRupiah(payment.discount_amount)}
+                        </p>
+                      )}
+                      {payment.voucher_code && (
+                        <p className="text-[10px] text-blue-600 font-semibold">
+                          Voucher: {payment.voucher_code}
+                        </p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
                   <TableCell className="text-xs text-slate-500">{formatDate(payment.created_at)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl border border-slate-200 hover:bg-slate-100">
                           <MoreHorizontal className="h-4 w-4 text-slate-600" />
-                        </Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
                         <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Opsi</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleEdit(payment)} className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2">
-                          <Edit className="h-3.5 w-3.5 text-indigo-600" />
-                          <span>Ubah Transaksi</span>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            const info = [
+                              `Order ID: ${payment.order_id}`,
+                              `Status: ${payment.status}`,
+                              `Amount: ${formatRupiah(payment.amount)}`,
+                              `Original Amount: ${formatRupiah(payment.original_amount)}`,
+                              `Discount: ${formatRupiah(payment.discount_amount)}`,
+                              `Voucher: ${payment.voucher_code || "None"}`,
+                              `Payment Method: ${payment.payment_method}`,
+                              `Payment Type: ${payment.payment_type || "N/A"}`,
+                              `Transaction Status: ${payment.transaction_status || "N/A"}`,
+                              `Fraud Status: ${payment.fraud_status || "N/A"}`,
+                            ];
+                            alert(info.join("\n"));
+                          }} 
+                          className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                        >
+                          <Receipt className="h-3.5 w-3.5 text-blue-600" />
+                          <span>Lihat Detail</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDelete(payment.id)} className="text-xs font-semibold text-rose-600 cursor-pointer rounded-lg gap-2 focus:bg-rose-50">
-                          <Trash2 className="h-3.5 w-3.5 text-rose-600" />
-                          <span>Batalkan Transaksi</span>
-                        </DropdownMenuItem>
+                        {payment.status === "pending" ? (
+                          <DropdownMenuItem 
+                            onClick={() => handleCancel(payment)} 
+                            className="text-xs font-semibold text-rose-600 cursor-pointer rounded-lg gap-2 focus:bg-rose-50"
+                          >
+                            <X className="h-3.5 w-3.5 text-rose-600" />
+                            <span>Batalkan Transaksi</span>
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem disabled className="text-xs text-slate-400 gap-2">
+                            <X className="h-3.5 w-3.5" />
+                            <span>Hanya pending bisa dibatalkan</span>
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -305,54 +298,6 @@ export default function AdminPaymentsPage() {
           </TableBody>
         </Table>
       </CrudLayout>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingPayment ? "Edit Transaksi" : "Tambah Transaksi Manual"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>No. Invoice *</Label>
-              <Input value={formData.invoice_no} onChange={e => setFormData({ ...formData, invoice_no: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Nama Siswa *</Label>
-              <Input value={formData.user_name} onChange={e => setFormData({ ...formData, user_name: e.target.value })} placeholder="Budi Pratama" />
-            </div>
-            <div className="space-y-2">
-              <Label>Email Siswa *</Label>
-              <Input value={formData.user_email} onChange={e => setFormData({ ...formData, user_email: e.target.value })} placeholder="budi@yahoo.com" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nominal Pembayaran *</Label>
-                <Input value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} placeholder="Rp 149.000" />
-              </div>
-              <div className="space-y-2">
-                <Label>Metode *</Label>
-                <Input value={formData.method} onChange={e => setFormData({ ...formData, method: e.target.value })} placeholder="GoPay / Midtrans" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Status Transaksi</Label>
-              <select
-                value={formData.status}
-                onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-              >
-                <option value="success">Success</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSave} disabled={isSaving || !formData.invoice_no || !formData.user_name} className="bg-blue-600 hover:bg-blue-700 text-white">Simpan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
