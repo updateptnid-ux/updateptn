@@ -86,6 +86,23 @@ export default function DashboardLayout({
         const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
         const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
 
+        // Check if user has admin role in profiles (prioritize this check)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        const isAdminRole = profile?.role === "admin";
+
+        console.log("🔍 User role check:", {
+          email: user.email,
+          profileRole: profile?.role,
+          isAdminEmail,
+          isAdminRole,
+          finalIsAdmin: isAdminEmail || isAdminRole
+        });
+
         // Check if user is in mentors table
         const { data: mentorRecord } = await supabase
           .from("mentors")
@@ -93,17 +110,6 @@ export default function DashboardLayout({
           .eq("email", user.email!)
           .eq("status", "active")
           .maybeSingle();
-
-        // Check if user has admin role in profiles
-        let isAdminRole = false;
-        if (!isAdminEmail) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .maybeSingle();
-          isAdminRole = profile?.role === "admin";
-        }
 
         setUserRole({
           isAdmin: isAdminEmail || isAdminRole,
