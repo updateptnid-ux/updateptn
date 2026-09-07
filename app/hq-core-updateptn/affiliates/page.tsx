@@ -70,11 +70,46 @@ export default function AdminAffiliatesPage() {
         throw new Error(result.error || 'Failed to update status');
       }
 
-      alert(`Affiliate ${status === "active" ? "disetujui" : "ditolak"}!`);
+      if (status === "active" && result.promoCode) {
+        alert(`✅ Affiliate disetujui!\n\nKode Promo: ${result.promoCode}\n\nKode promo sudah otomatis di-generate dan bisa langsung digunakan.`);
+      } else {
+        alert(`Affiliate ${status === "active" ? "disetujui" : "ditolak"}!`);
+      }
+      
       loadData();
     } catch (error: any) {
       console.error('Error updating affiliate status:', error);
       alert("Gagal memperbarui status: " + error.message);
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  async function handleDeleteAffiliate(affiliateId: string, affiliateName: string) {
+    if (!confirm(`Yakin ingin menghapus affiliate "${affiliateName}"?\n\nSemua data komisi dan penarikan juga akan terhapus!`)) {
+      return;
+    }
+
+    setProcessing(affiliateId);
+
+    try {
+      const response = await fetch('/hq-core-updateptn/api/affiliates/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ affiliateId }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete affiliate');
+      }
+
+      alert('Affiliate berhasil dihapus!');
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting affiliate:', error);
+      alert("Gagal menghapus affiliate: " + error.message);
     } finally {
       setProcessing(null);
     }
@@ -278,6 +313,15 @@ export default function AdminAffiliatesPage() {
                         <X className="h-4 w-4 mr-1" />
                         Tolak
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteAffiliate(affiliate.id, affiliate.full_name)}
+                        disabled={processing === affiliate.id}
+                        className="border-slate-200 text-slate-600 hover:bg-slate-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -329,6 +373,22 @@ export default function AdminAffiliatesPage() {
                         </div>
                       </div>
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteAffiliate(affiliate.id, affiliate.full_name)}
+                      disabled={processing === affiliate.id}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50 ml-3"
+                    >
+                      {processing === affiliate.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <X className="h-4 w-4 mr-1" />
+                          Hapus
+                        </>
+                      )}
+                    </Button>
                   </div>
                 ))}
               </div>

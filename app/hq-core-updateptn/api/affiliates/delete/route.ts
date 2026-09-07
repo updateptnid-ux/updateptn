@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { affiliateId, status } = await request.json();
+    const { affiliateId } = await request.json();
 
-    if (!affiliateId || !status) {
+    if (!affiliateId) {
       return NextResponse.json(
-        { success: false, error: "Missing affiliateId or status" },
+        { success: false, error: "Missing affiliateId" },
         { status: 400 }
       );
     }
@@ -55,57 +55,27 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Generate unique promo code when approving
-    let promoCode = null;
-    if (status === "active") {
-      // Call database function to generate unique code
-      const { data: codeData, error: codeError } = await serviceSupabase
-        .rpc("generate_affiliate_code");
-      
-      if (codeError) {
-        console.error("Error generating promo code:", codeError);
-        return NextResponse.json(
-          { success: false, error: "Gagal generate kode promo" },
-          { status: 500 }
-        );
-      }
-      
-      promoCode = codeData;
-      console.log(`✅ Generated promo code: ${promoCode}`);
-    }
-
-    // Update affiliate status (and code if active)
-    const updateData: any = {
-      status,
-      approved_at: status === "active" ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Add affiliate_code if approving
-    if (status === "active" && promoCode) {
-      updateData.affiliate_code = promoCode;
-    }
-
-    const { error: updateError } = await serviceSupabase
+    // Delete affiliate (CASCADE akan otomatis hapus commissions, withdrawals, referrals)
+    const { error: deleteError } = await serviceSupabase
       .from("affiliates")
-      .update(updateData)
+      .delete()
       .eq("id", affiliateId);
 
-    if (updateError) {
-      console.error("Update affiliate error:", updateError);
+    if (deleteError) {
+      console.error("Delete affiliate error:", deleteError);
       return NextResponse.json(
-        { success: false, error: updateError.message },
+        { success: false, error: deleteError.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ 
       success: true,
-      promoCode: promoCode || undefined  // Return the generated code
+      message: "Affiliate dan semua data terkait berhasil dihapus"
     });
     
   } catch (err: any) {
-    console.error("API approve affiliate error:", err);
+    console.error("API delete affiliate error:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Internal server error" },
       { status: 500 }
