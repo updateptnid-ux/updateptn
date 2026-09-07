@@ -74,10 +74,10 @@ export async function POST(request: NextRequest) {
 
     // If payment successful, activate subscription
     if (finalStatus === 'success') {
-      // Get payment details with metadata
+      // Get payment details with metadata and affiliate_id
       const { data: payment } = await supabase
         .from('payments')
-        .select('user_id, metadata, affiliate_code')
+        .select('user_id, metadata, affiliate_id')
         .eq('order_id', orderId)
         .single();
 
@@ -110,13 +110,13 @@ export async function POST(request: NextRequest) {
         // ========================================
         // AFFILIATE COMMISSION PROCESSING
         // ========================================
-        if (payment.affiliate_code) {
+        if (payment.affiliate_id) {
           try {
-            // Get affiliate details
+            // Get affiliate details using affiliate_id
             const { data: affiliate } = await supabase
               .from('affiliates')
               .select('id, commission_rate, affiliate_code, full_name')
-              .eq('affiliate_code', payment.affiliate_code)
+              .eq('id', payment.affiliate_id)
               .eq('status', 'active')
               .single();
 
@@ -125,27 +125,28 @@ export async function POST(request: NextRequest) {
               // Customer gets 10% discount, affiliate gets 10% commission from discounted price
               const transactionAmount = parseFloat(grossAmount);
               const commissionRate = affiliate.commission_rate || 10.00;
-              const commissionAmount = (transactionAmount * commissionRate) / 100;
+              const commissionAmount = Math.round((transactionAmount * commissionRate) / 100);
 
               console.log(`💰 Commission Calculation:
                 Transaction Amount (after discount): Rp ${transactionAmount.toLocaleString('id-ID')}
                 Commission Rate: ${commissionRate}%
                 Commission Amount: Rp ${commissionAmount.toLocaleString('id-ID')}
+                Affiliate: ${affiliate.full_name} (${affiliate.affiliate_code})
               `);
 
-              // Create commission record with 'pending' status first
-              // Then update to 'approved' to trigger the affiliate earnings update
+              // Create commission record directly as 'approved' since payment is settled
               const { data: newCommission, error: commissionError } = await supabase
                 .from('commissions')
                 .insert({
                   affiliate_id: affiliate.id,
-                  payment_id: payment.user_id,
+                  payment_id: orderId,
                   order_id: orderId,
-                  customer_email: notification.customer_email || metadata.email,
+                  customer_email: notification.customer_email || metadata.user_email,
                   transaction_amount: transactionAmount,
                   commission_rate: commissionRate,
                   commission_amount: commissionAmount,
-                  status: 'pending', // Start with pending
+                  status: 'approved', // Directly approved on successful payment
+                  approved_at: new Date().toISOString(),
                   created_at: new Date().toISOString(),
                 })
                 .select()
@@ -154,23 +155,10 @@ export async function POST(request: NextRequest) {
               if (commissionError) {
                 console.error('❌ Error creating commission:', commissionError);
               } else {
-                // Update to 'approved' - this will trigger the earnings update
-                const { error: approveError } = await supabase
-                  .from('commissions')
-                  .update({
-                    status: 'approved',
-                    approved_at: new Date().toISOString(),
-                  })
-                  .eq('id', newCommission.id);
-
-                if (approveError) {
-                  console.error('❌ Error approving commission:', approveError);
-                } else {
-                  console.log(`✅ Commission Rp ${commissionAmount.toLocaleString('id-ID')} credited to ${affiliate.full_name} (${affiliate.affiliate_code})`);
-                }
+                console.log(`✅ Commission Rp ${commissionAmount.toLocaleString('id-ID')} credited to ${affiliate.full_name} (${affiliate.affiliate_code})`);
               }
             } else {
-              console.warn(`⚠️ Affiliate code ${payment.affiliate_code} not found or inactive`);
+              console.warn(`⚠️ Affiliate ID ${payment.affiliate_id} not found or inactive`);
             }
           } catch (affiliateError) {
             console.error('❌ Error processing affiliate commission:', affiliateError);

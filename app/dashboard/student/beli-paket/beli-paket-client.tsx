@@ -9,27 +9,20 @@ import Link from "next/link";
 import { createSubscriptionPayment } from "@/actions/payment-midtrans";
 import { toast } from "sonner";
 
-// Declare Midtrans Snap on window
-declare global {
-  interface Window {
-    snap: any;
-  }
-}
-
-interface SubscriptionPlan {
-  tier: string;
-  duration: string;
-  price: number;
-  name: string;
-  description?: string;
-}
-
 export default function BeliPaketClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tierParam = searchParams.get("tier") || "Premium SNBT";
   const durationParam = searchParams.get("duration") || "1 bulan";
   const priceParam = parseInt(searchParams.get("price") || "79000");
+  
+  // Package info for display
+  const selectedPlan = {
+    tier: tierParam,
+    duration: durationParam,
+    price: priceParam,
+    name: tierParam,
+  };
   
   const [step, setStep] = useState<"payment" | "confirmation">("payment");
   const [loading, setLoading] = useState(false);
@@ -67,60 +60,47 @@ export default function BeliPaketClient() {
     };
   }, []);
 
-  // Check voucher/affiliate code
+  // Check voucher/affiliate code using server action
   async function checkVoucher() {
-    if (!voucherCode.trim()) return;
+    if (!voucherCode.trim()) {
+      toast.error('Masukkan kode promo terlebih dahulu');
+      return;
+    }
     
     setCheckingVoucher(true);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      // Check affiliate code first
-      const { data: affiliate } = await supabase
-        .from('affiliates')
-        .select('affiliate_code')
-        .ilike('affiliate_code', voucherCode.trim())
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (affiliate) {
-        // Affiliate code: 10% discount
-        const discountAmount = Math.round((priceParam * 10) / 100);
+      // Import the server action
+      const { validatePromoCodeAction } = await import("@/actions/affiliate");
+      
+      // Validate promo code
+      const result = await validatePromoCodeAction(voucherCode.trim());
+      
+      if (result.success && result.affiliate) {
+        // Promo code valid - calculate discount
+        const discountPercent = result.affiliate.discountPercent || 10;
+        const discountAmount = Math.round((priceParam * discountPercent) / 100);
+        
         setDiscount(discountAmount);
         setVoucherApplied(true);
-        toast.success(`Kode promo valid! Diskon Rp ${discountAmount.toLocaleString('id-ID')}`);
+        toast.success(`✅ ${result.message} - Diskon ${discountPercent}% (Rp ${discountAmount.toLocaleString('id-ID')})`);
+        
+        console.log('✅ Promo code applied:', {
+          code: result.affiliate.code,
+          affiliateName: result.affiliate.name,
+          discountPercent,
+          discountAmount,
+        });
       } else {
-        // Check vouchers table
-        const { data: voucher } = await supabase
-          .from('vouchers')
-          .select('*')
-          .ilike('code', voucherCode.trim())
-          .eq('status', 'active')
-          .maybeSingle();
-
-        if (voucher && new Date(voucher.valid_until) > new Date()) {
-          const voucherValue = parseInt(String(voucher.value || '0').replace(/\D/g, '')) || 0;
-          let discountAmount = 0;
-          
-          if (voucher.discount_type === 'percentage') {
-            discountAmount = Math.round((priceParam * voucherValue) / 100);
-          } else {
-            discountAmount = voucherValue;
-          }
-          
-          setDiscount(discountAmount);
-          setVoucherApplied(true);
-          toast.success(`Voucher valid! Diskon Rp ${discountAmount.toLocaleString('id-ID')}`);
-        } else {
-          toast.error('Kode tidak valid atau sudah kadaluarsa');
-          setVoucherApplied(false);
-          setDiscount(0);
-        }
+        // Invalid promo code
+        toast.error(result.message || 'Kode promo tidak valid');
+        setVoucherApplied(false);
+        setDiscount(0);
       }
     } catch (error) {
-      console.error('Error checking voucher:', error);
-      toast.error('Gagal memvalidasi kode');
+      console.error('Error checking promo code:', error);
+      toast.error('Gagal memvalidasi kode promo');
+      setVoucherApplied(false);
+      setDiscount(0);
     } finally {
       setCheckingVoucher(false);
     }

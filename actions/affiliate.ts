@@ -262,6 +262,79 @@ export async function getAffiliateDashboardAction() {
 }
 
 // ============================================
+// VALIDATE PROMO CODE (FOR CHECKOUT)
+// ============================================
+
+export async function validatePromoCodeAction(promoCode: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Normalize code (uppercase, trim)
+    const normalizedCode = promoCode.trim().toUpperCase();
+    
+    if (!normalizedCode) {
+      return { 
+        success: false, 
+        error: "InvalidCode", 
+        message: "Kode promo tidak boleh kosong" 
+      };
+    }
+
+    // Check if code exists and is active
+    const { data: affiliate, error } = await supabase
+      .from("affiliates")
+      .select("id, affiliate_code, full_name, status, commission_rate")
+      .eq("affiliate_code", normalizedCode)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error validating promo code:", error);
+      return { 
+        success: false, 
+        error: "DatabaseError", 
+        message: "Gagal memvalidasi kode promo" 
+      };
+    }
+
+    if (!affiliate) {
+      return { 
+        success: false, 
+        error: "NotFound", 
+        message: "Kode promo tidak valid" 
+      };
+    }
+
+    if (affiliate.status !== "active") {
+      return { 
+        success: false, 
+        error: "Inactive", 
+        message: "Kode promo tidak aktif" 
+      };
+    }
+
+    // Return success with discount info
+    return {
+      success: true,
+      message: "Kode promo valid!",
+      affiliate: {
+        id: affiliate.id,
+        code: affiliate.affiliate_code,
+        name: affiliate.full_name,
+        discountPercent: 10, // Fixed 10% discount for customers
+        commissionRate: affiliate.commission_rate || 10, // Commission rate for affiliate
+      },
+    };
+  } catch (error) {
+    console.error("Error in validatePromoCodeAction:", error);
+    return { 
+      success: false, 
+      error: "ServerError", 
+      message: "Terjadi kesalahan server" 
+    };
+  }
+}
+
+// ============================================
 // CREATE WITHDRAWAL REQUEST
 // ============================================
 
