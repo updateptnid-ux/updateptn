@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Admin route protection (TETAP AKTIF)
+  // Admin route protection
   if (pathname.startsWith("/hq-core-updateptn")) {
     if (pathname === "/hq-core-updateptn/login") {
       if (user) {
@@ -49,9 +49,26 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Check if admin
+    // Check if admin (email whitelist OR database role)
     const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    const isAdmin = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+    let isAdmin = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
+    // If not in whitelist, check database role
+    if (user && !isAdmin) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        if (profile?.role === "admin") {
+          isAdmin = true;
+        }
+      } catch (err) {
+        console.error("Middleware admin check error:", err);
+      }
+    }
 
     if (!user || !isAdmin) {
       return NextResponse.redirect(new URL("/hq-core-updateptn/login", request.url));

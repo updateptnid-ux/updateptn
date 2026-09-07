@@ -35,51 +35,73 @@ export default async function AdminLayout({
     user.email?.split("@")[0] ||
     "Super Admin";
 
-  // 2. Secondary check: Query profiles.role on the server
-  try {
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const dbClient = serviceRoleKey
-      ? createSupabaseClient(
+  // ADMIN EMAIL WHITELIST - Priority check
+  const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+
+  if (isAdminEmail) {
+    isAdmin = true;
+  }
+
+  // 2. Check profiles.role in database (if not admin email)
+  if (!isAdmin) {
+    try {
+      // Try with service role first (more reliable for RLS)
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (serviceRoleKey) {
+        const serviceClient = createSupabaseClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceRoleKey,
           { auth: { persistSession: false } }
-        )
-      : supabase;
+        );
 
-    const { data: profile, error } = await dbClient
-      .from("profiles")
-      .select("role, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
+        const { data: profile, error } = await serviceClient
+          .from("profiles")
+          .select("role, full_name")
+          .eq("id", user.id)
+          .maybeSingle();
 
-    if (!error && profile) {
-      if (profile.full_name) {
-        adminName = profile.full_name;
+        if (!error && profile) {
+          if (profile.full_name) {
+            adminName = profile.full_name;
+          }
+          if (profile.role === "admin") {
+            isAdmin = true;
+          }
+        }
+      } else {
+        // Fallback: use regular supabase client (might be affected by RLS)
+        console.warn("⚠️ SUPABASE_SERVICE_ROLE_KEY not found, using regular client");
+        
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role, full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!error && profile) {
+          if (profile.full_name) {
+            adminName = profile.full_name;
+          }
+          if (profile.role === "admin") {
+            isAdmin = true;
+          }
+        }
       }
-      if (profile.role === "admin") {
-        isAdmin = true;
-      }
-    }
-  } catch (err) {
-    console.error("AdminLayout profile authorization error:", err);
-  }
-
-  // Fallback: Check metadata or admin email
-  if (!isAdmin) {
-    const userMetaRole =
-      user.user_metadata?.role ||
-      user.app_metadata?.role ||
-      (user.email === "admin@updateptn.id" || user.email === "updateptnid@gmail.com" ? "admin" : null);
-
-    if (userMetaRole === "admin") {
-      isAdmin = true;
+    } catch (err) {
+      console.error("❌ AdminLayout profile check error:", err);
+      // Don't block access on error - let other checks decide
     }
   }
 
   // If unauthorized, redirect to /hq-core-updateptn/login
   if (!isAdmin) {
+    console.log("🚫 Access denied for:", user.email, "- Not admin");
     redirect("/hq-core-updateptn/login");
   }
+
+  console.log("✅ Admin access granted:", user.email);
 
   const adminUser = {
     name: adminName,
