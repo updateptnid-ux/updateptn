@@ -272,6 +272,11 @@ export async function validatePromoCodeAction(promoCode: string) {
     // Normalize code (uppercase, trim)
     const normalizedCode = promoCode.trim().toUpperCase();
     
+    console.log("🔍 Validating promo code:", {
+      original: promoCode,
+      normalized: normalizedCode
+    });
+    
     if (!normalizedCode) {
       return { 
         success: false, 
@@ -280,15 +285,21 @@ export async function validatePromoCodeAction(promoCode: string) {
       };
     }
 
-    // Check if code exists and is active
+    // Check if code exists and is active - use ILIKE for case-insensitive
     const { data: affiliate, error } = await supabase
       .from("affiliates")
       .select("id, affiliate_code, full_name, status, commission_rate")
-      .eq("affiliate_code", normalizedCode)
+      .ilike("affiliate_code", normalizedCode)
       .maybeSingle();
 
+    console.log("📊 Query result:", {
+      affiliate,
+      error,
+      searchCode: normalizedCode
+    });
+
     if (error) {
-      console.error("Error validating promo code:", error);
+      console.error("❌ Error validating promo code:", error);
       return { 
         success: false, 
         error: "DatabaseError", 
@@ -297,6 +308,7 @@ export async function validatePromoCodeAction(promoCode: string) {
     }
 
     if (!affiliate) {
+      console.log("❌ Affiliate not found for code:", normalizedCode);
       return { 
         success: false, 
         error: "NotFound", 
@@ -305,12 +317,18 @@ export async function validatePromoCodeAction(promoCode: string) {
     }
 
     if (affiliate.status !== "active") {
+      console.log("❌ Affiliate found but not active:", affiliate.status);
       return { 
         success: false, 
         error: "Inactive", 
         message: "Kode promo tidak aktif" 
       };
     }
+
+    console.log("✅ Promo code valid:", {
+      code: affiliate.affiliate_code,
+      name: affiliate.full_name
+    });
 
     // Return success with discount info
     return {
@@ -325,7 +343,7 @@ export async function validatePromoCodeAction(promoCode: string) {
       },
     };
   } catch (error) {
-    console.error("Error in validatePromoCodeAction:", error);
+    console.error("❌ Error in validatePromoCodeAction:", error);
     return { 
       success: false, 
       error: "ServerError", 
