@@ -49,30 +49,18 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Check if admin (email whitelist OR database role)
+    // SIMPLIFIED: Only check whitelist in middleware
+    // Role check will be done in layout.tsx with service role
     const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
-    let isAdmin = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
+    const isAdminEmail = user && ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
 
-    // If not in whitelist, check database role
-    if (user && !isAdmin) {
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .maybeSingle();
-        
-        if (profile?.role === "admin") {
-          isAdmin = true;
-        }
-      } catch (err) {
-        console.error("Middleware admin check error:", err);
-      }
-    }
-
-    if (!user || !isAdmin) {
+    // If not in whitelist, let it through to layout.tsx for role check
+    // Layout will do proper check with service role and redirect if needed
+    if (!user) {
       return NextResponse.redirect(new URL("/hq-core-updateptn/login", request.url));
     }
+
+    // Allow access - final check in layout.tsx
   }
 
   // Student & Protected Route Protection

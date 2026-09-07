@@ -49,6 +49,9 @@ export default async function AdminLayout({
       // Try with service role first (more reliable for RLS)
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       
+      console.log("🔍 Checking admin role for:", user.email);
+      console.log("📧 Service role key exists:", !!serviceRoleKey);
+      
       if (serviceRoleKey) {
         const serviceClient = createSupabaseClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,13 +65,18 @@ export default async function AdminLayout({
           .eq("id", user.id)
           .maybeSingle();
 
+        console.log("👤 Profile data:", { role: profile?.role, full_name: profile?.full_name, error: error?.message });
+
         if (!error && profile) {
           if (profile.full_name) {
             adminName = profile.full_name;
           }
           if (profile.role === "admin") {
             isAdmin = true;
+            console.log("✅ Admin access granted via database role");
           }
+        } else if (error) {
+          console.error("❌ Profile query error:", error);
         }
       } else {
         // Fallback: use regular supabase client (might be affected by RLS)
@@ -80,12 +88,15 @@ export default async function AdminLayout({
           .eq("id", user.id)
           .maybeSingle();
 
+        console.log("👤 Profile data (regular client):", { role: profile?.role, error: error?.message });
+
         if (!error && profile) {
           if (profile.full_name) {
             adminName = profile.full_name;
           }
           if (profile.role === "admin") {
             isAdmin = true;
+            console.log("✅ Admin access granted via database role (regular client)");
           }
         }
       }
@@ -93,6 +104,8 @@ export default async function AdminLayout({
       console.error("❌ AdminLayout profile check error:", err);
       // Don't block access on error - let other checks decide
     }
+  } else {
+    console.log("✅ Admin access granted via email whitelist");
   }
 
   // If unauthorized, redirect to /hq-core-updateptn/login
