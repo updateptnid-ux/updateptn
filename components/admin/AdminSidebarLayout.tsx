@@ -37,6 +37,7 @@ import {
   Home,
   UserCog,
   FileJson,
+  MessageSquare,
 } from "lucide-react";
 
 interface MenuItem {
@@ -90,6 +91,8 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       items: [
         { name: "Siswa & Pengguna", href: "/hq-core-updateptn/users", icon: Users },
         { name: "Tutor & Tentor", href: "/hq-core-updateptn/mentors", icon: UserCheck },
+        { name: "Program Affiliasi", href: "/hq-core-updateptn/affiliates", icon: Users },
+        { name: "Customer Feedback", href: "/hq-core-updateptn/feedback", icon: MessageSquare },
       ],
     },
     {

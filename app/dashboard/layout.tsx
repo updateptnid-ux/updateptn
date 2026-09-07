@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   UserCog,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 
 interface UserRole {
@@ -179,6 +180,11 @@ export default function DashboardLayout({
     },
     // SECTION DIVIDER
     { divider: "LAINNYA" },
+    {
+      name: "Berikan Feedback",
+      href: "/dashboard/student/feedback",
+      icon: MessageSquare,
+    },
     {
       name: "Profil",
       href: "/profile",

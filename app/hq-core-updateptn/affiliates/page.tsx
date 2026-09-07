@@ -56,24 +56,28 @@ export default function AdminAffiliatesPage() {
 
   async function handleAffiliateStatus(affiliateId: string, status: "active" | "rejected") {
     setProcessing(affiliateId);
-    const supabase = createClient();
 
-    const { error } = await supabase
-      .from("affiliates")
-      .update({
-        status,
-        approved_at: status === "active" ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", affiliateId);
+    try {
+      const response = await fetch('/hq-core-updateptn/api/affiliates/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ affiliateId, status }),
+      });
 
-    if (error) {
-      alert("Gagal memperbarui status: " + error.message);
-    } else {
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update status');
+      }
+
       alert(`Affiliate ${status === "active" ? "disetujui" : "ditolak"}!`);
       loadData();
+    } catch (error: any) {
+      console.error('Error updating affiliate status:', error);
+      alert("Gagal memperbarui status: " + error.message);
+    } finally {
+      setProcessing(null);
     }
-    setProcessing(null);
   }
 
   async function handleWithdrawalStatus(
@@ -83,31 +87,34 @@ export default function AdminAffiliatesPage() {
     amount: number
   ) {
     setProcessing(withdrawalId);
-    const supabase = createClient();
 
-    const updates: any = {
-      status,
-      processed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
+    let rejectionReason = "";
     if (status === "rejected") {
       const reason = prompt("Alasan penolakan (opsional):");
-      if (reason) updates.rejection_reason = reason;
+      if (reason) rejectionReason = reason;
     }
 
-    const { error } = await supabase
-      .from("withdrawals")
-      .update(updates)
-      .eq("id", withdrawalId);
+    try {
+      const response = await fetch('/hq-core-updateptn/api/affiliates/withdrawal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withdrawalId, status, rejectionReason }),
+      });
 
-    if (error) {
-      alert("Gagal memperbarui withdrawal: " + error.message);
-    } else {
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update withdrawal');
+      }
+
       alert(`Withdrawal ${status === "completed" ? "diselesaikan" : "ditolak"}!`);
       loadData();
+    } catch (error: any) {
+      console.error('Error updating withdrawal:', error);
+      alert("Gagal memperbarui withdrawal: " + error.message);
+    } finally {
+      setProcessing(null);
     }
-    setProcessing(null);
   }
 
   const filteredAffiliates = affiliates.filter((a) =>
