@@ -169,9 +169,12 @@ export async function createSubscriptionPayment(params: {
       paymentData.affiliate_id = affiliateId;
     }
 
-    const { error: paymentError } = await supabase
+    // Insert payment and get the UUID back
+    const { data: paymentRecord, error: paymentError } = await supabase
       .from('payments')
-      .insert(paymentData);
+      .insert(paymentData)
+      .select('id')
+      .single();
 
     if (paymentError) {
       console.error('❌ Payment insert error:', paymentError);
@@ -183,17 +186,22 @@ export async function createSubscriptionPayment(params: {
       return { success: false, error: `Gagal membuat record pembayaran: ${paymentError.message}` };
     }
 
-    console.log('✅ Payment record created for order:', orderId);
+    console.log('✅ Payment record created for order:', orderId, 'with UUID:', paymentRecord.id);
 
     // If affiliate code was used, create commission record (pending status)
-    if (affiliateId && finalAmount > 0) {
+    if (affiliateId && finalAmount > 0 && paymentRecord) {
       const commissionAmount = Math.round((finalAmount * 10) / 100); // 10% commission from DISCOUNTED price
+      const commissionRate = 10.00;
       
       const { error: commissionError } = await supabase
         .from('commissions')
         .insert({
           affiliate_id: affiliateId,
-          payment_id: orderId, // Store order_id for reference
+          payment_id: paymentRecord.id, // ✅ Use payment UUID not order_id string
+          order_id: orderId,
+          customer_email: userEmail,
+          transaction_amount: finalAmount,
+          commission_rate: commissionRate,
           commission_amount: commissionAmount,
           status: 'pending', // Will be updated to 'approved' when payment settles
           created_at: new Date().toISOString(),
