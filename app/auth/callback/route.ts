@@ -50,34 +50,13 @@ export async function GET(request: NextRequest) {
 
       console.log('✅ Session created for user:', data.user.email, 'Session expires:', data.session.expires_at);
 
-      // Wait for profile trigger to complete (2 seconds to be safe)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Check if profile needs completion
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, provinsi")
-        .eq("id", data.user.id)
-        .single();
-
-      console.log('📊 Profile check result:', { 
-        hasProfile: !!profile, 
-        fullName: profile?.full_name, 
-        provinsi: profile?.provinsi,
-        error: profileError 
-      });
-
-      // If profile is incomplete (no name or provinsi), redirect to complete-profile
-      const needsCompletion = !profile?.full_name || !profile?.provinsi;
+      // Redirect to success page - session cookies are already set by exchangeCodeForSession
+      // The success page will check profile completion status
+      const response = NextResponse.redirect(`${baseUrl}/auth/success?email=${encodeURIComponent(data.user.email || '')}`);
       
-      const redirectUrl = needsCompletion 
-        ? `${baseUrl}/complete-profile` 
-        : `${baseUrl}/dashboard/student`;
+      console.log('🍪 Redirecting to success page for profile check');
       
-      console.log(needsCompletion ? '📝 Profile incomplete, redirecting to complete-profile' : '✅ Profile complete, redirecting to dashboard');
-
-      // Simple redirect - let the middleware handle session cookies
-      return NextResponse.redirect(redirectUrl);
+      return response;
       
     } catch (err: any) {
       console.error('❌ Unexpected error in callback:', err);
