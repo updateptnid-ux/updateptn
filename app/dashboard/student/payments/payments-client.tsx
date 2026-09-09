@@ -174,7 +174,7 @@ export default function PaymentsClient() {
   const handleCancelPayment = async (orderId: string) => {
     const confirmed = window.confirm(
       '⚠️ Batalkan Pembayaran?\n\n' +
-      'Pembayaran ini akan dibatalkan secara permanen. ' +
+      'Pembayaran ini akan dihapus secara permanen dari database. ' +
       'Anda perlu membuat pesanan baru jika ingin berlangganan.\n\n' +
       'Lanjutkan?'
     );
@@ -189,11 +189,14 @@ export default function PaymentsClient() {
       const result = await cancelPendingPayment(orderId);
 
       if (result.success) {
-        toast.success('Pembayaran berhasil dibatalkan');
-        // Optimistically remove from pending list
+        toast.success('✅ Pembayaran berhasil dihapus');
+        
+        // Force reload payments to ensure clean state
+        await loadPayments();
+        
+        // Also optimistically remove from UI immediately
         setPendingPayments(prev => prev.filter(p => p.order_id !== orderId));
-        // Refresh payments to update history tab
-        loadPayments();
+        setAllPayments(prev => prev.filter(p => p.order_id !== orderId));
       } else {
         toast.error(result.error || 'Gagal membatalkan pembayaran');
       }

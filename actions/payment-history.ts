@@ -99,48 +99,86 @@ export async function cancelPendingPayment(orderId: string) {
       return { success: false, error: 'Pembayaran sudah diproses dan tidak bisa dibatalkan' };
     }
 
-    // Try to cancel on Midtrans (may fail, that's ok)
+    // Try to cancel on Midtrans FIRST
+    let midtransCancelled = false;
+    let midtransError = '';
+    
     try {
       const { cancelTransaction } = await import('@/lib/midtrans');
       await cancelTransaction(orderId);
+      midtransCancelled = true;
       console.log('✅ Midtrans transaction cancelled:', orderId);
     } catch (midtransError: any) {
-      console.log('⚠️ Midtrans cancel skipped:', midtransError.message);
+      midtransError = midtransError.message?.toLowerCase() || '';
+      console.error('❌ Midtrans cancel failed:', midtransError);
+      
+      // These errors are OK - transaction already inactive/expired
+      // We should still delete from DB
+      if (
+        midtransError.includes('not found') || 
+        midtransError.includes('404') ||
+        midtransError.includes('tidak dapat dibatalkan') ||
+        midtransError.includes('non-aktif') ||
+        midtransError.includes('expire') ||
+        midtransError.includes('cancel') ||
+        midtransError.includes('deny')
+      ) {
+        console.log('⚠️ Transaction already inactive/expired in Midtrans - safe to delete from DB');
+        midtransCancelled = true;
+      } else {
+        // Real API error (network, auth, etc) - don't delete
+        return { 
+          success: false, 
+          error: `Gagal membatalkan di Midtrans: ${midtransError}. Silakan coba lagi.` 
+        };
+      }
     }
 
-    // Update payment status to cancelled
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update({ 
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
-      })
-      .eq('order_id', orderId)
-      .eq('user_id', user.id);
-
-    if (updateError) {
-      console.error('❌ Error updating payment status:', updateError);
-      return { success: false, error: 'Gagal memperbarui status pembayaran' };
+    // Proceed with DB deletion (transaction is cancelled or already inactive)
+    if (!midtransCancelled) {
+      return { success: false, error: 'Gagal membatalkan transaksi' };
     }
 
-    console.log('✅ Payment cancelled:', orderId);
+    // Delete associated commission first (if exists) - to avoid foreign key constraint
+    const { error: commissionDeleteError } = await supabase
+      .from('commissions')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (commissionDeleteError) {
+      console.log('⚠️ No commission to delete or error:', commissionDeleteError.message);
+    } else {
+      console.log('✅ Commission deleted for order:', orderId);
+    }
 
     // Cancel associated subscription if exists
     if (payment.metadata && typeof payment.metadata === 'object') {
       const metadata = payment.metadata as any;
       if (metadata.subscription_id) {
+        // Delete subscription instead of updating
         await supabase
           .from('subscriptions')
-          .update({ 
-            status: 'cancelled',
-            updated_at: new Date().toISOString()
-          })
+          .delete()
           .eq('id', metadata.subscription_id)
           .eq('status', 'pending');
 
-        console.log('✅ Subscription cancelled:', metadata.subscription_id);
+        console.log('✅ Subscription deleted:', metadata.subscription_id);
       }
     }
+
+    // Delete payment record completely
+    const { error: deleteError } = await supabase
+      .from('payments')
+      .delete()
+      .eq('order_id', orderId)
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('❌ Error deleting payment:', deleteError);
+      return { success: false, error: 'Gagal menghapus pembayaran' };
+    }
+
+    console.log('✅ Payment deleted:', orderId);
 
     return { success: true, error: null };
   } catch (err: any) {

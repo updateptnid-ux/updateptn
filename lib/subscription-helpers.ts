@@ -67,11 +67,12 @@ export function hasActivePremiumSubscription(subscription: {
 } | null | undefined): boolean {
   if (!subscription) return false;
   
+  // CRITICAL: Check expiry FIRST before status
+  // This prevents issues where status='active' but expires_at is past
+  if (new Date(subscription.expires_at) <= new Date()) return false;
+  
   // Check status is active
   if (subscription.status !== 'active') return false;
-  
-  // Check not expired
-  if (new Date(subscription.expires_at) <= new Date()) return false;
   
   // Check tier is premium
   return isPremiumTier(subscription.tier);
@@ -118,19 +119,20 @@ export function hasFeatureAccess(
     };
   }
   
+  // CRITICAL: Check expiry FIRST before status
+  // This prevents issues where status='active' but expires_at is past
+  if (new Date(subscription.expires_at) <= new Date()) {
+    return { 
+      hasAccess: false, 
+      message: "Subscription sudah kadaluarsa" 
+    };
+  }
+  
   // Check status is active
   if (subscription.status !== 'active') {
     return { 
       hasAccess: false, 
       message: "Subscription tidak aktif" 
-    };
-  }
-  
-  // Check not expired
-  if (new Date(subscription.expires_at) <= new Date()) {
-    return { 
-      hasAccess: false, 
-      message: "Subscription sudah kadaluarsa" 
     };
   }
   

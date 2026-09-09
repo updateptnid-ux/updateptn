@@ -136,6 +136,24 @@ export default function ProfilePage() {
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
 
+  // Target PTN #2 (Secondary) state
+  const [selectedUniv2, setSelectedUniv2] = useState<string>("");
+  const [univSearch2, setUnivSearch2] = useState<string>("");
+  const [isUnivOpen2, setIsUnivOpen2] = useState<boolean>(false);
+  
+  const [majors2, setMajors2] = useState<ProdiSuggestion[]>([]);
+  const [selectedProdiId2, setSelectedProdiId2] = useState<string>("");
+  const [majorSearch2, setMajorSearch2] = useState<string>("");
+  const [isMajorOpen2, setIsMajorOpen2] = useState<boolean>(false);
+
+  const [loadingMajors2, setLoadingMajors2] = useState(false);
+  
+  const [targetUnivValue2, setTargetUnivValue2] = useState("");
+  const [targetProdiValue2, setTargetProdiValue2] = useState("");
+  
+  const univContainerRef2 = useRef<HTMLDivElement>(null);
+  const majorContainerRef2 = useRef<HTMLDivElement>(null);
+
   // Password form
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -171,7 +189,7 @@ export default function ProfilePage() {
       // Then load from profiles table as source of truth
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, asal_sekolah, target_ptn, target_prodi, bio, provinsi")
+        .select("full_name, asal_sekolah, target_ptn, target_prodi, target_ptn_2, target_prodi_2, bio, provinsi")
         .eq("id", user.id)
         .single();
       
@@ -183,6 +201,8 @@ export default function ProfilePage() {
       const avatarUrlValue = meta.avatar_url || "";
       const univValue = profile?.target_ptn || meta.target_univ || meta.target_ptn || "";
       const prodiValue = profile?.target_prodi || meta.target_prodi || "";
+      const univValue2 = profile?.target_ptn_2 || meta.target_univ_2 || meta.target_ptn_2 || "";
+      const prodiValue2 = profile?.target_prodi_2 || meta.target_prodi_2 || "";
       
       setUserData(meta);
       setEmail(user.email || "");
@@ -194,6 +214,9 @@ export default function ProfilePage() {
       setSelectedUniv(univValue);
       setTargetUnivValue(univValue);
       setTargetProdiValue(prodiValue);
+      setSelectedUniv2(univValue2);
+      setTargetUnivValue2(univValue2);
+      setTargetProdiValue2(prodiValue2);
 
       // Load subscription status
       const { data: sub } = await supabase
@@ -215,6 +238,11 @@ export default function ProfilePage() {
       // If user has existing prodi data, load majors for that univ
       if (univValue) {
         loadMajorsForUniv(univValue, prodiValue);
+      }
+      
+      // If user has existing prodi data for second target, load majors
+      if (univValue2) {
+        loadMajorsForUniv2(univValue2, prodiValue2);
       }
       
       setAuthLoading(false);
@@ -297,6 +325,39 @@ export default function ProfilePage() {
     }
   }
 
+  // Load majors for second target university
+  async function loadMajorsForUniv2(univName: string, existingProdi?: string) {
+    try {
+      setLoadingMajors2(true);
+      const { data, error } = await supabase
+        .from("prodi_reference")
+        .select("id, univ, prodi, jenjang, kelompok")
+        .eq("univ", univName)
+        .limit(1000)
+        .order("prodi", { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setMajors2(data as ProdiSuggestion[]);
+        
+        // Auto-select if there's existing prodi
+        if (existingProdi) {
+          const found = data.find((m: any) => m.prodi === existingProdi);
+          if (found) {
+            setSelectedProdiId2(String(found.id));
+          } else if (data[0]) {
+            setSelectedProdiId2(String(data[0].id));
+          }
+        } else if (data[0]) {
+          setSelectedProdiId2(String(data[0].id));
+        }
+      }
+    } catch (err) {
+      console.error("Error loading majors for target 2:", err);
+    } finally {
+      setLoadingMajors2(false);
+    }
+  }
+
   // When univ changes, load new majors
   useEffect(() => {
     if (selectedUniv) {
@@ -317,11 +378,33 @@ export default function ProfilePage() {
     }
   }, [selectedProdiId, majors]);
 
+  // When univ 2 changes, load new majors
+  useEffect(() => {
+    if (selectedUniv2) {
+      loadMajorsForUniv2(selectedUniv2);
+      // Update hidden field
+      setTargetUnivValue2(selectedUniv2);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUniv2]);
+
+  // When prodi 2 changes, update hidden field
+  useEffect(() => {
+    if (selectedProdiId2 && majors2.length > 0) {
+      const selected = majors2.find(m => String(m.id) === String(selectedProdiId2));
+      if (selected) {
+        setTargetProdiValue2(selected.prodi);
+      }
+    }
+  }, [selectedProdiId2, majors2]);
+
   // Dropdown outside click
   useEffect(() => {
     function onOutside(e: MouseEvent) {
       if (univContainerRef.current && !univContainerRef.current.contains(e.target as Node)) setIsUnivOpen(false);
       if (majorContainerRef.current && !majorContainerRef.current.contains(e.target as Node)) setIsMajorOpen(false);
+      if (univContainerRef2.current && !univContainerRef2.current.contains(e.target as Node)) setIsUnivOpen2(false);
+      if (majorContainerRef2.current && !majorContainerRef2.current.contains(e.target as Node)) setIsMajorOpen2(false);
     }
     document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
@@ -339,6 +422,19 @@ export default function ProfilePage() {
   );
 
   const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
+
+  // Filter functions for second target
+  const filteredUnivs2 = universities.filter((u) =>
+    u.toLowerCase().includes(univSearch2.trim().toLowerCase())
+  );
+
+  const filteredMajors2 = majors2.filter((m) =>
+    `${m.prodi} ${m.jenjang || ""} ${m.kelompok || ""}`
+      .toLowerCase()
+      .includes(majorSearch2.trim().toLowerCase())
+  );
+
+  const selectedProdiObj2 = majors2.find((m) => String(m.id) === String(selectedProdiId2));
 
   // Avatar file validation (PNG, Max 500KB)
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,6 +499,8 @@ export default function ProfilePage() {
     const fd = new FormData(e.currentTarget);
     fd.set("targetUniv", targetUnivValue);
     fd.set("targetProdi", targetProdiValue);
+    fd.set("targetUniv2", targetUnivValue2);
+    fd.set("targetProdi2", targetProdiValue2);
     fd.set("avatarUrl", avatarUrl);
     startProfileTransition(async () => {
       const res = await updateProfileAction(fd);
@@ -758,6 +856,171 @@ export default function ProfilePage() {
 
             <input type="hidden" name="targetUniv" value={targetUnivValue} />
             <input type="hidden" name="targetProdi" value={targetProdiValue} />
+          </div>
+
+          {/* Target PTN #2 - Cadangan */}
+          <div className="space-y-3" style={{ overflow: "visible" }}>
+            <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Target className="h-3 w-3 text-amber-600" /> Target PTN Cadangan (Opsional)
+            </Label>
+            <p className="text-[10px] text-slate-500 -mt-1">
+              Pilih PTN dan prodi cadangan sebagai pilihan alternatif
+            </p>
+
+            {/* Grid 2 columns for PTN and Prodi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ overflow: "visible" }}>
+              {/* Step 1: PTN Selection #2 */}
+              <div ref={univContainerRef2} style={{ position: "relative", zIndex: isUnivOpen2 ? 200 : 1 }}>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    1. Pilih PTN Cadangan
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => { setIsUnivOpen2(!isUnivOpen2); setIsMajorOpen2(false); setIsUnivOpen(false); setIsMajorOpen(false); }}
+                    className="w-full h-11 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-amber-500 transition-colors shadow-xs"
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <Building2 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span className="truncate">{selectedUniv2 || "Pilih PTN Cadangan"}</span>
+                    </div>
+                    <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen2 ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                </div>
+
+                {isUnivOpen2 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                    <div className="relative flex-shrink-0">
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <input
+                        type="text"
+                        value={univSearch2}
+                        onChange={(e) => setUnivSearch2(e.target.value)}
+                        placeholder="Cari PTN (cth: UI, ITB, UGM)..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-600 font-medium"
+                        autoFocus
+                      />
+                    </div>
+
+                    {loadingUnivs ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                      </div>
+                    ) : (
+                      <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                        {filteredUnivs2.length > 0 ? (
+                          filteredUnivs2.map((univName) => (
+                            <button
+                              key={univName}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUniv2(univName);
+                                setIsUnivOpen2(false);
+                                setUnivSearch2("");
+                              }}
+                              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                selectedUniv2 === univName
+                                  ? "bg-amber-600 text-white"
+                                  : "text-slate-800 hover:bg-slate-100"
+                              }`}
+                            >
+                              <span className="truncate">{univName}</span>
+                              {selectedUniv2 === univName && <Check className="h-4 w-4 text-white shrink-0" />}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                            PTN tidak ditemukan
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Prodi Selection #2 */}
+              <div ref={majorContainerRef2} style={{ position: "relative", zIndex: isMajorOpen2 ? 100 : 1 }}>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    2. Pilih Prodi Cadangan
+                  </Label>
+                  <button
+                    type="button"
+                    disabled={loadingMajors2 || majors2.length === 0 || !selectedUniv2}
+                    onClick={() => { setIsMajorOpen2(!isMajorOpen2); setIsUnivOpen2(false); setIsUnivOpen(false); setIsMajorOpen(false); }}
+                    className="w-full h-11 px-4 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-amber-500 transition-colors shadow-xs disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <BookOpen className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span className="truncate">
+                        {selectedProdiObj2
+                          ? `${selectedProdiObj2.prodi}${selectedProdiObj2.jenjang ? ` (${selectedProdiObj2.jenjang})` : ""}`
+                          : (loadingMajors2 ? "Memuat jurusan..." : !selectedUniv2 ? "Pilih PTN dulu" : "Pilih Jurusan")}
+                      </span>
+                    </div>
+                    <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen2 ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                </div>
+
+                {isMajorOpen2 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                    <div className="relative flex-shrink-0">
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                      <input
+                        type="text"
+                        value={majorSearch2}
+                        onChange={(e) => setMajorSearch2(e.target.value)}
+                        placeholder="Cari jurusan..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-600 font-medium"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                      {filteredMajors2.length > 0 ? (
+                        filteredMajors2.map((m) => {
+                          const isSelected = String(m.id) === String(selectedProdiId2);
+                          const label = `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kelompok ? ` - ${m.kelompok}` : ""}`;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedProdiId2(String(m.id));
+                                setIsMajorOpen2(false);
+                                setMajorSearch2("");
+                              }}
+                              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                isSelected
+                                  ? "bg-amber-600 text-white"
+                                  : "text-slate-800 hover:bg-slate-100"
+                              }`}
+                            >
+                              <span className="truncate">{label}</span>
+                              {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                          Jurusan tidak ditemukan
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedProdiObj2 && (
+              <p className="text-[11px] text-amber-600 font-semibold pl-1">
+                {selectedProdiObj2.prodi} di {selectedUniv2}
+              </p>
+            )}
+
+            <input type="hidden" name="targetUniv2" value={targetUnivValue2} />
+            <input type="hidden" name="targetProdi2" value={targetProdiValue2} />
           </div>
 
           <Button type="submit" disabled={profilePending}

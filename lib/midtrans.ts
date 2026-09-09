@@ -247,6 +247,8 @@ export function getClientKey(): string {
  */
 export async function cancelTransaction(orderId: string): Promise<void> {
   try {
+    console.log('🔄 Cancelling Midtrans transaction:', orderId);
+    
     const response = await fetch(`${MIDTRANS_API_URL}/v2/${orderId}/cancel`, {
       method: 'POST',
       headers: {
@@ -255,11 +257,26 @@ export async function cancelTransaction(orderId: string): Promise<void> {
       },
     });
 
+    const responseText = await response.text();
+    console.log('📡 Cancel response status:', response.status);
+    console.log('📄 Cancel response body:', responseText);
+
     if (!response.ok) {
-      throw new Error('Failed to cancel transaction');
+      let errorMessage = 'Failed to cancel transaction';
+      
+      try {
+        const error = JSON.parse(responseText);
+        errorMessage = error.error_messages?.join(', ') || error.status_message || errorMessage;
+      } catch (e) {
+        errorMessage = `Midtrans cancel error: ${response.status} ${response.statusText}`;
+      }
+      
+      throw new Error(errorMessage);
     }
-  } catch (error) {
-    console.error('Midtrans cancel error:', error);
+
+    console.log('✅ Transaction cancelled successfully in Midtrans');
+  } catch (error: any) {
+    console.error('❌ Midtrans cancel error:', error.message);
     throw error;
   }
 }

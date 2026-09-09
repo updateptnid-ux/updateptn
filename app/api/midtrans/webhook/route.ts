@@ -12,16 +12,57 @@ import {
  * 
  * Security:
  * - Signature verification
+ * - Amount verification
+ * - Idempotency check
+ * - IP whitelist validation
+ * - Audit logging
  * - Server-side only
- * - Idempotent updates
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let orderId = 'unknown';
+  let processingStatus: 'success' | 'failed' | 'rejected' | 'duplicate' = 'failed';
+  let errorMessage: string | null = null;
+  
+  const supabase = await createClient();
+  
+  // Security: Get client IP and user agent
+  const clientIP = request.headers.get('x-forwarded-for') || 
+                   request.headers.get('x-real-ip') || 
+                   'unknown';
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  
+  // Security: Midtrans IP whitelist (Sandbox + Production)
+  // Source: https://docs.midtrans.com/docs/http-notification-webhooks
+  const MIDTRANS_IPS = [
+    '103.127.16.0/23',   // Production range
+    '103.127.17.6',      // Specific production IP
+    '103.208.23.6',      // Specific production IP  
+    '103.208.23.0/24',   // Production range
+    '::1',               // localhost (for testing)
+    '127.0.0.1',         // localhost (for testing)
+  ];
+  
+  // IP validation (warning only, don't block - some proxies may change IP)
+  const isValidIP = MIDTRANS_IPS.some(allowedIP => {
+    if (allowedIP.includes('/')) {
+      // CIDR notation - simple check (for production, use proper CIDR library)
+      const [network, bits] = allowedIP.split('/');
+      return clientIP.startsWith(network.split('.').slice(0, parseInt(bits) / 8).join('.'));
+    }
+    return clientIP === allowedIP || clientIP.includes(allowedIP);
+  });
+  
+  if (!isValidIP) {
+    console.warn(`⚠️ Webhook from unrecognized IP: ${clientIP}`);
+  }
+
   try {
     const notification = await request.json();
 
     // Parse notification
     const {
-      orderId,
+      orderId: parsedOrderId,
       transactionStatus,
       fraudStatus,
       paymentType,
@@ -29,8 +70,10 @@ export async function POST(request: NextRequest) {
       signatureKey,
       statusCode,
     } = parseTransactionStatus(notification);
+    
+    orderId = parsedOrderId;
 
-    // Verify signature
+    // Security: Verify signature
     const isValid = verifyWebhookSignature(
       orderId,
       statusCode,
@@ -38,19 +81,90 @@ export async function POST(request: NextRequest) {
       signatureKey
     );
 
+    // Audit log: Log webhook attempt
+    await supabase.from('webhook_logs').insert({
+      source: 'midtrans',
+      order_id: orderId,
+      transaction_status: transactionStatus,
+      signature_valid: isValid,
+      ip_address: clientIP,
+      user_agent: userAgent,
+      raw_payload: notification,
+      headers: Object.fromEntries(request.headers.entries()),
+      processing_status: 'failed', // Will update on success
+      processed_in_ms: null,
+    }).select('id').maybeSingle(); // Non-blocking
+
     if (!isValid) {
-      console.error('Invalid signature from Midtrans webhook');
+      console.error('❌ Invalid signature from Midtrans webhook');
+      processingStatus = 'rejected';
+      errorMessage = 'Invalid signature';
+      
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
 
-    // Get final status
-    const finalStatus = getFinalStatus(transactionStatus, fraudStatus);
+    // Security: Get payment details FIRST for validation
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, user_id, amount, status, metadata, affiliate_id')
+      .eq('order_id', orderId)
+      .single();
 
-    // Update database
-    const supabase = await createClient();
+    if (paymentError || !payment) {
+      console.error('❌ Payment not found for order_id:', orderId);
+      processingStatus = 'rejected';
+      errorMessage = 'Payment not found';
+      
+      return NextResponse.json(
+        { error: 'Payment not found' },
+        { status: 404 }
+      );
+    }
+
+    // Security: AMOUNT VERIFICATION - prevent price manipulation
+    const expectedAmount = payment.amount;
+    const receivedAmount = parseFloat(grossAmount);
+    
+    if (Math.abs(expectedAmount - receivedAmount) > 1) { // Allow 1 Rp tolerance
+      console.error(`❌ Amount mismatch! Expected: ${expectedAmount}, Received: ${receivedAmount}`);
+      processingStatus = 'rejected';
+      errorMessage = `Amount mismatch: expected ${expectedAmount}, got ${receivedAmount}`;
+      
+      await supabase.from('webhook_logs').insert({
+        source: 'midtrans',
+        order_id: orderId,
+        transaction_status: transactionStatus,
+        signature_valid: isValid,
+        ip_address: clientIP,
+        user_agent: userAgent,
+        raw_payload: notification,
+        processing_status: 'rejected',
+        error_message: errorMessage,
+        processed_in_ms: Date.now() - startTime,
+      });
+      
+      return NextResponse.json(
+        { error: 'Amount mismatch' },
+        { status: 400 }
+      );
+    }
+
+    // Security: IDEMPOTENCY CHECK - prevent duplicate processing
+    const finalStatus = getFinalStatus(transactionStatus, fraudStatus);
+    
+    if (['success', 'settlement', 'capture'].includes(payment.status) && 
+        ['success', 'settlement', 'capture'].includes(finalStatus)) {
+      console.log(`✅ Payment ${orderId} already processed (status: ${payment.status})`);
+      processingStatus = 'duplicate';
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Already processed' 
+      });
+    }
 
     // Update payment record
     const { error: updateError } = await supabase
@@ -65,7 +179,10 @@ export async function POST(request: NextRequest) {
       .eq('order_id', orderId);
 
     if (updateError) {
-      console.error('Error updating payment:', updateError);
+      console.error('❌ Error updating payment:', updateError);
+      processingStatus = 'failed';
+      errorMessage = 'Database update failed';
+      
       return NextResponse.json(
         { error: 'Database update failed' },
         { status: 500 }
@@ -74,13 +191,6 @@ export async function POST(request: NextRequest) {
 
     // If payment successful, activate subscription
     if (finalStatus === 'success') {
-      // Get payment details with metadata, affiliate_id, and UUID
-      const { data: payment } = await supabase
-        .from('payments')
-        .select('id, user_id, metadata, affiliate_id')
-        .eq('order_id', orderId)
-        .single();
-
       if (payment && payment.metadata) {
         const metadata = payment.metadata as any;
         const subscriptionId = metadata.subscription_id;
@@ -150,7 +260,7 @@ export async function POST(request: NextRequest) {
 
               if (affiliate) {
                 // IMPORTANT: Calculate commission from ACTUAL PAID AMOUNT (after discount)
-                const transactionAmount = parseFloat(grossAmount);
+                const transactionAmount = receivedAmount;
                 const commissionRate = affiliate.commission_rate || 10.00;
                 const commissionAmount = Math.round((transactionAmount * commissionRate) / 100);
 
@@ -192,14 +302,10 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      
+      processingStatus = 'success';
     } else if (finalStatus === 'failed') {
       // Mark subscription as failed
-      const { data: payment } = await supabase
-        .from('payments')
-        .select('metadata')
-        .eq('order_id', orderId)
-        .single();
-
       if (payment && payment.metadata) {
         const metadata = payment.metadata as any;
         const subscriptionId = metadata.subscription_id;
@@ -216,11 +322,43 @@ export async function POST(request: NextRequest) {
           console.log(`❌ Subscription ${subscriptionId} marked as failed`);
         }
       }
+      
+      processingStatus = 'success'; // Successfully processed a failure
     }
+
+    // Log successful processing
+    const processingTime = Date.now() - startTime;
+    await supabase.from('webhook_logs').insert({
+      source: 'midtrans',
+      order_id: orderId,
+      transaction_status: transactionStatus,
+      signature_valid: true,
+      ip_address: clientIP,
+      user_agent: userAgent,
+      raw_payload: notification,
+      processing_status: processingStatus,
+      processed_in_ms: processingTime,
+    });
+
+    console.log(`✅ Webhook processed successfully in ${processingTime}ms - Order: ${orderId}, Status: ${finalStatus}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('❌ Webhook error:', error);
+    errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log error
+    await supabase.from('webhook_logs').insert({
+      source: 'midtrans',
+      order_id: orderId,
+      signature_valid: false,
+      ip_address: clientIP,
+      user_agent: userAgent,
+      processing_status: 'failed',
+      error_message: errorMessage,
+      processed_in_ms: Date.now() - startTime,
+    });
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -53,6 +53,7 @@ export default function DashboardLayout({
     const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
     const itemUrl = item.href;
     
+    // Exact match for items marked as exact
     if (item.exact) {
       return currentUrl === itemUrl;
     }
@@ -62,12 +63,10 @@ export default function DashboardLayout({
       return currentUrl === itemUrl;
     }
     
-    // For items without query params, check pathname only (ignore search params)
-    // AND make sure current URL doesn't have conflicting query params
-    if (pathname.startsWith(itemUrl)) {
-      // If pathname matches but there are search params, it's not active
-      // (because this means another menu item with query params should be active)
-      return searchParams.toString() === '';
+    // FIXED: Do exact pathname match, not startsWith
+    // This prevents /cek-peluang-snbp from matching /cek-peluang
+    if (pathname === itemUrl && searchParams.toString() === '') {
+      return true;
     }
     
     return false;
@@ -170,12 +169,7 @@ export default function DashboardLayout({
     },
     {
       name: "Cek Peluang SNBP",
-      href: "/dashboard/student/cek-peluang?type=snbp",
-      icon: Target,
-    },
-    {
-      name: "Kalkulator SNBP",
-      href: "/dashboard/student/kalkulator-snbp",
+      href: "/dashboard/student/cek-peluang-snbp",
       icon: Target,
     },
     // SECTION DIVIDER

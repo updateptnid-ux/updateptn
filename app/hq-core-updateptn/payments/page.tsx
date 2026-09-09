@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import CrudLayout from "@/components/admin/CrudLayout";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -14,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Receipt, AlertTriangle, X } from "lucide-react";
+import { MoreHorizontal, Receipt, AlertTriangle, X, DollarSign, CreditCard, TrendingUp, Users } from "lucide-react";
 
 interface PaymentRecord {
   id: string;
@@ -41,6 +42,14 @@ export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  
+  // Statistics
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    pendingRevenue: 0,
+    successfulTransactions: 0,
+    pendingTransactions: 0,
+  });
 
   useEffect(() => {
     fetchPayments();
@@ -79,6 +88,25 @@ export default function AdminPaymentsPage() {
 
         setPayments(enrichedData as PaymentRecord[]);
         setIsDemoMode(false);
+        
+        // Calculate statistics
+        const totalRevenue = data
+          .filter((p: any) => p.status === 'settlement')
+          .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+        
+        const pendingRevenue = data
+          .filter((p: any) => p.status === 'pending')
+          .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+        
+        const successfulTransactions = data.filter((p: any) => p.status === 'settlement').length;
+        const pendingTransactions = data.filter((p: any) => p.status === 'pending').length;
+        
+        setStats({
+          totalRevenue,
+          pendingRevenue,
+          successfulTransactions,
+          pendingTransactions,
+        });
       }
     } catch (err) {
       console.error(err);
@@ -181,6 +209,64 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-emerald-700">TOTAL PEMASUKAN</span>
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+          </div>
+          <p className="text-2xl font-black text-emerald-900">
+            {formatRupiah(stats.totalRevenue)}
+          </p>
+          <p className="text-xs text-emerald-600 mt-1">
+            Dari transaksi berhasil (settlement)
+          </p>
+        </Card>
+
+        <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-amber-700">PENDING</span>
+            <CreditCard className="h-5 w-5 text-amber-600" />
+          </div>
+          <p className="text-2xl font-black text-amber-900">
+            {formatRupiah(stats.pendingRevenue)}
+          </p>
+          <p className="text-xs text-amber-600 mt-1">
+            Menunggu pembayaran ({stats.pendingTransactions} transaksi)
+          </p>
+        </Card>
+
+        <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-blue-700">TRANSAKSI SUKSES</span>
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+          </div>
+          <p className="text-2xl font-black text-blue-900">
+            {stats.successfulTransactions}
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Total transaksi berhasil
+          </p>
+        </Card>
+
+        <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-purple-700">AVG. TRANSAKSI</span>
+            <Users className="h-5 w-5 text-purple-600" />
+          </div>
+          <p className="text-2xl font-black text-purple-900">
+            {stats.successfulTransactions > 0 
+              ? formatRupiah(Math.round(stats.totalRevenue / stats.successfulTransactions))
+              : formatRupiah(0)
+            }
+          </p>
+          <p className="text-xs text-purple-600 mt-1">
+            Rata-rata per transaksi
+          </p>
+        </Card>
+      </div>
 
       <CrudLayout
         title="Transaksi Payment"

@@ -424,79 +424,43 @@ export default function CekPeluangPage() {
             window.scrollTo(0, scrollY);
           }, 10);
         } else {
-          // SNBT Logic: Existing logic with server action
-          const res = await calculateProbabilityAction({
-            score: numScore,
-            universityName: selectedUniv,
-            prodiId: selectedProdiId,
-          });
+          // SNBT Logic: Use passing_grade_est from local data
+          if (currentProdi?.passing_grade_est) {
+            const pg = Number(currentProdi.passing_grade_est);
+            const diff = numScore - pg;
+            let percentage = 75;
+            let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+            let recommendation = "";
 
-          console.log("Prediction response:", res); // Debug log
-
-          // Handle quota exceeded error
-          if (!res.success && res.error === "QuotaExceeded") {
-            setQuotaError(res.message || "Quota habis. Upgrade untuk unlimited!");
-            setRemainingPredictions(0);
-            return;
-          }
-
-          // Handle other errors
-          if (!res.success) {
-            setQuotaError(res.message || "Terjadi kesalahan. Silakan coba lagi.");
-            return;
-          }
-
-          if (res?.success) {
-            // Update remaining predictions from response
-            if (typeof res.remainingPredictions === "number") {
-              setRemainingPredictions(res.remainingPredictions);
-            }
-
-            // If passingGrade in res was default 700 but we have exact passing_grade_est in local prodi object
-            if (currentProdi?.passing_grade_est && res.passingGrade === 700) {
-              const pg = Number(currentProdi.passing_grade_est);
-              const diff = numScore - pg;
-              let percentage = 75;
-              let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
-              let recommendation = "";
-
-              if (diff >= 20) {
-                status = "AMAN";
-                percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
-                recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi ketetatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
-              } else if (diff >= 0) {
-                status = "BERSAING";
-                percentage = Math.round(60 + (diff / 20) * 24);
-                recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
-              } else {
-                status = "RENTAN";
-                percentage = Math.max(25, Math.round(60 + diff * 1.2));
-                recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
-              }
-
-              setResult({
-                score: numScore,
-                passingGrade: pg,
-                diff,
-                percentage,
-                status,
-                majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
-                universityName: selectedUniv,
-                recommendation,
-              });
-              
-              // Maintain scroll position after result is set
-              setTimeout(() => {
-                window.scrollTo(0, scrollY);
-              }, 10);
+            if (diff >= 20) {
+              status = "AMAN";
+              percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+              recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi keketatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
+            } else if (diff >= 0) {
+              status = "BERSAING";
+              percentage = Math.round(60 + (diff / 20) * 24);
+              recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
             } else {
-              setResult(res as PredictionResult);
-              
-              // Maintain scroll position after result is set
-              setTimeout(() => {
-                window.scrollTo(0, scrollY);
-              }, 10);
+              status = "RENTAN";
+              percentage = Math.max(25, Math.round(60 + diff * 1.2));
+              recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
             }
+
+            setResult({
+              score: numScore,
+              passingGrade: pg,
+              diff,
+              percentage,
+              status,
+              majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
+              universityName: selectedUniv,
+              recommendation,
+            });
+            
+            // Maintain scroll position after result is set
+            setTimeout(() => {
+              window.scrollTo(0, scrollY);
+            }, 10);
           }
         }
       } catch (error) {

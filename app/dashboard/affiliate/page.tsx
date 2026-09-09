@@ -233,14 +233,9 @@ export default function AffiliateDashboardPage() {
           <p className="text-xl md:text-2xl font-black text-slate-900">
             Rp {Number(affiliate.pending_balance || 0).toLocaleString("id-ID")}
           </p>
-          <Button
-            size="sm"
-            onClick={() => setShowWithdrawForm(true)}
-            disabled={Number(affiliate.pending_balance) < 100000}
-            className="mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white h-8 text-xs"
-          >
-            Tarik Saldo
-          </Button>
+          <p className="text-[10px] md:text-xs text-slate-500 mt-2">
+            💡 Fitur penarikan sedang dalam pengembangan
+          </p>
         </Card>
 
         <Card className="p-3 md:p-4">
@@ -322,49 +317,7 @@ export default function AffiliateDashboardPage() {
         )}
       </Card>
 
-      {/* Withdraw Form Modal */}
-      {showWithdrawForm && (
-        <Card className="p-4 md:p-6 bg-emerald-50/50 border-emerald-200">
-          <h3 className="text-sm md:text-base font-bold text-slate-900 mb-3">Tarik Saldo</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs md:text-sm font-semibold text-slate-700 mb-1 block">
-                Jumlah Penarikan (Min. Rp 100.000)
-              </label>
-              <Input
-                type="number"
-                placeholder="100000"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                className="text-sm"
-                style={{ fontSize: "16px" }}
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Saldo tersedia: Rp {Number(affiliate.pending_balance || 0).toLocaleString("id-ID")}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleWithdraw}
-                disabled={processing}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white h-10"
-              >
-                {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajukan Penarikan"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowWithdrawForm(false);
-                  setWithdrawAmount("");
-                }}
-                className="h-10 px-6"
-              >
-                Batal
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
+
 
       {/* Tabs */}
       <Tabs defaultValue="commissions" className="space-y-3 md:space-y-4">

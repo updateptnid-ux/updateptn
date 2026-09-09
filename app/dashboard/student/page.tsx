@@ -52,7 +52,8 @@ export default async function StudentDashboardPage() {
   const [
     { data: resultsData },
     { data: subData },
-    { data: pendingPayments }
+    { data: pendingPayments },
+    { data: profileData }
   ] = await Promise.all([
     supabase
       .from("results")
@@ -74,7 +75,13 @@ export default async function StudentDashboardPage() {
       .eq("user_id", user.id)
       .eq("status", "pending")
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    
+    supabase
+      .from("profiles")
+      .select("asal_sekolah, target_ptn, target_prodi, target_ptn_2, target_prodi_2")
+      .eq("id", user.id)
+      .single()
   ]);
 
   // 3. Process results
@@ -84,15 +91,23 @@ export default async function StudentDashboardPage() {
   const hasPendingPayments = (pendingPayments?.length || 0) > 0;
   const pendingPaymentCount = pendingPayments?.length || 0;
 
-  const asalSekolah = user?.user_metadata?.asal_sekolah as string | undefined;
-  const targetUniv = user?.user_metadata?.target_univ as string | undefined;
-  const targetProdi = user?.user_metadata?.target_prodi as string | undefined;
+  // Use profile data as source of truth, fallback to user_metadata
+  const asalSekolah = profileData?.asal_sekolah || (user?.user_metadata?.asal_sekolah as string | undefined);
+  const targetUniv = profileData?.target_ptn || (user?.user_metadata?.target_univ as string | undefined) || (user?.user_metadata?.target_ptn as string | undefined);
+  const targetProdi = profileData?.target_prodi || (user?.user_metadata?.target_prodi as string | undefined);
+  const targetUniv2 = profileData?.target_ptn_2 || (user?.user_metadata?.target_univ_2 as string | undefined) || (user?.user_metadata?.target_ptn_2 as string | undefined);
+  const targetProdi2 = profileData?.target_prodi_2 || (user?.user_metadata?.target_prodi_2 as string | undefined);
   
-  // Build a display label for the target
+  // Build display labels for both targets
   const targetLabel =
     targetProdi && targetUniv
       ? `${targetProdi} — ${targetUniv.replace("UNIVERSITAS ", "").replace("INSTITUT ", "")}`
       : targetUniv || targetProdi || null;
+  
+  const targetLabel2 =
+    targetProdi2 && targetUniv2
+      ? `${targetProdi2} — ${targetUniv2.replace("UNIVERSITAS ", "").replace("INSTITUT ", "")}`
+      : targetUniv2 || targetProdi2 || null;
 
   return (
     <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
@@ -183,11 +198,11 @@ export default async function StudentDashboardPage() {
             </MotionCard>
           </StaggerItem>
 
-          {/* Stat 3 - Compact */}
+          {/* Stat 3 - Target (Dual Display) */}
           <StaggerItem>
             <MotionCard className="h-full rounded-lg md:rounded-xl">
-              <Card className="bg-white border border-slate-200 p-2.5 md:p-4 rounded-lg md:rounded-xl space-y-1 md:space-y-2 h-full">
-                <div className="flex items-center justify-between">
+              <Card className="bg-white border border-slate-200 p-2.5 md:p-4 rounded-lg md:rounded-xl space-y-1.5 md:space-y-2 h-full">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-slate-400">Target</span>
                   {targetUniv ? (
                     <Avatar className="h-6 w-6 md:h-8 md:w-8 rounded-lg border border-slate-200 shrink-0">
@@ -206,22 +221,39 @@ export default async function StudentDashboardPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Target Utama */}
                 {targetLabel ? (
-                  <>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 rounded">
+                        <Target className="h-2.5 w-2.5 text-blue-600" />
+                        <span className="text-[8px] md:text-[9px] font-extrabold text-blue-600 uppercase tracking-wide">Utama</span>
+                      </div>
+                    </div>
                     <p className="text-[10px] md:text-xs font-bold text-slate-900 leading-tight line-clamp-2">{targetLabel}</p>
-                    <p className="text-[9px] md:text-[10px] text-blue-600 font-semibold flex items-center gap-0.5">
-                      <Target className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                      <span>Impian</span>
-                    </p>
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div className="space-y-1">
                     <p className="text-[10px] md:text-xs font-semibold text-slate-400 italic">Belum diset</p>
-                    <Link href="/direktori-prodi" className="text-[9px] md:text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-0.5">
+                    <Link href="/profile" className="text-[9px] md:text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-0.5">
                       <TrendingUp className="h-2.5 w-2.5" />
-                      <span>Cari →</span>
+                      <span>Set Target →</span>
                     </Link>
-                  </>
+                  </div>
+                )}
+
+                {/* Target Cadangan - Only show if exists */}
+                {targetLabel2 && (
+                  <div className="pt-1.5 border-t border-slate-200 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 rounded">
+                        <Target className="h-2.5 w-2.5 text-amber-600" />
+                        <span className="text-[8px] md:text-[9px] font-extrabold text-amber-600 uppercase tracking-wide">Cadangan</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] md:text-xs font-bold text-slate-700 leading-tight line-clamp-2">{targetLabel2}</p>
+                  </div>
                 )}
               </Card>
             </MotionCard>

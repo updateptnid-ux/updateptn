@@ -256,3 +256,241 @@ export async function submitTryoutAction(payload: {
     abilityEstimate: Number(abilityEstimate.toFixed(2))
   };
 }
+
+/**
+ * Save try-out session progress (for pause/resume)
+ */
+export async function saveTryoutSession(payload: {
+  tryoutId: string;
+  currentQuestionIndex: number;
+  activeSubtestIndex: number;
+  answers: Record<string, string>;
+  flaggedQuestions: Record<string, boolean>;
+  questionTimeSpent: Record<string, number>;
+  timeRemainingSeconds: number;
+  totalDurationSeconds: number;
+  selectedTargets?: any[];
+}) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      success: false,
+      error: "User not authenticated",
+    };
+  }
+
+  try {
+    // Calculate expiry (7 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Check if session already exists
+    const { data: existingSession } = await supabase
+      .from("tryout_sessions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("tryout_id", payload.tryoutId)
+      .eq("status", "in_progress")
+      .maybeSingle();
+
+    if (existingSession) {
+      // Update existing session
+      const { error: updateError } = await supabase
+        .from("tryout_sessions")
+        .update({
+          current_question_index: payload.currentQuestionIndex,
+          active_subtest_index: payload.activeSubtestIndex,
+          answers: payload.answers,
+          flagged_questions: payload.flaggedQuestions,
+          question_time_spent: payload.questionTimeSpent,
+          time_remaining_seconds: payload.timeRemainingSeconds,
+          total_duration_seconds: payload.totalDurationSeconds,
+          selected_targets: payload.selectedTargets || [],
+          status: "paused",
+          expires_at: expiresAt.toISOString(),
+        })
+        .eq("id", existingSession.id);
+
+      if (updateError) {
+        console.error("Error updating session:", updateError);
+        return {
+          success: false,
+          error: "Gagal menyimpan progress",
+        };
+      }
+    } else {
+      // Create new session
+      const { error: insertError } = await supabase
+        .from("tryout_sessions")
+        .insert({
+          user_id: user.id,
+          tryout_id: payload.tryoutId,
+          current_question_index: payload.currentQuestionIndex,
+          active_subtest_index: payload.activeSubtestIndex,
+          answers: payload.answers,
+          flagged_questions: payload.flaggedQuestions,
+          question_time_spent: payload.questionTimeSpent,
+          time_remaining_seconds: payload.timeRemainingSeconds,
+          total_duration_seconds: payload.totalDurationSeconds,
+          selected_targets: payload.selectedTargets || [],
+          status: "paused",
+          expires_at: expiresAt.toISOString(),
+        });
+
+      if (insertError) {
+        console.error("Error creating session:", insertError);
+        return {
+          success: false,
+          error: "Gagal menyimpan progress",
+        };
+      }
+    }
+
+    return {
+      success: true,
+      message: "Progress berhasil disimpan",
+    };
+  } catch (error) {
+    console.error("Error saving session:", error);
+    return {
+      success: false,
+      error: "Terjadi kesalahan saat menyimpan progress",
+    };
+  }
+}
+
+/**
+ * Get saved try-out session
+ */
+export async function getTryoutSession(tryoutId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      success: false,
+      error: "User not authenticated",
+    };
+  }
+
+  try {
+    const { data: session, error } = await supabase
+      .from("tryout_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("tryout_id", tryoutId)
+      .in("status", ["in_progress", "paused"])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching session:", error);
+      return {
+        success: false,
+        error: "Gagal mengambil data session",
+      };
+    }
+
+    if (!session) {
+      return {
+        success: true,
+        data: null,
+      };
+    }
+
+    // Check if session expired
+    if (session.expires_at && new Date(session.expires_at) < new Date()) {
+      // Mark as expired
+      await supabase
+        .from("tryout_sessions")
+        .update({ status: "expired" })
+        .eq("id", session.id);
+
+      return {
+        success: true,
+        data: null,
+        expired: true,
+      };
+    }
+
+    return {
+      success: true,
+      data: session,
+    };
+  } catch (error) {
+    console.error("Error getting session:", error);
+    return {
+      success: false,
+      error: "Terjadi kesalahan saat mengambil session",
+    };
+  }
+}
+
+/**
+ * Mark session as completed (after submit)
+ */
+export async function completeTryoutSession(tryoutId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false };
+  }
+
+  try {
+    await supabase
+      .from("tryout_sessions")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .eq("tryout_id", tryoutId)
+      .in("status", ["in_progress", "paused"]);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error completing session:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Delete session (user wants to restart)
+ */
+export async function deleteTryoutSession(tryoutId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false };
+  }
+
+  try {
+    await supabase
+      .from("tryout_sessions")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("tryout_id", tryoutId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting session:", error);
+    return { success: false };
+  }
+}

@@ -124,7 +124,16 @@ export default function AdminSubscriptionsPage() {
         setIsDemoMode(true);
         setSubs(mockSubs);
       } else if (data) {
-        setSubs(data as SubRecord[]);
+        // Auto-update expired subscriptions in real-time display
+        const now = new Date();
+        const processedData = (data as SubRecord[]).map(sub => {
+          // If status is active but expires_at is in the past, mark as expired
+          if (sub.status === 'active' && new Date(sub.expires_at) <= now) {
+            return { ...sub, status: 'expired' as const };
+          }
+          return sub;
+        });
+        setSubs(processedData);
         setIsDemoMode(false);
       }
     } catch (err) {
@@ -165,11 +174,36 @@ export default function AdminSubscriptionsPage() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      
+      // Lookup user dari email
+      let userName = formData.user_name;
+      let userId = null;
+      
+      if (formData.user_email) {
+        try {
+          const res = await fetch(`/api/lookup-user?email=${encodeURIComponent(formData.user_email)}`);
+          if (res.ok) {
+            const userData = await res.json();
+            userId = userData.user_id;
+            userName = userData.name || formData.user_email.split('@')[0];
+          }
+        } catch (lookupErr) {
+          console.warn("Gagal lookup user:", lookupErr);
+          userName = formData.user_email.split('@')[0];
+        }
+      }
+      
       const payload: any = {
-        ...formData,
+        user_name: userName,
+        user_email: formData.user_email,
+        tier: formData.tier,
+        status: formData.status,
+        price_paid: formData.price_paid,
         expires_at: new Date(formData.expires_at).toISOString(),
         updated_at: new Date().toISOString(),
       };
+      
+      if (userId) payload.user_id = userId;
 
       if (isDemoMode) {
         if (editingSub) {
@@ -182,26 +216,6 @@ export default function AdminSubscriptionsPage() {
       }
 
       const supabase = createClient();
-
-      // Jika create baru, lookup user_id dari email
-      if (!editingSub && formData.user_email) {
-        try {
-          const res = await fetch(`/api/lookup-user?email=${encodeURIComponent(formData.user_email)}`);
-          if (res.ok) {
-            const userData = await res.json();
-            payload.user_id = userData.user_id;
-            // Isi user_name dari data jika kosong
-            if (!payload.user_name && userData.name) {
-              payload.user_name = userData.name;
-            }
-          } else {
-            // User tidak ditemukan di auth — tetap simpan tanpa user_id
-            console.warn("User tidak ditemukan di auth.users untuk email:", formData.user_email);
-          }
-        } catch (lookupErr) {
-          console.warn("Gagal lookup user_id:", lookupErr);
-        }
-      }
 
       if (editingSub) {
         const { error } = await supabase.from("subscriptions").update(payload).eq("id", editingSub.id);
@@ -377,43 +391,43 @@ export default function AdminSubscriptionsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingSub ? "Edit Langganan" : "Tambah Langganan Baru"}</DialogTitle>
+            <DialogTitle className="text-base font-bold">{editingSub ? "Edit Langganan" : "Tambah Langganan Baru"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nama Siswa *</Label>
-              <Input value={formData.user_name} onChange={e => setFormData({ ...formData, user_name: e.target.value })} placeholder="Amanda Zevanya" />
+          <div className="space-y-3 py-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Email Siswa *</Label>
+              <Input 
+                value={formData.user_email} 
+                onChange={e => setFormData({ ...formData, user_email: e.target.value })} 
+                placeholder="amanda@gmail.com"
+                className="h-10 text-sm"
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Email Siswa *</Label>
-              <Input value={formData.user_email} onChange={e => setFormData({ ...formData, user_email: e.target.value })} placeholder="amanda@gmail.com" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Paket Tier *</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Paket Tier *</Label>
                 <select
                   value={formData.tier}
                   onChange={e => setFormData({ ...formData, tier: e.target.value })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white font-medium"
+                  className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
                 >
-                  <option value="VIP">VIP (Semua Produk)</option>
-                  <option value="Bimbel 2027 (Paket Hemat)">Bimbel 2027 (Paket Hemat)</option>
-                  <option value="Bimbel 2027 (Paket Eksklusif)">Bimbel 2027 (Paket Eksklusif)</option>
-                  <option value="Bimbel 2027 (Premium Intensif)">Bimbel 2027 (Premium Intensif)</option>
-                  <option value="Bimbel 2027 (Bimbel Mandiri)">Bimbel 2027 (Bimbel Mandiri)</option>
+                  <option value="VIP">VIP (All-in-One)</option>
+                  <option value="Bimbel 2027 (Paket Hemat)">Bimbel 2027 (Hemat)</option>
+                  <option value="Bimbel 2027 (Paket Eksklusif)">Bimbel 2027 (Eksklusif)</option>
+                  <option value="Bimbel 2027 (Premium Intensif)">Bimbel 2027 (Intensif)</option>
                   <option value="Premium SNBT">Premium SNBT</option>
                   <option value="Premium SNBP">Premium SNBP</option>
                   <option value="Premium Mandiri">Premium Mandiri</option>
-                  <option value="Try Out Satuan">Try Out (Paket Satuan)</option>
+                  <option value="Try Out Satuan">Try Out</option>
                   <option value="Trial / Gratis">Trial / Gratis</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Status *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Status *</Label>
                 <select
                   value={formData.status}
                   onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                  className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
                 >
                   <option value="active">Active</option>
                   <option value="expired">Expired</option>
@@ -421,20 +435,32 @@ export default function AdminSubscriptionsPage() {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Harga Bayar *</Label>
-                <Input value={formData.price_paid} onChange={e => setFormData({ ...formData, price_paid: e.target.value })} placeholder="Rp 149.000" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Harga Bayar *</Label>
+                <Input 
+                  value={formData.price_paid} 
+                  onChange={e => setFormData({ ...formData, price_paid: e.target.value })} 
+                  placeholder="Rp 149.000"
+                  className="h-10 text-sm"
+                />
               </div>
-              <div className="space-y-2">
-                <Label>Masa Berlaku *</Label>
-                <Input type="date" value={formData.expires_at} onChange={e => setFormData({ ...formData, expires_at: e.target.value })} />
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Masa Berlaku *</Label>
+                <Input 
+                  type="date" 
+                  value={formData.expires_at} 
+                  onChange={e => setFormData({ ...formData, expires_at: e.target.value })}
+                  className="h-10 text-sm"
+                />
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSave} disabled={isSaving || !formData.user_name || !formData.user_email} className="bg-blue-600 hover:bg-blue-700 text-white">Simpan</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="h-9 text-sm">Batal</Button>
+            <Button onClick={handleSave} disabled={isSaving || !formData.user_email} className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm">
+              {isSaving ? "Menyimpan..." : "Simpan"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

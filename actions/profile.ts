@@ -18,6 +18,8 @@ export async function updateProfileAction(formData: FormData) {
   const asalSekolah = formData.get("asalSekolah") as string;
   const targetUniv = formData.get("targetUniv") as string;
   const targetProdi = formData.get("targetProdi") as string;
+  const targetUniv2 = formData.get("targetUniv2") as string;
+  const targetProdi2 = formData.get("targetProdi2") as string;
   const bio = formData.get("bio") as string;
   const provinsi = formData.get("provinsi") as string;
 
@@ -35,11 +37,14 @@ export async function updateProfileAction(formData: FormData) {
       asal_sekolah: asalSekolah?.trim() || "",
       target_univ: targetUniv?.trim() || "",
       target_prodi: targetProdi?.trim() || "",
+      target_univ_2: targetUniv2?.trim() || "",
+      target_prodi_2: targetProdi2?.trim() || "",
       bio: bio?.trim() || "",
       provinsi: provinsi?.trim() || "",
       avatar_url: avatarUrl?.trim() || "",
       // keep legacy
       target_ptn: targetUniv?.trim() || "",
+      target_ptn_2: targetUniv2?.trim() || "",
     },
   });
 
@@ -62,6 +67,8 @@ export async function updateProfileAction(formData: FormData) {
     asal_sekolah: asalSekolah?.trim() || "",
     target_ptn: targetUniv?.trim() || "",
     target_prodi: targetProdi?.trim() || "",
+    target_ptn_2: targetUniv2?.trim() || "",
+    target_prodi_2: targetProdi2?.trim() || "",
     bio: bio?.trim() || "",
     provinsi: provinsi?.trim() || "",
     role: currentProfile?.role || "student", // Preserve existing role
