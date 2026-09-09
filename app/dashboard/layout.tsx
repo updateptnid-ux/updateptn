@@ -163,13 +163,13 @@ export default function DashboardLayout({
     // SECTION DIVIDER
     { divider: "CEK PELUANG" },
     {
-      name: "Cek Peluang SNBT",
-      href: "/dashboard/student/cek-peluang",
+      name: "Cek Peluang SNBP",
+      href: "/dashboard/student/cek-peluang-snbp",
       icon: Target,
     },
     {
-      name: "Cek Peluang SNBP",
-      href: "/dashboard/student/cek-peluang-snbp",
+      name: "Cek Peluang SNBT",
+      href: "/dashboard/student/cek-peluang",
       icon: Target,
     },
     // SECTION DIVIDER
@@ -246,7 +246,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Scrollable Menu */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 custom-scrollbar-thin smooth-scroll min-h-0">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <nav className="space-y-1 pb-4">
                 {navItems.map((item) => {
                   // Render divider
@@ -362,7 +362,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Scrollable Navigation Links */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 custom-scrollbar-thin smooth-scroll min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
           <nav className="space-y-0.5 pb-4">
             {navItems.map((item) => {
               // Render divider

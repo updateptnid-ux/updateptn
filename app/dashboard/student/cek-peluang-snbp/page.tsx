@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import SNBPCalculatorForm from "@/components/student/SNBPCalculatorForm";
 import { createClient } from "@/lib/supabase/client";
+import { hasFeatureAccess } from "@/lib/subscription-helpers";
 
 interface SNBPData {
   province: string;
@@ -123,15 +124,16 @@ export default function CekPeluangSNBPPage() {
           .maybeSingle();
 
         const isAdmin = profileData?.role === "admin";
-        const tier = subscription?.tier || "Basic";
         
-        // Check if subscription includes SNBP
-        const hasSNBPAccess = isAdmin || 
-          tier === "VIP All-in-One" ||
-          tier === "Premium SNBP" ||
-          tier.includes("SNBP");
-
-        setHasAccess(hasSNBPAccess);
+        // Check feature access using helper function (same as SNBT page)
+        const accessCheck = hasFeatureAccess(subscription, "snbp");
+        
+        // Admins always have access
+        if (isAdmin) {
+          setHasAccess(true);
+        } else {
+          setHasAccess(accessCheck.hasAccess);
+        }
       } catch (err) {
         console.error("Error checking access:", err);
         setHasAccess(false);
