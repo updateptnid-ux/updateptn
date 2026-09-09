@@ -66,24 +66,76 @@ export default function CekPeluangPage() {
   const urlScore = searchParams.get("score");
   const initialScore = urlScore 
     ? parseFloat(urlScore) 
-    : (predictionType === "snbt" ? 720 : 85);
+    : (predictionType === "snbt" ? 0 : 85);
   
   const [universities, setUniversities] = useState<string[]>([]);
+  
+  // Pilihan 1
   const [selectedUniv, setSelectedUniv] = useState<string>("");
   const [univSearch, setUnivSearch] = useState<string>("");
   const [isUnivOpen, setIsUnivOpen] = useState<boolean>(false);
-  
   const [majors, setMajors] = useState<ProdiReferenceItem[]>([]);
   const [selectedProdiId, setSelectedProdiId] = useState<string>("");
   const [majorSearch, setMajorSearch] = useState<string>("");
   const [isMajorOpen, setIsMajorOpen] = useState<boolean>(false);
+  
+  // Pilihan 2
+  const [selectedUniv2, setSelectedUniv2] = useState<string>("");
+  const [univSearch2, setUnivSearch2] = useState<string>("");
+  const [isUnivOpen2, setIsUnivOpen2] = useState<boolean>(false);
+  const [majors2, setMajors2] = useState<ProdiReferenceItem[]>([]);
+  const [selectedProdiId2, setSelectedProdiId2] = useState<string>("");
+  const [majorSearch2, setMajorSearch2] = useState<string>("");
+  const [isMajorOpen2, setIsMajorOpen2] = useState<boolean>(false);
+  
+  // Pilihan 3
+  const [selectedUniv3, setSelectedUniv3] = useState<string>("");
+  const [univSearch3, setUnivSearch3] = useState<string>("");
+  const [isUnivOpen3, setIsUnivOpen3] = useState<boolean>(false);
+  const [majors3, setMajors3] = useState<ProdiReferenceItem[]>([]);
+  const [selectedProdiId3, setSelectedProdiId3] = useState<string>("");
+  const [majorSearch3, setMajorSearch3] = useState<string>("");
+  const [isMajorOpen3, setIsMajorOpen3] = useState<boolean>(false);
+  
+  // Pilihan 4
+  const [selectedUniv4, setSelectedUniv4] = useState<string>("");
+  const [univSearch4, setUnivSearch4] = useState<string>("");
+  const [isUnivOpen4, setIsUnivOpen4] = useState<boolean>(false);
+  const [majors4, setMajors4] = useState<ProdiReferenceItem[]>([]);
+  const [selectedProdiId4, setSelectedProdiId4] = useState<string>("");
+  const [majorSearch4, setMajorSearch4] = useState<string>("");
+  const [isMajorOpen4, setIsMajorOpen4] = useState<boolean>(false);
 
   const [score, setScore] = useState<string | number>(initialScore);
   const [result, setResult] = useState<PredictionResult | null>(null);
   
+  // Mode input: "total" atau "manual"
+  const [inputMode, setInputMode] = useState<"total" | "manual">("total");
+  
+  // Manual subtes scores (untuk SNBT - 7 subtes)
+  const [subtesScores, setSubtesScores] = useState({
+    penalaran_umum: 0,
+    bacaan_menulis: 0,
+    pengetahuan_umum: 0,
+    pengetahuan_kuantitatif: 0,
+    literasi_indonesia: 0,
+    literasi_inggris: 0,
+    penalaran_matematika: 0,
+  });
+  
   const [loadingUnivs, setLoadingUnivs] = useState(true);
   const [loadingMajors, setLoadingMajors] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Auto-calculate total score from subtes (AVERAGE, not SUM)
+  useEffect(() => {
+    if (predictionType === "snbt") {
+      const values = Object.values(subtesScores);
+      const total = values.reduce((sum, val) => sum + val, 0);
+      const average = Math.round(total / values.length); // Divide by 6 (number of subtests)
+      setScore(average);
+    }
+  }, [subtesScores, predictionType]);
 
   // Quota tracking states
   const [remainingPredictions, setRemainingPredictions] = useState<number | null>(null);
@@ -95,6 +147,12 @@ export default function CekPeluangPage() {
 
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
+  const univContainerRef2 = useRef<HTMLDivElement>(null);
+  const majorContainerRef2 = useRef<HTMLDivElement>(null);
+  const univContainerRef3 = useRef<HTMLDivElement>(null);
+  const majorContainerRef3 = useRef<HTMLDivElement>(null);
+  const univContainerRef4 = useRef<HTMLDivElement>(null);
+  const majorContainerRef4 = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Fetch user quota on mount + AUTH GUARD + FEATURE ACCESS CHECK
@@ -179,7 +237,7 @@ export default function CekPeluangPage() {
     setQuotaError("");
     
     // Reset score to default for the new type
-    const defaultScore = predictionType === "snbt" ? 720 : 85;
+    const defaultScore = predictionType === "snbt" ? 0 : 85;
     setScore(defaultScore);
     
     // Reset selected university and major to first available
@@ -197,6 +255,24 @@ export default function CekPeluangPage() {
       }
       if (majorContainerRef.current && !majorContainerRef.current.contains(event.target as Node)) {
         setIsMajorOpen(false);
+      }
+      if (univContainerRef2.current && !univContainerRef2.current.contains(event.target as Node)) {
+        setIsUnivOpen2(false);
+      }
+      if (majorContainerRef2.current && !majorContainerRef2.current.contains(event.target as Node)) {
+        setIsMajorOpen2(false);
+      }
+      if (univContainerRef3.current && !univContainerRef3.current.contains(event.target as Node)) {
+        setIsUnivOpen3(false);
+      }
+      if (majorContainerRef3.current && !majorContainerRef3.current.contains(event.target as Node)) {
+        setIsMajorOpen3(false);
+      }
+      if (univContainerRef4.current && !univContainerRef4.current.contains(event.target as Node)) {
+        setIsUnivOpen4(false);
+      }
+      if (majorContainerRef4.current && !majorContainerRef4.current.contains(event.target as Node)) {
+        setIsMajorOpen4(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -357,6 +433,117 @@ export default function CekPeluangPage() {
 
     loadMajorsForUniv();
   }, [selectedUniv, predictionType]);
+
+  // Fetch majors for Pilihan 2
+  useEffect(() => {
+    if (!selectedUniv2) return;
+
+    async function loadMajorsForUniv2() {
+      try {
+        if (predictionType === "snbp") {
+          const res = await fetch("/data_snbp.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv2);
+            if (filtered.length > 0) {
+              setMajors2(filtered);
+              setSelectedProdiId2(String(filtered[0].id));
+              return;
+            }
+          }
+        } else {
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.univ === selectedUniv2);
+            if (filtered.length > 0) {
+              setMajors2(filtered);
+              setSelectedProdiId2(String(filtered[0].id));
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading majors 2:", err);
+      }
+    }
+
+    loadMajorsForUniv2();
+  }, [selectedUniv2, predictionType]);
+
+  // Fetch majors for Pilihan 3
+  useEffect(() => {
+    if (!selectedUniv3) return;
+
+    async function loadMajorsForUniv3() {
+      try {
+        if (predictionType === "snbp") {
+          const res = await fetch("/data_snbp.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv3);
+            if (filtered.length > 0) {
+              setMajors3(filtered);
+              setSelectedProdiId3(String(filtered[0].id));
+              return;
+            }
+          }
+        } else {
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.univ === selectedUniv3);
+            if (filtered.length > 0) {
+              setMajors3(filtered);
+              setSelectedProdiId3(String(filtered[0].id));
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading majors 3:", err);
+      }
+    }
+
+    loadMajorsForUniv3();
+  }, [selectedUniv3, predictionType]);
+
+  // Fetch majors for Pilihan 4
+  useEffect(() => {
+    if (!selectedUniv4) return;
+
+    async function loadMajorsForUniv4() {
+      try {
+        if (predictionType === "snbp") {
+          const res = await fetch("/data_snbp.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv4);
+            if (filtered.length > 0) {
+              setMajors4(filtered);
+              setSelectedProdiId4(String(filtered[0].id));
+              return;
+            }
+          }
+        } else {
+          const res = await fetch("/data_snbt.json");
+          if (res.ok) {
+            const localData = await res.json();
+            const filtered = localData.filter((item: any) => item.univ === selectedUniv4);
+            if (filtered.length > 0) {
+              setMajors4(filtered);
+              setSelectedProdiId4(String(filtered[0].id));
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading majors 4:", err);
+      }
+    }
+
+    loadMajorsForUniv4();
+  }, [selectedUniv4, predictionType]);
 
   // Submit Handler for Prediction Calculation
   const handleAnalyze = (e: React.FormEvent) => {
@@ -535,6 +722,64 @@ export default function CekPeluangPage() {
     .map(item => item.major);
 
   const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
+  const selectedProdiObj2 = majors2.find((m) => String(m.id) === String(selectedProdiId2));
+  const selectedProdiObj3 = majors3.find((m) => String(m.id) === String(selectedProdiId3));
+  const selectedProdiObj4 = majors4.find((m) => String(m.id) === String(selectedProdiId4));
+
+  // Filtered majors for each selection
+  const filteredMajors2 = majors2
+    .map((m) => {
+      const searchTerm = normalizeText(majorSearch2);
+      if (!searchTerm) return { major: m, score: 1 };
+      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
+      const prodiScore = getRelevanceScore(prodiName, searchTerm);
+      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
+      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
+      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
+      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
+      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
+      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
+      return { major: m, score: totalScore };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.major);
+
+  const filteredMajors3 = majors3
+    .map((m) => {
+      const searchTerm = normalizeText(majorSearch3);
+      if (!searchTerm) return { major: m, score: 1 };
+      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
+      const prodiScore = getRelevanceScore(prodiName, searchTerm);
+      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
+      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
+      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
+      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
+      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
+      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
+      return { major: m, score: totalScore };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.major);
+
+  const filteredMajors4 = majors4
+    .map((m) => {
+      const searchTerm = normalizeText(majorSearch4);
+      if (!searchTerm) return { major: m, score: 1 };
+      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
+      const prodiScore = getRelevanceScore(prodiName, searchTerm);
+      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
+      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
+      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
+      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
+      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
+      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
+      return { major: m, score: totalScore };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.major);
 
   return (
     <div className="max-w-4xl w-full mx-auto space-y-8 py-4 font-sans">
@@ -600,12 +845,27 @@ export default function CekPeluangPage() {
       {/* Main Content - Clean UI for users with access */}
       {!isCheckingAccess && hasAccess && (
         <>
+      {/* Back Button */}
+      <div className="mb-4">
+        <Link href="/dashboard/student">
+          <Button variant="ghost" className="h-9 px-3 text-xs font-semibold text-slate-700 hover:text-blue-600 hover:bg-blue-50">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Kembali ke Beranda
+          </Button>
+        </Link>
+      </div>
+
       {/* Header Title */}
-      <div className="text-center space-y-3">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          Cek Peluang Kelulusan {predictionType === "snbp" ? "SNBP" : "SNBT"}
+      <div className="text-center space-y-3 mb-6">
+        <div className="flex justify-center mb-3">
+          <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs font-bold px-4 py-1.5 rounded-full">
+            📊 RASIONALISASI {predictionType === "snbp" ? "SNBP" : "SNBT"} 2026
+          </Badge>
+        </div>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900">
+          Analisis <span className="text-blue-600">Peluang</span>
         </h1>
-        <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
+        <p className="text-slate-600 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
           {predictionType === "snbp" 
             ? "Bandingkan rata-rata nilai raport kamu dengan estimasi keketatan 5.100+ Jurusan SNBP 2026."
             : "Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian."
@@ -630,256 +890,873 @@ export default function CekPeluangPage() {
         </div>
       )}
 
-      {/* Input Form Card */}
-      <div className="border border-blue-100 shadow-md rounded-2xl bg-white p-6 sm:p-8" style={{ overflow: "visible" }}>
+      {/* Input Form Card - New Two-Column Layout */}
+      <div className="space-y-4" style={{ overflow: "visible" }}>
         {loadingUnivs ? (
           <div className="flex flex-col items-center justify-center py-12 space-y-3">
             <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
             <p className="text-xs font-semibold text-blue-400">Memuat Database 4.900+ PTN & Jurusan...</p>
           </div>
         ) : (
-          <form onSubmit={handleAnalyze} className="space-y-6" style={{ overflow: "visible" }}>
-            {/* Skor UTBK Input Section */}
-            <div className="bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <Label htmlFor="score" className="text-xs font-bold uppercase tracking-wider text-blue-700 block mb-1">
-                  {predictionType === "snbp" ? "Rata-rata Nilai Raport (Semester 1-5)" : "Skor IRT UTBK / Try Out Kamu"}
-                </Label>
-                <p className="text-xs text-blue-400">
-                  {predictionType === "snbp" 
-                    ? "Masukkan rata-rata nilai raport kamu (skala 0-100)"
-                    : "Masukkan total skor hasil Try Out atau latihan subtes"
-                  }
-                </p>
-              </div>
-              <div className="w-full sm:w-48">
-                <Input
-                  id="score"
-                  type="number"
-                  min={predictionType === "snbp" ? 0 : 300}
-                  max={predictionType === "snbp" ? 100 : 1000}
-                  step={predictionType === "snbp" ? 0.01 : 1}
-                  value={score}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setScore(val === "" ? "" : Number(val));
-                  }}
-                  required
-                  className="h-12 rounded-xl text-lg font-black text-blue-700 bg-white border-blue-200 text-center focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* SNBP Calculator Link Button */}
+          <form onSubmit={handleAnalyze} className="space-y-4" style={{ overflow: "visible" }}>
+            {/* SNBP Calculator Link Banner (if SNBP) */}
             {predictionType === "snbp" && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-xl border border-blue-200">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg shrink-0">
-                      <Calculator className="h-5 w-5 text-blue-600" />
+                      <Calculator className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900 mb-1">
+                      <p className="text-xs font-bold text-slate-900 mb-0.5">
                         Belum tahu rata-rata nilai raport kamu?
                       </p>
-                      <p className="text-xs text-slate-600">
-                        Gunakan kalkulator detail untuk menghitung nilai per mata pelajaran dari semester 1-5
+                      <p className="text-[10px] text-slate-600">
+                        Gunakan kalkulator detail untuk menghitung nilai per mata pelajaran
                       </p>
                     </div>
                   </div>
                   <Link href="/dashboard/student/kalkulator-snbp">
                     <Button
                       type="button"
-                      className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm whitespace-nowrap"
+                      className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs whitespace-nowrap"
                     >
                       Buka Kalkulator
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      <ArrowRight className="h-3 w-3 ml-2" />
                     </Button>
                   </Link>
                 </div>
               </div>
             )}
 
-            {/* Selection Grid: PTN & Jurusan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ overflow: "visible" }}>
-              {/* PTN Selection Combobox */}
-              <div className="space-y-2" ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 100 : 1 }}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center justify-between">
-                  <span>1. Perguruan Tinggi Negeri (PTN)</span>
-                  <span className="text-[11px] font-normal text-blue-400">{universities.length} PTN</span>
-                </Label>
-
-                <button
-                  type="button"
-                  onClick={() => { setIsUnivOpen(!isUnivOpen); setIsMajorOpen(false); }}
-                  className="w-full h-13 px-4 bg-white border border-blue-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors shadow-xs"
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
-                    <span className="truncate">{selectedUniv || "Pilih PTN Target"}</span>
+            {/* Two-Column Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ overflow: "visible" }}>
+              {/* LEFT CARD: Skor Simulasi */}
+              <Card className="p-4 border-2 border-slate-200 bg-white rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <Target className="h-4 w-4 text-blue-600" />
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-blue-400 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
-                </button>
+                  <h3 className="text-sm font-bold text-slate-900">Skor Simulasi</h3>
+                </div>
 
-                {isUnivOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
-                    <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
-                      <input
-                        type="text"
-                        value={univSearch}
-                        onChange={(e) => setUnivSearch(e.target.value)}
-                        placeholder="Ketik nama PTN (cth: UI, ITB, UGM)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                        autoFocus
+                {predictionType === "snbt" ? (
+                  <>
+                    {/* Slider per subtes - Horizontal Layout (7 SUBTES) */}
+                    <div className="space-y-3 mb-3">
+                      {/* 1. Penalaran Umum (PU) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Penalaran Umum</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.penalaran_umum}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, penalaran_umum: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.penalaran_umum}</span>
+                      </div>
+
+                      {/* 2. Bacaan dan Menulis (KMBM) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Bacaan dan Menulis</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.bacaan_menulis}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, bacaan_menulis: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.bacaan_menulis}</span>
+                      </div>
+
+                      {/* 3. Pengetahuan Umum (PPU) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Pengetahuan Umum</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.pengetahuan_umum}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, pengetahuan_umum: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.pengetahuan_umum}</span>
+                      </div>
+
+                      {/* 4. Pengetahuan Kuantitatif (PK) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Pengetahuan Kuantitatif</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.pengetahuan_kuantitatif}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, pengetahuan_kuantitatif: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.pengetahuan_kuantitatif}</span>
+                      </div>
+
+                      {/* 5. Literasi Bahasa Indonesia (LBI) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Literasi Bahasa Indonesia</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.literasi_indonesia}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, literasi_indonesia: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.literasi_indonesia}</span>
+                      </div>
+
+                      {/* 6. Literasi Bahasa Inggris (LBIng) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Literasi Bahasa Inggris</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.literasi_inggris}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, literasi_inggris: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.literasi_inggris}</span>
+                      </div>
+
+                      {/* 7. Penalaran Matematika (PM) */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
+                          <span className="text-[9px] font-semibold text-slate-700">Penalaran Matematika</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={subtesScores.penalaran_matematika}
+                          onChange={(e) => setSubtesScores({ ...subtesScores, penalaran_matematika: Number(e.target.value) })}
+                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.penalaran_matematika}</span>
+                      </div>
+                    </div>
+
+                    {/* Total Skor - Visible */}
+                    <div className="mt-4 pt-3 border-t border-slate-200">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">RATA-RATA SKOR</span>
+                        <span className="text-3xl font-black text-blue-600">{score}</span>
+                      </div>
+                      <p className="text-[8px] text-slate-500 mt-1">Total skor = rata-rata dari 7 subtes</p>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="mt-3 bg-blue-50 rounded-lg p-2 border border-blue-200">
+                      <div className="flex items-start gap-1.5">
+                        <div className="p-1 bg-blue-200 rounded shrink-0">
+                          <Calculator className="h-2.5 w-2.5 text-blue-700" />
+                        </div>
+                        <p className="text-[8px] text-slate-700 leading-snug">
+                          Input skor IRT untuk 7 subtes SNBT (TPS: PU, KMBM, PPU, PK | Literasi: LBI, LBIng, PM)
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* SNBP - Direct Input */}
+                    <div className="mb-3">
+                      <Label htmlFor="score" className="text-[10px] font-bold text-slate-700 mb-2 block uppercase tracking-wide">
+                        RATA-RATA NILAI RAPORT
+                      </Label>
+                      <Input
+                        id="score"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={score}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setScore(val === "" ? "" : Number(val));
+                        }}
+                        required
+                        style={{ fontSize: '16px' }}
+                        className="h-12 rounded-lg text-2xl font-black text-blue-700 bg-blue-50 border-2 border-blue-200 text-center focus:border-blue-500"
                       />
+                      <p className="text-[9px] text-slate-500 mt-1.5 text-center">
+                        Masukkan rata-rata nilai raport semester 1-5
+                      </p>
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
-                      <span>Daftar Kampus Negeri</span>
-                      <span>{filteredUnivs.length} ditemukan</span>
+                    <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-200">
+                      <div className="flex items-start gap-2">
+                        <div className="p-1 bg-blue-200 rounded shrink-0">
+                          <Calculator className="h-3 w-3 text-blue-700" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[9px] font-bold text-slate-900 mb-0.5">
+                            Gunakan Kalkulator SNBP
+                          </p>
+                          <p className="text-[8px] text-slate-600 leading-snug">
+                            Hitung nilai raport detail per mata pelajaran.
+                          </p>
+                        </div>
+                      </div>
                     </div>
+                  </>
+                )}
+              </Card>
 
-                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
-                      {filteredUnivs.length > 0 ? (
-                        filteredUnivs.map((univName) => (
-                          <button
-                            key={univName}
-                            type="button"
-                            onClick={() => {
-                              setSelectedUniv(univName);
-                              setIsUnivOpen(false);
-                              setUnivSearch("");
-                            }}
-                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                              selectedUniv === univName
-                                ? "bg-blue-700 text-white"
-                                : "text-slate-800 hover:bg-blue-50"
-                            }`}
+              {/* RIGHT CARD: Jurusan Target */}
+              <Card className="p-4 border-2 border-slate-200 bg-white rounded-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Jurusan Target</h3>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                  Pilih hingga 4 jurusan untuk dianalisa peluang kelulusannya berdasarkan skor simulasi kamu.
+                </p>
+
+                <div className="space-y-3">
+                  {/* PILIHAN 1 - PTN Dropdown */}
+                  <div className="space-y-2 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">1</Badge>
+                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
+                    </div>
+                    
+                    {/* PTN Selection - Fixed positioning */}
+                    <div className="space-y-2" style={{ position: "relative" }}>
+                      <div ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => { 
+                            setIsUnivOpen(!isUnivOpen); 
+                            setIsMajorOpen(false); 
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="truncate text-left flex-1">{selectedUniv || "Pilih PTN"}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isUnivOpen && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
                           >
-                            <span className="truncate">{univName}</span>
-                            {selectedUniv === univName && <Check className="h-4 w-4 text-white shrink-0" />}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="p-6 text-center space-y-2">
-                          <p className="text-sm text-slate-600 font-medium">
-                            PTN "{univSearch}" tidak ditemukan
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            Coba singkatan atau nama lengkap kampus
-                          </p>
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={univSearch}
+                                onChange={(e) => setUnivSearch(e.target.value)}
+                                placeholder="Cari PTN..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredUnivs.slice(0, 50).map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv(univName);
+                                    setIsUnivOpen(false);
+                                    setUnivSearch("");
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                    selectedUniv === univName
+                                      ? "bg-blue-700 text-white"
+                                      : "text-slate-800 hover:bg-blue-50"
+                                  }`}
+                                >
+                                  {univName}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Jurusan Selection - Fixed positioning */}
+                      <div ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          disabled={loadingMajors || majors.length === 0}
+                          onClick={() => { 
+                            setIsMajorOpen(!isMajorOpen); 
+                            setIsUnivOpen(false); 
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                        >
+                          <span className="truncate text-left flex-1">
+                            {selectedProdiObj
+                              ? (predictionType === "snbp" ? selectedProdiObj.nama_prodi : selectedProdiObj.prodi)
+                              : (loadingMajors ? "Memuat..." : "Pilih Jurusan")}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isMajorOpen && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={majorSearch}
+                                onChange={(e) => setMajorSearch(e.target.value)}
+                                placeholder="Cari jurusan..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredMajors.slice(0, 50).map((m) => {
+                                const isSelected = String(m.id) === String(selectedProdiId);
+                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedProdiId(String(m.id));
+                                      setIsMajorOpen(false);
+                                      setMajorSearch("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    
+                      {selectedProdiObj && (
+                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
+                          <Check className="h-3.5 w-3.5" />
+                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
                         </div>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Major Selection Combobox */}
-              <div className="space-y-2" ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 100 : 1 }}>
-                <Label className="text-xs font-bold uppercase tracking-wider text-blue-700 flex items-center justify-between">
-                  <span>2. Program Studi (Jurusan)</span>
-                  {loadingMajors && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />}
-                </Label>
-
-                <button
-                  type="button"
-                  disabled={loadingMajors || majors.length === 0}
-                  onClick={() => { setIsMajorOpen(!isMajorOpen); setIsUnivOpen(false); }}
-                  className="w-full h-13 px-4 bg-white border border-blue-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors shadow-xs disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <BookOpen className="h-5 w-5 text-blue-500 shrink-0" />
-                    <span className="truncate">
-                      {selectedProdiObj
-                        ? predictionType === "snbp"
-                          ? `${selectedProdiObj.nama_prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kategori ? ` - ${selectedProdiObj.kategori}` : ""}`
-                          : `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}${selectedProdiObj.kelompok ? ` - ${selectedProdiObj.kelompok}` : ""}`
-                        : (loadingMajors ? "Memuat jurusan..." : "Pilih Jurusan")}
-                    </span>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-blue-400 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} />
-                </button>
-
-                {isMajorOpen && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "320px" }}>
-                    <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
-                      <input
-                        type="text"
-                        value={majorSearch}
-                        onChange={(e) => setMajorSearch(e.target.value)}
-                        placeholder="Ketik jurusan (cth: Kedokteran, Informatika)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                        autoFocus
-                      />
+                  {/* PILIHAN 2 - Fully Functional */}
+                  <div className="space-y-2 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">2</Badge>
+                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
                     </div>
+                    
+                    <div className="space-y-2" style={{ position: "relative" }}>
+                      {/* PTN Selection 2 */}
+                      <div ref={univContainerRef2} style={{ position: "relative", zIndex: isUnivOpen2 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => { 
+                            setIsUnivOpen2(!isUnivOpen2); 
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="truncate text-left flex-1">{selectedUniv2 || "Pilih PTN"}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen2 ? "rotate-180" : ""}`} />
+                        </button>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
-                      <span>Jurusan di {selectedUniv}</span>
-                      <span className={filteredMajors.length === 0 ? "text-rose-500" : "text-blue-600"}>
-                        {filteredMajors.length} {filteredMajors.length === 1 ? "prodi" : "prodi"}
-                      </span>
-                    </div>
+                        {isUnivOpen2 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={univSearch2}
+                                onChange={(e) => setUnivSearch2(e.target.value)}
+                                placeholder="Cari PTN..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
 
-                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
-                      {filteredMajors.length > 0 ? (
-                        filteredMajors.map((m) => {
-                          const isSelected = String(m.id) === String(selectedProdiId);
-                          const label = predictionType === "snbp"
-                            ? `${m.nama_prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kategori ? ` - ${m.kategori}` : ""}`
-                            : `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}${m.kelompok ? ` - ${m.kelompok}` : ""}`;
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedProdiId(String(m.id));
-                                setIsMajorOpen(false);
-                                setMajorSearch("");
-                              }}
-                              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                                isSelected
-                                  ? "bg-blue-700 text-white"
-                                  : "text-slate-800 hover:bg-blue-50"
-                              }`}
-                            >
-                              <span className="truncate">{label}</span>
-                              {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="p-6 text-center space-y-2">
-                          <p className="text-sm text-slate-600 font-medium">
-                            Tidak ada jurusan yang cocok dengan "{majorSearch}"
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            Coba kata kunci lain atau cek ejaan pencarian
-                          </p>
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredUnivs.slice(0, 50).map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv2(univName);
+                                    setIsUnivOpen2(false);
+                                    setUnivSearch2("");
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                    selectedUniv2 === univName
+                                      ? "bg-blue-700 text-white"
+                                      : "text-slate-800 hover:bg-blue-50"
+                                  }`}
+                                >
+                                  {univName}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Jurusan Selection 2 */}
+                      <div ref={majorContainerRef2} style={{ position: "relative", zIndex: isMajorOpen2 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          disabled={!selectedUniv2 || majors2.length === 0}
+                          onClick={() => { 
+                            setIsMajorOpen2(!isMajorOpen2); 
+                            setIsUnivOpen2(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="truncate text-left flex-1">
+                            {selectedProdiObj2
+                              ? (predictionType === "snbp" ? selectedProdiObj2.nama_prodi : selectedProdiObj2.prodi)
+                              : (!selectedUniv2 ? "Pilih PTN dulu" : "Pilih Jurusan")}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen2 ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isMajorOpen2 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={majorSearch2}
+                                onChange={(e) => setMajorSearch2(e.target.value)}
+                                placeholder="Cari jurusan..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredMajors2.slice(0, 50).map((m) => {
+                                const isSelected = String(m.id) === String(selectedProdiId2);
+                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedProdiId2(String(m.id));
+                                      setIsMajorOpen2(false);
+                                      setMajorSearch2("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    
+                      {selectedProdiObj2 && (
+                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
+                          <Check className="h-3.5 w-3.5" />
+                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
                         </div>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* PILIHAN 3 - Fully Functional */}
+                  <div className="space-y-2 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">3</Badge>
+                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
+                    </div>
+                    
+                    <div className="space-y-2" style={{ position: "relative" }}>
+                      {/* PTN Selection 3 */}
+                      <div ref={univContainerRef3} style={{ position: "relative", zIndex: isUnivOpen3 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => { 
+                            setIsUnivOpen3(!isUnivOpen3); 
+                            setIsMajorOpen3(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="truncate text-left flex-1">{selectedUniv3 || "Pilih PTN"}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen3 ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isUnivOpen3 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={univSearch3}
+                                onChange={(e) => setUnivSearch3(e.target.value)}
+                                placeholder="Cari PTN..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredUnivs.slice(0, 50).map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv3(univName);
+                                    setIsUnivOpen3(false);
+                                    setUnivSearch3("");
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                    selectedUniv3 === univName
+                                      ? "bg-blue-700 text-white"
+                                      : "text-slate-800 hover:bg-blue-50"
+                                  }`}
+                                >
+                                  {univName}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Jurusan Selection 3 */}
+                      <div ref={majorContainerRef3} style={{ position: "relative", zIndex: isMajorOpen3 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          disabled={!selectedUniv3 || majors3.length === 0}
+                          onClick={() => { 
+                            setIsMajorOpen3(!isMajorOpen3); 
+                            setIsUnivOpen3(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen4(false);
+                            setIsMajorOpen4(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="truncate text-left flex-1">
+                            {selectedProdiObj3
+                              ? (predictionType === "snbp" ? selectedProdiObj3.nama_prodi : selectedProdiObj3.prodi)
+                              : (!selectedUniv3 ? "Pilih PTN dulu" : "Pilih Jurusan")}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen3 ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isMajorOpen3 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={majorSearch3}
+                                onChange={(e) => setMajorSearch3(e.target.value)}
+                                placeholder="Cari jurusan..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredMajors3.slice(0, 50).map((m) => {
+                                const isSelected = String(m.id) === String(selectedProdiId3);
+                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedProdiId3(String(m.id));
+                                      setIsMajorOpen3(false);
+                                      setMajorSearch3("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    
+                      {selectedProdiObj3 && (
+                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
+                          <Check className="h-3.5 w-3.5" />
+                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PILIHAN 4 - Fully Functional */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">4</Badge>
+                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
+                    </div>
+                    
+                    <div className="space-y-2" style={{ position: "relative" }}>
+                      {/* PTN Selection 4 */}
+                      <div ref={univContainerRef4} style={{ position: "relative", zIndex: isUnivOpen4 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          onClick={() => { 
+                            setIsUnivOpen4(!isUnivOpen4); 
+                            setIsMajorOpen4(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="truncate text-left flex-1">{selectedUniv4 || "Pilih PTN"}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen4 ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isUnivOpen4 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={univSearch4}
+                                onChange={(e) => setUnivSearch4(e.target.value)}
+                                placeholder="Cari PTN..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredUnivs.slice(0, 50).map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv4(univName);
+                                    setIsUnivOpen4(false);
+                                    setUnivSearch4("");
+                                  }}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                    selectedUniv4 === univName
+                                      ? "bg-blue-700 text-white"
+                                      : "text-slate-800 hover:bg-blue-50"
+                                  }`}
+                                >
+                                  {univName}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Jurusan Selection 4 */}
+                      <div ref={majorContainerRef4} style={{ position: "relative", zIndex: isMajorOpen4 ? 50 : 1 }}>
+                        <button
+                          type="button"
+                          disabled={!selectedUniv4 || majors4.length === 0}
+                          onClick={() => { 
+                            setIsMajorOpen4(!isMajorOpen4); 
+                            setIsUnivOpen4(false);
+                            setIsUnivOpen(false);
+                            setIsMajorOpen(false);
+                            setIsUnivOpen2(false);
+                            setIsMajorOpen2(false);
+                            setIsUnivOpen3(false);
+                            setIsMajorOpen3(false);
+                          }}
+                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="truncate text-left flex-1">
+                            {selectedProdiObj4
+                              ? (predictionType === "snbp" ? selectedProdiObj4.nama_prodi : selectedProdiObj4.prodi)
+                              : (!selectedUniv4 ? "Pilih PTN dulu" : "Pilih Jurusan")}
+                          </span>
+                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen4 ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {isMajorOpen4 && (
+                          <div 
+                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
+                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
+                          >
+                            <div className="relative">
+                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
+                              <input
+                                type="text"
+                                value={majorSearch4}
+                                onChange={(e) => setMajorSearch4(e.target.value)}
+                                placeholder="Cari jurusan..."
+                                style={{ fontSize: '16px' }}
+                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                                autoFocus
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
+                              {filteredMajors4.slice(0, 50).map((m) => {
+                                const isSelected = String(m.id) === String(selectedProdiId4);
+                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedProdiId4(String(m.id));
+                                      setIsMajorOpen4(false);
+                                      setMajorSearch4("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
+                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    
+                      {selectedProdiObj4 && (
+                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
+                          <Check className="h-3.5 w-3.5" />
+                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
 
+            {/* Submit Button */}
             <Button
               type="submit"
               disabled={isPending || !selectedProdiId}
-              className="w-full h-13 text-base font-extrabold bg-blue-700 hover:bg-blue-800 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
+              className="w-full h-12 text-sm font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
             >
               {isPending ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Menganalisis Algoritma Rasionalisasi...</span>
+                  <span>Menganalisis...</span>
                 </>
               ) : (
                 <>
                   <Target className="h-5 w-5" />
-                  <span>Analisis Peluang Kelulusan Sekarang</span>
+                  <span>Lihat Hasil Analisis</span>
                 </>
               )}
             </Button>
@@ -887,68 +1764,69 @@ export default function CekPeluangPage() {
         )}
       </div>
 
-      {/* PREDICTION RESULT DISPLAY CARD */}
+      {/* PREDICTION RESULT DISPLAY CARD - Mobile Optimized */}
       {result && (
-        <Card className="border border-blue-100 shadow-md rounded-2xl overflow-hidden bg-white p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-50 pb-4">
+        <Card className="border-2 border-blue-200 shadow-lg rounded-xl overflow-hidden bg-white p-4 sm:p-6 space-y-4 animate-in fade-in zoom-in-95">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <span className="text-xs text-blue-400 font-semibold">Hasil Analisis Rasionalisasi:</span>
-              <h3 className="text-xl font-extrabold text-slate-900">
-                {result.majorName} • {result.universityName}
+              <span className="text-[10px] text-blue-500 font-bold uppercase tracking-wide">Hasil Analisis</span>
+              <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                {result.majorName}
               </h3>
+              <p className="text-xs text-slate-600 font-semibold">{result.universityName}</p>
             </div>
 
             {result.status === "AMAN" && (
-              <Badge className="bg-emerald-600 text-white font-bold text-xs px-3.5 py-1">
-                SANGAT TINGGI (AMAN)
+              <Badge className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-lg">
+                🎉 AMAN
               </Badge>
             )}
             {result.status === "BERSAING" && (
-              <Badge className="bg-blue-700 text-white font-bold text-xs px-3.5 py-1">
-                MODERAT (BERSAING)
+              <Badge className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded-lg">
+                ⚡ BERSAING
               </Badge>
             )}
             {result.status === "RENTAN" && (
-              <Badge className="bg-amber-500 text-white font-bold text-xs px-3.5 py-1">
-                BERISIKO (RENTAN)
+              <Badge className="bg-amber-500 text-white font-bold text-xs px-3 py-1 rounded-lg">
+                ⚠️ RENTAN
               </Badge>
             )}
           </div>
 
           {/* Probability Percentage Bar */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-baseline">
-              <span className="text-xs font-bold text-blue-500">Estimasi Peluang Lulus</span>
-              <span className="text-3xl font-black text-blue-700">{result.percentage}%</span>
+              <span className="text-xs font-bold text-slate-700">Estimasi Peluang Lulus</span>
+              <span className="text-3xl font-black text-blue-600">{result.percentage}%</span>
             </div>
-            <Progress value={result.percentage} className="h-3 bg-blue-50 rounded-full" />
+            <Progress value={result.percentage} className="h-3 bg-slate-100 rounded-full" />
           </div>
 
-          {/* Score Comparison Grid */}
-          <div className="grid grid-cols-3 gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
+          {/* Score Comparison Grid - More Compact */}
+          <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-center">
             <div>
-              <span className="text-xs text-blue-400 block font-medium">
+              <span className="text-[10px] text-slate-500 block font-semibold mb-1">
                 {predictionType === "snbp" ? "Nilai Raport" : "Skor Kamu"}
               </span>
-              <span className="text-xl font-extrabold text-slate-900">{result.score}</span>
+              <span className="text-lg sm:text-xl font-black text-slate-900">{result.score}</span>
             </div>
             <div>
-              <span className="text-xs text-blue-400 block font-medium">
-                {predictionType === "snbp" ? "Estimasi Nilai" : "Passing Grade"}
+              <span className="text-[10px] text-slate-500 block font-semibold mb-1">
+                {predictionType === "snbp" ? "Estimasi Min" : "Passing Grade"}
               </span>
-              <span className="text-xl font-extrabold text-slate-900">{result.passingGrade}</span>
+              <span className="text-lg sm:text-xl font-black text-slate-900">{result.passingGrade}</span>
             </div>
             <div>
-              <span className="text-xs text-blue-400 block font-medium">Selisih Poin</span>
-              <span className={`text-xl font-extrabold ${result.diff >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+              <span className="text-[10px] text-slate-500 block font-semibold mb-1">Selisih</span>
+              <span className={`text-lg sm:text-xl font-black ${result.diff >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
                 {result.diff >= 0 ? `+${result.diff.toFixed(1)}` : result.diff.toFixed(1)}
               </span>
             </div>
           </div>
 
-          {/* Recommendation Box */}
-          <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          {/* Recommendation Box - Compact */}
+          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 flex items-start gap-2">
+            <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
             <p className="text-xs text-slate-700 leading-relaxed font-medium">
               {result.recommendation}
             </p>
