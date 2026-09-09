@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import {
   Award,
   Building2,
   BookOpen,
+  Search,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import SNBPCalculatorForm from "@/components/student/SNBPCalculatorForm";
 import { createClient } from "@/lib/supabase/client";
@@ -68,6 +71,16 @@ export default function CekPeluangSNBPPage() {
   const [selectedProdi1Id, setSelectedProdi1Id] = useState<string>("");
   const [selectedProdi2Id, setSelectedProdi2Id] = useState<string>("");
   
+  // Search & dropdown states
+  const [prodiSearch1, setProdiSearch1] = useState<string>("");
+  const [prodiSearch2, setProdiSearch2] = useState<string>("");
+  const [isProdi1Open, setIsProdi1Open] = useState<boolean>(false);
+  const [isProdi2Open, setIsProdi2Open] = useState<boolean>(false);
+  
+  // Refs for click outside
+  const prodi1ContainerRef = useRef<HTMLDivElement>(null);
+  const prodi2ContainerRef = useRef<HTMLDivElement>(null);
+  
   // Results for 2 choices
   const [result1, setResult1] = useState<PredictionResult | null>(null);
   const [result2, setResult2] = useState<PredictionResult | null>(null);
@@ -75,6 +88,20 @@ export default function CekPeluangSNBPPage() {
   // Access control
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (prodi1ContainerRef.current && !prodi1ContainerRef.current.contains(event.target as Node)) {
+        setIsProdi1Open(false);
+      }
+      if (prodi2ContainerRef.current && !prodi2ContainerRef.current.contains(event.target as Node)) {
+        setIsProdi2Open(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Load SNBP data
   useEffect(() => {
@@ -481,31 +508,106 @@ export default function CekPeluangSNBPPage() {
 
             <div className="space-y-4 mb-6">
               {/* Pilihan 1 */}
-              <div className="space-y-2">
+              <div className="space-y-2" ref={prodi1ContainerRef} style={{ position: "relative", zIndex: isProdi1Open ? 100 : 1 }}>
                 <Label className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">1</Badge>
                   Pilihan Pertama <span className="text-rose-600">*</span>
                 </Label>
-                <div className="relative">
-                  <select
-                    value={selectedProdi1Id}
-                    onChange={(e) => setSelectedProdi1Id(e.target.value)}
-                    className="w-full h-12 pl-4 pr-10 border-2 border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer hover:border-blue-400 transition-colors"
-                    style={{ fontSize: '14px' }}
-                  >
-                    <option value="">-- Pilih Universitas & Jurusan --</option>
-                    {allProdi.map((p) => (
-                      <option key={p.id} value={p.id} className="py-2">
-                        {p.ptn_name.replace('UNIVERSITAS ', '').replace('INSTITUT TEKNOLOGI ', 'IT ')} — {p.nama_prodi}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                
+                <button
+                  type="button"
+                  onClick={() => { setIsProdi1Open(!isProdi1Open); setIsProdi2Open(false); }}
+                  className="w-full h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
+                    <span className="truncate">
+                      {selectedProdi1Id ? 
+                        (() => {
+                          const p = allProdi.find(pr => String(pr.id) === selectedProdi1Id);
+                          return p ? `${p.ptn_name} - ${p.nama_prodi}` : "Pilih PTN & Jurusan";
+                        })()
+                        : "Pilih PTN & Jurusan"
+                      }
+                    </span>
                   </div>
-                </div>
+                  <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 ${isProdi1Open ? "rotate-180" : ""}`} />
+                </button>
+
+                {isProdi1Open && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "400px" }}>
+                    <div className="relative flex-shrink-0">
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
+                      <input
+                        type="text"
+                        value={prodiSearch1}
+                        onChange={(e) => setProdiSearch1(e.target.value)}
+                        placeholder="Ketik PTN atau Jurusan (cth: UI Teknik, ITB Informatika)..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                        style={{ fontSize: '16px' }}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
+                      <span>Daftar Jurusan PTN</span>
+                      <span>{allProdi.filter(p => {
+                        if (!prodiSearch1) return true;
+                        const search = prodiSearch1.toLowerCase();
+                        return p.ptn_name.toLowerCase().includes(search) || 
+                               p.nama_prodi.toLowerCase().includes(search);
+                      }).length} ditemukan</span>
+                    </div>
+
+                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "300px" }}>
+                      {allProdi
+                        .filter(p => {
+                          if (!prodiSearch1) return true;
+                          const search = prodiSearch1.toLowerCase();
+                          return p.ptn_name.toLowerCase().includes(search) || 
+                                 p.nama_prodi.toLowerCase().includes(search);
+                        })
+                        .map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedProdi1Id(String(p.id));
+                              setIsProdi1Open(false);
+                              setProdiSearch1("");
+                            }}
+                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                              String(selectedProdi1Id) === String(p.id)
+                                ? "bg-blue-700 text-white"
+                                : "text-slate-800 hover:bg-blue-50"
+                            }`}
+                          >
+                            <div className="truncate">
+                              <div className="font-black text-[13px]">{p.ptn_name.replace('UNIVERSITAS ', 'U. ').replace('INSTITUT TEKNOLOGI ', 'IT ')}</div>
+                              <div className="text-[11px] opacity-80 mt-0.5">{p.nama_prodi}</div>
+                            </div>
+                            {String(selectedProdi1Id) === String(p.id) && <Check className="h-4 w-4 shrink-0" />}
+                          </button>
+                        ))}
+                      {allProdi.filter(p => {
+                        if (!prodiSearch1) return true;
+                        const search = prodiSearch1.toLowerCase();
+                        return p.ptn_name.toLowerCase().includes(search) || 
+                               p.nama_prodi.toLowerCase().includes(search);
+                      }).length === 0 && (
+                        <div className="p-6 text-center space-y-2">
+                          <p className="text-sm text-slate-600 font-medium">
+                            Jurusan "{prodiSearch1}" tidak ditemukan
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Coba cari dengan nama PTN atau jurusan lain
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedProdi1Id && (
                   <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -515,31 +617,106 @@ export default function CekPeluangSNBPPage() {
               </div>
 
               {/* Pilihan 2 */}
-              <div className="space-y-2">
+              <div className="space-y-2" ref={prodi2ContainerRef} style={{ position: "relative", zIndex: isProdi2Open ? 100 : 1 }}>
                 <Label className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">2</Badge>
                   Pilihan Kedua <span className="text-rose-600">*</span>
                 </Label>
-                <div className="relative">
-                  <select
-                    value={selectedProdi2Id}
-                    onChange={(e) => setSelectedProdi2Id(e.target.value)}
-                    className="w-full h-12 pl-4 pr-10 border-2 border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer hover:border-blue-400 transition-colors"
-                    style={{ fontSize: '14px' }}
-                  >
-                    <option value="">-- Pilih Universitas & Jurusan --</option>
-                    {allProdi.map((p) => (
-                      <option key={p.id} value={p.id} className="py-2">
-                        {p.ptn_name.replace('UNIVERSITAS ', '').replace('INSTITUT TEKNOLOGI ', 'IT ')} — {p.nama_prodi}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                
+                <button
+                  type="button"
+                  onClick={() => { setIsProdi2Open(!isProdi2Open); setIsProdi1Open(false); }}
+                  className="w-full h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 truncate">
+                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
+                    <span className="truncate">
+                      {selectedProdi2Id ? 
+                        (() => {
+                          const p = allProdi.find(pr => String(pr.id) === selectedProdi2Id);
+                          return p ? `${p.ptn_name} - ${p.nama_prodi}` : "Pilih PTN & Jurusan";
+                        })()
+                        : "Pilih PTN & Jurusan"
+                      }
+                    </span>
                   </div>
-                </div>
+                  <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 ${isProdi2Open ? "rotate-180" : ""}`} />
+                </button>
+
+                {isProdi2Open && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "400px" }}>
+                    <div className="relative flex-shrink-0">
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
+                      <input
+                        type="text"
+                        value={prodiSearch2}
+                        onChange={(e) => setProdiSearch2(e.target.value)}
+                        placeholder="Ketik PTN atau Jurusan (cth: UGM Hukum, UNAIR Kedokteran)..."
+                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                        style={{ fontSize: '16px' }}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
+                      <span>Daftar Jurusan PTN</span>
+                      <span>{allProdi.filter(p => {
+                        if (!prodiSearch2) return true;
+                        const search = prodiSearch2.toLowerCase();
+                        return p.ptn_name.toLowerCase().includes(search) || 
+                               p.nama_prodi.toLowerCase().includes(search);
+                      }).length} ditemukan</span>
+                    </div>
+
+                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "300px" }}>
+                      {allProdi
+                        .filter(p => {
+                          if (!prodiSearch2) return true;
+                          const search = prodiSearch2.toLowerCase();
+                          return p.ptn_name.toLowerCase().includes(search) || 
+                                 p.nama_prodi.toLowerCase().includes(search);
+                        })
+                        .map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedProdi2Id(String(p.id));
+                              setIsProdi2Open(false);
+                              setProdiSearch2("");
+                            }}
+                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                              String(selectedProdi2Id) === String(p.id)
+                                ? "bg-blue-700 text-white"
+                                : "text-slate-800 hover:bg-blue-50"
+                            }`}
+                          >
+                            <div className="truncate">
+                              <div className="font-black text-[13px]">{p.ptn_name.replace('UNIVERSITAS ', 'U. ').replace('INSTITUT TEKNOLOGI ', 'IT ')}</div>
+                              <div className="text-[11px] opacity-80 mt-0.5">{p.nama_prodi}</div>
+                            </div>
+                            {String(selectedProdi2Id) === String(p.id) && <Check className="h-4 w-4 shrink-0" />}
+                          </button>
+                        ))}
+                      {allProdi.filter(p => {
+                        if (!prodiSearch2) return true;
+                        const search = prodiSearch2.toLowerCase();
+                        return p.ptn_name.toLowerCase().includes(search) || 
+                               p.nama_prodi.toLowerCase().includes(search);
+                      }).length === 0 && (
+                        <div className="p-6 text-center space-y-2">
+                          <p className="text-sm text-slate-600 font-medium">
+                            Jurusan "{prodiSearch2}" tidak ditemukan
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Coba cari dengan nama PTN atau jurusan lain
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedProdi2Id && (
                   <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" />
