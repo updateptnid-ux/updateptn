@@ -17,25 +17,36 @@ export default function AuthSuccessPage() {
       try {
         const supabase = createClient();
         
-        // Wait a bit for session to be fully established
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait a bit longer for session cookies to be fully established
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (!user) {
-          console.error('No user found after OAuth');
-          router.push('/login?error=session_failed');
+        if (userError || !user) {
+          console.error('❌ No user found after OAuth:', userError);
+          // Redirect back to login with error
+          router.push('/login?error=session_failed&message=' + encodeURIComponent('Sesi tidak ditemukan. Silakan coba login lagi.'));
           return;
         }
 
+        console.log('✅ User found:', user.email);
+
         // Check if profile needs completion
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, provinsi")
           .eq("id", user.id)
           .single();
 
-        console.log('Profile check:', { profile, needsCompletion: !profile?.full_name || !profile?.provinsi });
+        if (profileError) {
+          console.error('⚠️ Profile query error:', profileError);
+          // If profile doesn't exist yet, go to complete-profile
+          setChecking(false);
+          router.push('/complete-profile');
+          return;
+        }
+
+        console.log('📊 Profile check:', { profile, needsCompletion: !profile?.full_name || !profile?.provinsi });
 
         const needsCompletion = !profile?.full_name || !profile?.provinsi;
         const redirectUrl = needsCompletion ? '/complete-profile' : '/dashboard/student';
@@ -56,10 +67,12 @@ export default function AuthSuccessPage() {
 
         return () => clearInterval(interval);
       } catch (error) {
-        console.error('Error checking profile:', error);
+        console.error('❌ Error checking profile:', error);
         setChecking(false);
-        // Still redirect to dashboard on error
-        router.push('/dashboard/student');
+        // On error, try to go to dashboard anyway
+        setTimeout(() => {
+          router.push('/dashboard/student');
+        }, 2000);
       }
     }
 
