@@ -36,7 +36,8 @@ export function isPremiumTier(tier: string | null | undefined): boolean {
     normalizedTier.includes('plus') ||
     normalizedTier.includes('bimbel') ||
     normalizedTier.includes('eksklusif') ||
-    normalizedTier.includes('intensif')
+    normalizedTier.includes('intensif') ||
+    normalizedTier.includes('cek')
   );
 }
 
@@ -155,9 +156,68 @@ export function hasFeatureAccess(
     };
   }
   
+  // Check Paket Cek Peluang Satuan (Paket Cek 3x, 5x, 10x)
+  if (tierLower.includes('cek')) {
+    if (tierLower.includes('snbp') && featureType !== 'snbp') {
+      return {
+        hasAccess: false,
+        message: `Paket ini khusus untuk SNBP.`,
+      };
+    }
+    if (tierLower.includes('snbt') && featureType !== 'snbt') {
+      return {
+        hasAccess: false,
+        message: `Paket ini khusus untuk SNBT.`,
+      };
+    }
+    return {
+      hasAccess: true,
+      message: `Akses ${subscription.tier}`,
+    };
+  }
+  
   // User has subscription but not for this specific feature
   return { 
     hasAccess: false, 
     message: `Subscription ${subscription.tier} tidak mencakup fitur ${featureType.toUpperCase()}. Upgrade ke Premium ${featureType.toUpperCase()} atau VIP All-in-One.` 
   };
+}
+
+/**
+ * Detect quota for Paket Cek Peluang PTN Satuan (3x, 5x, 10x).
+ * Returns number if it's a Paket Cek Satuan, or null if unlimited/other tier.
+ */
+export function getCekPeluangQuota(tierOrPlan: string | null | undefined): number | null {
+  if (!tierOrPlan) return null;
+  const str = tierOrPlan.trim().toLowerCase();
+
+  // VIP / Admin / Unlimited tiers have no quota limit
+  if (str.includes('vip') || str === 'admin') return null;
+
+  // Check 10x first so "10x" is not confused with other numbers
+  if (str.includes('10x') || str.includes('10-x') || str.includes('10 x') || str.includes('10 kali')) {
+    return 10;
+  }
+  if (str.includes('5x') || str.includes('5-x') || str.includes('5 x') || str.includes('5 kali')) {
+    return 5;
+  }
+  if (str.includes('3x') || str.includes('3-x') || str.includes('3 x') || str.includes('3 kali')) {
+    return 3;
+  }
+
+  // Regex fallback for any Nx check package
+  if (str.includes('cek') || str.includes('peluang')) {
+    const match = str.match(/(\d+)\s*x/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > 0) return num;
+    }
+  }
+
+  // Direct number or string from query params
+  if (str === '3') return 3;
+  if (str === '5') return 5;
+  if (str === '10') return 10;
+
+  return null;
 }

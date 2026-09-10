@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { createSubscription, getUserSubscription } from "@/actions/subscription";
 import { createSubscriptionPayment } from "@/actions/payment-midtrans";
+import { activateSuccessfulPaymentAction } from "@/actions/payment-activation";
 import {
   Check,
   ArrowRight,
@@ -746,6 +747,12 @@ export default function PricingPage() {
       return;
     }
 
+    // Buka modal pemilihan jalur (SNBP / SNBT) jika paket cek peluang satuan
+    if (plan.id.startsWith("cek-peluang-") && !plan.id.includes("-snbp") && !plan.id.includes("-snbt")) {
+      setSelectedCekPeluangPlan(plan);
+      return;
+    }
+
     setVoucherInput("");
     setAppliedVoucher(null);
     setVoucherError("");
@@ -893,9 +900,17 @@ export default function PricingPage() {
 
         // Open Midtrans Snap popup
         window.snap?.pay(result.data.token, {
-          onSuccess: function(result: any) {
-            console.log('Payment success:', result);
-            alert('Pembayaran berhasil! Akun Anda akan segera diaktifkan.');
+          onSuccess: async function(snapResult: any) {
+            console.log('Payment success:', snapResult);
+            const targetOrderId = snapResult?.order_id || result.data.orderId;
+            try {
+              if (targetOrderId) {
+                await activateSuccessfulPaymentAction(targetOrderId);
+              }
+            } catch (actErr) {
+              console.error('Error auto-activating payment:', actErr);
+            }
+            alert('Pembayaran berhasil! Paket Anda telah otomatis aktif.');
             setCheckoutPlan(null);
             window.location.href = '/dashboard/student';
           },

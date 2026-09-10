@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { getPendingPayments, getPaymentHistory, cancelPendingPayment } from "@/actions/payment-history";
 import { createSubscriptionPayment } from "@/actions/payment-midtrans";
+import { activateSuccessfulPaymentAction } from "@/actions/payment-activation";
 import { toast } from "sonner";
 
 declare global {
@@ -142,9 +143,17 @@ export default function PaymentsClient() {
 
       // Open Snap modal with new token
       window.snap.pay(result.data.token, {
-        onSuccess: function(result: any) {
-          console.log('✅ Payment success:', result);
-          toast.success('Pembayaran berhasil!');
+        onSuccess: async function(snapResult: any) {
+          console.log('✅ Payment success:', snapResult);
+          const targetOrderId = snapResult?.order_id || result.data?.orderId || payment.order_id;
+          try {
+            if (targetOrderId) {
+              await activateSuccessfulPaymentAction(targetOrderId);
+            }
+          } catch (actErr) {
+            console.error('Error auto-activating payment:', actErr);
+          }
+          toast.success('Pembayaran berhasil! Paket telah aktif.');
           loadPayments();
           setProcessingId(null);
         },

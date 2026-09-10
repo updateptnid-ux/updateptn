@@ -53,6 +53,27 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     fetchPayments();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin-payments-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payments" },
+        () => {
+          fetchPayments();
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(() => {
+      fetchPayments();
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   const fetchPayments = async () => {
@@ -89,17 +110,21 @@ export default function AdminPaymentsPage() {
         setPayments(enrichedData as PaymentRecord[]);
         setIsDemoMode(false);
         
-        // Calculate statistics
+        // Calculate statistics accurately
+        const isSuccessful = (p: any) =>
+          ['settlement', 'success', 'capture'].includes(p.status) ||
+          ['settlement', 'capture'].includes(p.transaction_status);
+
         const totalRevenue = data
-          .filter((p: any) => p.status === 'settlement')
+          .filter(isSuccessful)
           .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
         
         const pendingRevenue = data
-          .filter((p: any) => p.status === 'pending')
+          .filter((p: any) => p.status === 'pending' && !isSuccessful(p))
           .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
         
-        const successfulTransactions = data.filter((p: any) => p.status === 'settlement').length;
-        const pendingTransactions = data.filter((p: any) => p.status === 'pending').length;
+        const successfulTransactions = data.filter(isSuccessful).length;
+        const pendingTransactions = data.filter((p: any) => p.status === 'pending' && !isSuccessful(p)).length;
         
         setStats({
           totalRevenue,

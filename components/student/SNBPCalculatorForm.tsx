@@ -97,9 +97,19 @@ interface Props {
   onCalculate: (data: SNBPData) => void;
   initialScore?: number;
   children?: React.ReactNode;
+  isQuotaExhausted?: boolean;
+  remainingQuota?: number | null;
+  totalQuota?: number | null;
 }
 
-export default function SNBPCalculatorForm({ onCalculate, initialScore = 0, children }: Props) {
+export default function SNBPCalculatorForm({
+  onCalculate,
+  initialScore = 0,
+  children,
+  isQuotaExhausted = false,
+  remainingQuota = null,
+  totalQuota = null,
+}: Props) {
   // Biodata
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
@@ -164,6 +174,11 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0, chil
 
   // Validate and submit
   const handleCalculate = () => {
+    if (isQuotaExhausted) {
+      alert("Kuota Anda sudah habis");
+      return;
+    }
+
     // Validation
     if (!province || !city || !schoolName || !accreditation || !curriculum) {
       alert("Harap isi semua data diri dan sekolah");
@@ -481,13 +496,42 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0, chil
       {/* Children Slot (Pilih Jurusan PTN) */}
       {children}
 
+      {isQuotaExhausted && (
+        <div className="p-4 bg-rose-50 border-2 border-rose-400 rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="p-1.5 bg-rose-100 rounded-lg shrink-0">
+              <AlertCircle className="h-5 w-5 text-rose-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-rose-900 mb-1">Kuota Anda sudah habis</p>
+              <p className="text-xs text-rose-800 leading-relaxed">
+                Batas kuota penggunaan Paket Cek Peluang Anda telah habis. Silakan beli paket tambahan untuk melanjutkan analisis.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {totalQuota !== null && remainingQuota !== null && !isQuotaExhausted && (
+        <div className="text-center">
+          <span className="text-xs text-slate-500 font-medium">
+            Sisa Kuota Cek: <span className="font-bold text-blue-600">{remainingQuota}</span> / {totalQuota}x
+          </span>
+        </div>
+      )}
+
       {/* Submit Button */}
       <Button
         onClick={handleCalculate}
-        className="w-full h-11 md:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm md:text-base shadow-md hover:shadow-lg transition-all"
+        disabled={isQuotaExhausted}
+        className={`w-full h-11 md:h-12 font-bold text-sm md:text-base shadow-md transition-all ${
+          isQuotaExhausted
+            ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300'
+            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-lg'
+        }`}
       >
         <Calculator className="h-4 w-4 md:h-5 md:w-5 mr-2" />
-        Hitung Peluang SNBP
+        {isQuotaExhausted ? "Kuota Anda sudah habis" : "Hitung Peluang SNBP"}
       </Button>
     </div>
   );

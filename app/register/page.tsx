@@ -108,6 +108,25 @@ export default function RegisterPage() {
         return;
       }
 
+      // Ensure profile record exists in public.profiles to trigger real-time updates
+      if (data.user) {
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: data.user.id,
+              email: email,
+              full_name: fullName,
+              role: "student",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "id" }
+          );
+        } catch (profileErr) {
+          console.warn("Profile upsert warning:", profileErr);
+        }
+      }
+
       // Check if session exists or if email confirmation is required
       if (data.session) {
         // Success - show subtle toast and redirect

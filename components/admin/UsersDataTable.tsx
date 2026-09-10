@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,10 +62,57 @@ interface UsersDataTableProps {
 export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTableProps) {
   const router = useRouter();
   const [users, setUsers] = useState<UserRecord[]>(initialUsers);
+  const [total, setTotal] = useState(totalCount);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "admin">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const fetchUsers = async () => {
+    try {
+      setIsRefreshing(true);
+      const res = await fetch("/hq-core-updateptn/api/users", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setUsers(json.data);
+          if (json.count !== undefined) {
+            setTotal(json.count);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to auto-refresh users:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Supabase Realtime channel listening on profiles table
+    const supabase = createClient();
+    const channel = supabase
+      .channel("admin-users-datatable-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => {
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    // 2. Fallback auto-refresh polling every 5 seconds for instant registration updates
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Delete user state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -203,7 +251,7 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
           </div>
           <div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pengguna</p>
-            <p className="text-xl font-black text-slate-900">{totalCount || users.length}</p>
+            <p className="text-xl font-black text-slate-900">{total || users.length}</p>
           </div>
         </Card>
 
@@ -273,10 +321,15 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
               variant="outline"
               size="icon"
               className="rounded-xl border-slate-200 shrink-0 h-9 w-9"
-              onClick={() => { setSearchQuery(""); setRoleFilter("all"); setCurrentPage(1); }}
-              title="Reset Filter"
+              onClick={() => {
+                setSearchQuery("");
+                setRoleFilter("all");
+                setCurrentPage(1);
+                fetchUsers();
+              }}
+              title="Segarkan Data"
             >
-              <RefreshCw className="h-4 w-4 text-slate-500" />
+              <RefreshCw className={`h-4 w-4 text-slate-500 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>

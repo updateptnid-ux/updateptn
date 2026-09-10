@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import SNBPCalculatorForm from "@/components/student/SNBPCalculatorForm";
 import { createClient } from "@/lib/supabase/client";
-import { hasFeatureAccess } from "@/lib/subscription-helpers";
+import { hasFeatureAccess, getCekPeluangQuota } from "@/lib/subscription-helpers";
 
 interface SNBPData {
   province: string;
@@ -84,6 +84,10 @@ export default function CekPeluangSNBPPage() {
   // Access control
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true);
+  const [totalQuota, setTotalQuota] = useState<number | null>(null);
+  const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState<boolean>(false);
+  const [quotaStorageKey, setQuotaStorageKey] = useState<string>("");
 
   // Load SNBP data
   useEffect(() => {
@@ -116,9 +120,9 @@ export default function CekPeluangSNBPPage() {
         }
 
         const now = new Date().toISOString();
-        const { data: subscription } = await supabase
+        let { data: subscription } = await supabase
           .from("subscriptions")
-          .select("tier, status, expires_at")
+          .select("id, tier, status, expires_at")
           .eq("user_email", user.email)
           .eq("status", "active")
           .gt("expires_at", now)
@@ -126,19 +130,67 @@ export default function CekPeluangSNBPPage() {
           .limit(1)
           .maybeSingle();
 
+        if (!subscription) {
+          const { data: subById } = await supabase
+            .from("subscriptions")
+            .select("id, tier, status, expires_at")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .gt("expires_at", now)
+            .order("expires_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (subById) subscription = subById;
+        }
+
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, subscription_tier, subscription_status, is_premium")
           .eq("id", user.id)
           .maybeSingle();
 
         const isAdmin = profileData?.role === "admin";
-        const accessCheck = hasFeatureAccess(subscription, "snbp");
+        const effectiveTier = subscription?.tier || (profileData?.subscription_status === 'active' || profileData?.is_premium ? profileData?.subscription_tier : null);
+        const accessCheck = hasFeatureAccess(subscription || { tier: effectiveTier, status: 'active', expires_at: new Date(Date.now() + 86400000).toISOString() }, "snbp");
         
-        if (isAdmin) {
+        // Deteksi paket kuota cek peluang satuan (3x, 5x, 10x)
+        const searchParams = new URLSearchParams(window.location.search);
+        const planParam = searchParams.get("plan") || searchParams.get("package");
+        const detectedQuota = getCekPeluangQuota(effectiveTier) ?? getCekPeluangQuota(planParam);
+
+        if (isAdmin || accessCheck.hasAccess || (detectedQuota !== null)) {
           setHasAccess(true);
+
+          if (!isAdmin && detectedQuota !== null) {
+            setTotalQuota(detectedQuota);
+            const baseKey = `cek_peluang_quota_${user.email || user.id}_${detectedQuota}x`;
+            const activeSubId = subscription?.id || profileData?.subscription_tier || "default";
+            const lastSubId = localStorage.getItem(baseKey + "_sub_id");
+
+            let currentRemaining: number;
+            const savedQuota = localStorage.getItem(baseKey);
+
+            if (savedQuota === null || (subscription?.id && lastSubId !== activeSubId)) {
+              currentRemaining = detectedQuota;
+              localStorage.setItem(baseKey, String(detectedQuota));
+              if (subscription?.id) {
+                localStorage.setItem(baseKey + "_sub_id", activeSubId);
+              }
+            } else {
+              const parsed = parseInt(savedQuota, 10);
+              currentRemaining = isNaN(parsed) ? detectedQuota : parsed;
+            }
+
+            setRemainingQuota(currentRemaining);
+            setIsQuotaExhausted(currentRemaining <= 0);
+            setQuotaStorageKey(baseKey);
+          } else {
+            setTotalQuota(null);
+            setRemainingQuota(null);
+            setIsQuotaExhausted(false);
+          }
         } else {
-          setHasAccess(accessCheck.hasAccess);
+          setHasAccess(false);
         }
       } catch (err) {
         console.error("Error checking access:", err);
@@ -226,6 +278,29 @@ export default function CekPeluangSNBPPage() {
   };
 
   const handleCalculate = (data: SNBPData) => {
+    if (isQuotaExhausted) {
+      alert("Kuota Anda sudah habis");
+      return;
+    }
+
+    const hasSelectedProdi = Object.values(selectedProdis).some(Boolean);
+    if (!hasSelectedProdi) {
+      alert("Harap pilih minimal 1 jurusan PTN pada tab Pilihan Jurusan di bawah sebelum menghitung peluang.");
+      return;
+    }
+
+    // Kurangi kuota jika paket satuan
+    if (totalQuota !== null && remainingQuota !== null) {
+      const nextQuota = Math.max(0, remainingQuota - 1);
+      setRemainingQuota(nextQuota);
+      if (quotaStorageKey) {
+        localStorage.setItem(quotaStorageKey, String(nextQuota));
+      }
+      if (nextQuota <= 0) {
+        setIsQuotaExhausted(true);
+      }
+    }
+
     setSNBPData(data);
     setLoading(true);
     
@@ -484,6 +559,9 @@ export default function CekPeluangSNBPPage() {
           <SNBPCalculatorForm
             onCalculate={handleCalculate}
             initialScore={85}
+            isQuotaExhausted={isQuotaExhausted}
+            remainingQuota={remainingQuota}
+            totalQuota={totalQuota}
           >
             <Card className="p-4 md:p-6 bg-white overflow-visible w-full shadow-sm border-slate-200">
               <div className="mb-4">

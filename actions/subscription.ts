@@ -90,11 +90,14 @@ export async function createSubscription(subscriptionData: any) {
     expiresAt.setDate(expiresAt.getDate() + durationDays);
     
     // Create subscription with correct schema matching the actual table
+    // Auto-approve: automatically set status to 'active'
+    const finalStatus = subscriptionData.status || 'active';
+
     const subscriptionRecord = {
       user_name: subscriptionData.user_name || user.email?.split('@')[0] || 'User',
       user_email: subscriptionData.user_email || user.email || '',
       tier: subscriptionData.tier,
-      status: subscriptionData.status || 'pending',
+      status: finalStatus,
       expires_at: expiresAt.toISOString(),
       price_paid: subscriptionData.price_paid,
     };
@@ -115,12 +118,15 @@ export async function createSubscription(subscriptionData: any) {
     
     const amount = parseInt(subscriptionData.price_paid?.replace(/\D/g, '') || '0');
     
+    const isApproved = finalStatus === 'active';
+
     const paymentRecord = {
       user_id: user.id,
       order_id: orderId,
       amount: amount,
       original_amount: amount,
-      status: 'pending',
+      status: isApproved ? 'success' : 'pending',
+      transaction_status: isApproved ? 'settlement' : 'pending',
       method: subscriptionData.payment_method || 'manual',
       metadata: {
         tier: subscriptionData.tier,
@@ -132,6 +138,19 @@ export async function createSubscription(subscriptionData: any) {
     };
     
     await supabase.from('payments').insert([paymentRecord]);
+    
+    // Auto-approve: update profile to active premium
+    if (isApproved) {
+      await supabase
+        .from('profiles')
+        .update({
+          is_premium: true,
+          subscription_status: 'active',
+          subscription_tier: subscriptionData.tier,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+    }
     
     return { success: true, data: { ...subscription, order_id: orderId }, error: null };
   } catch (err: any) {
@@ -265,13 +284,36 @@ export async function hasFeatureAccess(
         message: `Akses Premium ${featureType.toUpperCase()}` 
       };
     }
+
+    // Check Paket Cek Peluang Satuan (Paket Cek 3x, 5x, 10x)
+    if (tierName.includes('cek')) {
+      if (tierName.includes('snbp') && featureType !== 'snbp') {
+        return {
+          hasAccess: false,
+          tier: subscription.tier,
+          message: `Paket ini khusus untuk SNBP.`,
+        };
+      }
+      if (tierName.includes('snbt') && featureType !== 'snbt') {
+        return {
+          hasAccess: false,
+          tier: subscription.tier,
+          message: `Paket ini khusus untuk SNBT.`,
+        };
+      }
+      return {
+        hasAccess: true,
+        tier: subscription.tier,
+        message: `Akses ${subscription.tier}`,
+      };
+    }
     
     // No access for this specific feature
     return { 
       hasAccess: false, 
       tier: subscription.tier,
       message: `Subscription ${subscription.tier} tidak mencakup fitur ${featureType.toUpperCase()}` 
-      };
+    };
   } catch (err) {
     console.error('Error checking feature access:', err);
     return { 

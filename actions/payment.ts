@@ -43,14 +43,14 @@ export async function createPendingSubscription(params: CreateSubscriptionParams
       return { ok: false, message: "Invalid tier" };
     }
 
-    // Create subscription record with "pending" status
+    // Create subscription record with "active" status (Auto-Approved)
     const { data: subscription, error } = await supabase
       .from("subscriptions")
       .insert([
         {
           user_id: params.userId,
           tier: params.tier,
-          status: "pending", // Will be activated by admin
+          status: "active", // Auto-approved
           expires_at: expiresAt.toISOString(),
           payment_method: params.paymentMethod,
           payment_proof: params.paymentProof,
@@ -69,13 +69,21 @@ export async function createPendingSubscription(params: CreateSubscriptionParams
       };
     }
 
-    // TODO: Send notification to admin for verification
-    // TODO: Send email confirmation to user
+    // Auto-approve: update user profile to premium
+    await supabase
+      .from("profiles")
+      .update({
+        is_premium: true,
+        subscription_status: "active",
+        subscription_tier: params.tier,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.userId);
 
     return { 
       ok: true, 
       subscription,
-      message: "Subscription berhasil dibuat, menunggu verifikasi admin" 
+      message: "Subscription berhasil diaktifkan secara otomatis" 
     };
   } catch (error: any) {
     console.error("Create subscription error:", error);

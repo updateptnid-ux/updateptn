@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { hasFeatureAccess } from "@/lib/subscription-helpers";
+import { hasFeatureAccess, getCekPeluangQuota } from "@/lib/subscription-helpers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,6 +93,10 @@ export default function CekPeluangPage() {
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true);
   const [userTier, setUserTier] = useState<string>("Basic");
+  const [totalQuota, setTotalQuota] = useState<number | null>(null);
+  const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
+  const [isQuotaExhausted, setIsQuotaExhausted] = useState<boolean>(false);
+  const [quotaStorageKey, setQuotaStorageKey] = useState<string>("");
 
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
@@ -111,9 +115,9 @@ export default function CekPeluangPage() {
         }
 
         const now = new Date().toISOString();
-        const { data: subscription } = await supabase
+        let { data: subscription } = await supabase
           .from("subscriptions")
-          .select("tier, status, expires_at")
+          .select("id, tier, status, expires_at")
           .eq("user_email", user.email)
           .eq("status", "active")
           .gt("expires_at", now)
@@ -121,20 +125,67 @@ export default function CekPeluangPage() {
           .limit(1)
           .maybeSingle();
 
+        if (!subscription) {
+          const { data: subById } = await supabase
+            .from("subscriptions")
+            .select("id, tier, status, expires_at")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .gt("expires_at", now)
+            .order("expires_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (subById) subscription = subById;
+        }
+
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, subscription_tier, subscription_status, is_premium")
           .eq("id", user.id)
           .maybeSingle();
 
         const isAdminUser = profileData?.role === "admin";
+        const effectiveTier = subscription?.tier || (profileData?.subscription_status === 'active' || profileData?.is_premium ? profileData?.subscription_tier : null);
         const featureType = predictionType === "snbp" ? "snbp" : "snbt";
-        const accessCheck = hasFeatureAccess(subscription, featureType);
-        const tier = subscription?.tier || "Basic";
+        const accessCheck = hasFeatureAccess(subscription || { tier: effectiveTier, status: 'active', expires_at: new Date(Date.now() + 86400000).toISOString() }, featureType);
+        const tier = effectiveTier || "Basic";
+
+        // Deteksi paket kuota cek peluang satuan (3x, 5x, 10x)
+        const planParam = searchParams.get("plan") || searchParams.get("package");
+        const detectedQuota = getCekPeluangQuota(effectiveTier) ?? getCekPeluangQuota(planParam);
         
-        if (isAdminUser || accessCheck.hasAccess) {
+        if (isAdminUser || accessCheck.hasAccess || (detectedQuota !== null)) {
           setHasAccess(true);
           setUserTier(isAdminUser ? "Admin" : tier);
+
+          if (!isAdminUser && detectedQuota !== null) {
+            setTotalQuota(detectedQuota);
+            const baseKey = `cek_peluang_quota_${user.email || user.id}_${detectedQuota}x`;
+            const activeSubId = subscription?.id || profileData?.subscription_tier || "default";
+            const lastSubId = localStorage.getItem(baseKey + "_sub_id");
+
+            let currentRemaining: number;
+            const savedQuota = localStorage.getItem(baseKey);
+
+            if (savedQuota === null || (subscription?.id && lastSubId !== activeSubId)) {
+              currentRemaining = detectedQuota;
+              localStorage.setItem(baseKey, String(detectedQuota));
+              if (subscription?.id) {
+                localStorage.setItem(baseKey + "_sub_id", activeSubId);
+              }
+            } else {
+              const parsed = parseInt(savedQuota, 10);
+              currentRemaining = isNaN(parsed) ? detectedQuota : parsed;
+            }
+
+            setRemainingQuota(currentRemaining);
+            setIsQuotaExhausted(currentRemaining <= 0);
+            setQuotaStorageKey(baseKey);
+          } else {
+            setTotalQuota(null);
+            setRemainingQuota(null);
+            setIsQuotaExhausted(false);
+          }
         } else {
           setHasAccess(false);
           setUserTier(tier);
@@ -147,7 +198,7 @@ export default function CekPeluangPage() {
       }
     }
     fetchUserQuota();
-  }, [predictionType]);
+  }, [predictionType, searchParams]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -202,12 +253,34 @@ export default function CekPeluangPage() {
   // Calculate prediction
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isQuotaExhausted) {
+      alert("Kuota Anda sudah habis");
+      return;
+    }
+
+    if (!selectedProdiId) {
+      alert("Silakan pilih jurusan terlebih dahulu");
+      return;
+    }
+
+    // Kurangi kuota jika paket satuan
+    if (totalQuota !== null && remainingQuota !== null) {
+      const nextQuota = Math.max(0, remainingQuota - 1);
+      setRemainingQuota(nextQuota);
+      if (quotaStorageKey) {
+        localStorage.setItem(quotaStorageKey, String(nextQuota));
+      }
+      if (nextQuota <= 0) {
+        setIsQuotaExhausted(true);
+      }
+    }
+
     const scrollY = window.scrollY;
     setResult(null);
     
     setTimeout(() => window.scrollTo(0, scrollY), 0);
     
-    if (!selectedProdiId) return;
     const numScore = Number(score) || (predictionType === "snbt" ? 720 : 85);
 
     startTransition(async () => {
@@ -834,14 +907,61 @@ export default function CekPeluangPage() {
                     </div>
                   )}
 
+                  {isQuotaExhausted && (
+                    <div className="mb-4 p-4 bg-rose-50 border-2 border-rose-400 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 bg-rose-100 rounded-lg shrink-0">
+                          <AlertTriangle className="h-5 w-5 text-rose-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-rose-900 mb-1">Kuota Anda sudah habis</p>
+                          <p className="text-xs text-rose-800 leading-relaxed">
+                            Batas kuota penggunaan Paket Cek Peluang Anda telah habis. Silakan beli paket tambahan untuk melanjutkan analisis.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {totalQuota !== null && remainingQuota !== null && !isQuotaExhausted && (
+                    <div className="mb-3 text-center">
+                      <span className="text-xs text-slate-500 font-medium">
+                        Sisa Kuota Cek: <span className="font-bold text-blue-600">{remainingQuota}</span> / {totalQuota}x
+                      </span>
+                    </div>
+                  )}
+
                   <Button
                     type="button"
                     onClick={() => {
+                      if (isQuotaExhausted) {
+                        alert("Kuota Anda sudah habis");
+                        return;
+                      }
+
+                      const hasTargets = selectedTargets.some(Boolean);
+                      if (!hasTargets) {
+                        alert("Silakan pilih minimal 1 jurusan target terlebih dahulu");
+                        return;
+                      }
+
                       // Validasi jenjang terlebih dahulu
                       const validation = validateJenjangCombination(selectedTargets);
                       if (!validation.valid) {
                         setJenjangValidationError(validation.message);
                         return;
+                      }
+
+                      // Kurangi kuota jika paket satuan
+                      if (totalQuota !== null && remainingQuota !== null) {
+                        const nextQuota = Math.max(0, remainingQuota - 1);
+                        setRemainingQuota(nextQuota);
+                        if (quotaStorageKey) {
+                          localStorage.setItem(quotaStorageKey, String(nextQuota));
+                        }
+                        if (nextQuota <= 0) {
+                          setIsQuotaExhausted(true);
+                        }
                       }
                       
                       const total = computeSNBTTotal();
@@ -868,15 +988,15 @@ export default function CekPeluangPage() {
                       });
                       setMultiResults(results);
                     }}
-                    disabled={jenjangValidationError !== ''}
+                    disabled={jenjangValidationError !== '' || isQuotaExhausted}
                     className={`w-full font-bold py-3 md:py-3.5 rounded-lg text-sm md:text-base shadow-lg hover:shadow-xl transition-all touch-manipulation h-11 md:h-12 flex items-center justify-center gap-2 ${
-                      jenjangValidationError 
+                      jenjangValidationError || isQuotaExhausted
                         ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
                         : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white'
                     }`}
                   >
                     <Target className="h-5 w-5" />
-                    Lihat Hasil Analisis
+                    {isQuotaExhausted ? "Kuota Anda sudah habis" : "Lihat Hasil Analisis"}
                   </Button>
 
                   {isTargetPickerOpen && pickerSlot !== null && (
@@ -1060,6 +1180,33 @@ export default function CekPeluangPage() {
                 <p className="text-[10px] md:text-xs text-slate-500 mt-1">
                   {predictionType === "snbp" ? "Masukkan rata-rata nilai raport semester 1-5" : "Masukkan total skor UTBK kamu (200-1000)"}
                 </p>
+
+                {isQuotaExhausted && (
+                  <div className="mt-3 p-3 bg-rose-50 border border-rose-300 rounded-lg text-xs text-rose-800 font-medium">
+                    Kuota Anda sudah habis. Silakan beli paket tambahan untuk melanjutkan analisis.
+                  </div>
+                )}
+
+                {totalQuota !== null && remainingQuota !== null && !isQuotaExhausted && (
+                  <div className="mt-2 text-center">
+                    <span className="text-xs text-slate-500 font-medium">
+                      Sisa Kuota Cek: <span className="font-bold text-blue-600">{remainingQuota}</span> / {totalQuota}x
+                    </span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={isQuotaExhausted}
+                  className={`mt-3 w-full font-bold h-11 ${
+                    isQuotaExhausted
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  <Target className="h-4 w-4 mr-2" />
+                  {isQuotaExhausted ? "Kuota Anda sudah habis" : "Hitung Peluang SNBP"}
+                </Button>
               </div>
             )}
 

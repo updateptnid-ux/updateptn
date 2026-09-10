@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock, XCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+import { activateSuccessfulPaymentAction } from "@/actions/payment-activation";
 
 export default function PaymentStatusPage() {
   const router = useRouter();
@@ -22,8 +23,14 @@ export default function PaymentStatusPage() {
   const isError = status === 'deny' || status === 'cancel' || status === 'expire' || status === 'error' || status === 'failed';
 
   useEffect(() => {
-    // Success confetti
+    // Success confetti & activation
     if (isSuccess) {
+      if (orderId) {
+        activateSuccessfulPaymentAction(orderId).catch((err) => {
+          console.error("Failed to auto-activate payment on status page:", err);
+        });
+      }
+
       confetti({
         particleCount: 100,
         spread: 70,

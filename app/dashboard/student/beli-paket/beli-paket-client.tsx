@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { createSubscriptionPayment } from "@/actions/payment-midtrans";
+import { activateSuccessfulPaymentAction } from "@/actions/payment-activation";
 import { toast } from "sonner";
 
 export default function BeliPaketClient() {
@@ -132,9 +133,17 @@ export default function BeliPaketClient() {
 
       // Open Snap payment modal
       window.snap.pay(result.data.token, {
-        onSuccess: function(result: any) {
-          console.log('✅ Payment success:', result);
-          toast.success('Pembayaran berhasil!');
+        onSuccess: async function(snapResult: any) {
+          console.log('✅ Payment success:', snapResult);
+          const targetOrderId = snapResult?.order_id || result.data.orderId;
+          try {
+            if (targetOrderId) {
+              await activateSuccessfulPaymentAction(targetOrderId);
+            }
+          } catch (actErr) {
+            console.error('Error auto-activating payment:', actErr);
+          }
+          toast.success('Pembayaran berhasil! Paket telah otomatis aktif.');
           setStep("confirmation");
         },
         onPending: function(result: any) {
