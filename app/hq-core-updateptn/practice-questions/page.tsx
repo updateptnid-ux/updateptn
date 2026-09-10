@@ -49,6 +49,16 @@ interface Module {
   subtes_category: string;
 }
 
+const subtestLabels: Record<string, string> = {
+  "penalaran-umum": "Penalaran Umum (PU)",
+  "pengetahuan-pemahaman-umum": "Pengetahuan & Pemahaman Umum (PPU)",
+  "pemahaman-bacaan-menulis": "Pemahaman Bacaan & Menulis (PBM)",
+  "pengetahuan-kuantitatif": "Pengetahuan Kuantitatif (PK)",
+  "literasi-indonesia": "Literasi B. Indonesia",
+  "literasi-inggris": "Literasi B. Inggris",
+  "penalaran-matematika": "Penalaran Matematika (PM)",
+};
+
 export default function PracticeQuestionsPage() {
   const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
@@ -285,6 +295,14 @@ export default function PracticeQuestionsPage() {
     }
   };
 
+  // Group modules by subtest category
+  const modulesBySubtest = modules.reduce((acc, m) => {
+    const cat = m.subtes_category || "Lainnya";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(m);
+    return acc;
+  }, {} as Record<string, Module[]>);
+
   // Show error state
   if (error) {
     return (
@@ -315,13 +333,17 @@ export default function PracticeQuestionsPage() {
         <select
           value={selectedModule}
           onChange={(e) => setSelectedModule(e.target.value)}
-          className="h-10 px-3 border border-slate-200 rounded-xl text-sm"
+          className="h-10 px-3 border border-slate-200 rounded-xl text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-md"
         >
-          <option value="">Semua Modul</option>
-          {modules.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.title}
-            </option>
+          <option value="">Semua Subtes & Modul</option>
+          {Object.entries(modulesBySubtest).map(([cat, mods]) => (
+            <optgroup key={cat} label={`📌 Subtes: ${subtestLabels[cat] || cat}`}>
+              {mods.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         
@@ -426,12 +448,16 @@ export default function PracticeQuestionsPage() {
                 <select
                   value={formData.module_id}
                   onChange={(e) => setFormData({ ...formData, module_id: e.target.value })}
-                  className="w-full h-10 px-3 border rounded-xl text-sm"
+                  className="w-full h-10 px-3 border rounded-xl text-sm font-medium bg-white"
                 >
-                  {modules.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
+                  {Object.entries(modulesBySubtest).map(([cat, mods]) => (
+                    <optgroup key={cat} label={`📌 Subtes: ${subtestLabels[cat] || cat}`}>
+                      {mods.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.title}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -515,13 +541,17 @@ export default function PracticeQuestionsPage() {
               <select
                 value={selectedModule}
                 onChange={(e) => setSelectedModule(e.target.value)}
-                className="w-full h-10 px-3 border rounded-xl text-sm"
+                className="w-full h-10 px-3 border rounded-xl text-sm font-medium bg-white"
               >
-                <option value="">-- Pilih Modul --</option>
-                {modules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title}
-                  </option>
+                <option value="">-- Pilih Modul Target --</option>
+                {Object.entries(modulesBySubtest).map(([cat, mods]) => (
+                  <optgroup key={cat} label={`📌 Subtes: ${subtestLabels[cat] || cat}`}>
+                    {mods.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.title}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

@@ -229,7 +229,7 @@ export default function SubtesModulesPage() {
                 : "bg-white border border-slate-200 text-slate-600 hover:border-blue-300"
             }`}
           >
-            Semua Kategori ({modules.length})
+            Semua Kategori ({subtesCategories.length})
           </button>
           {subtesCategories.map((cat) => (
             <button

@@ -122,7 +122,13 @@ export default function AdminQuestionsPage() {
         .order("scheduled_date", { ascending: false });
 
       if (data) {
-        setTryouts(data as TryoutItem[]);
+        const sorted = (data as TryoutItem[]).sort((a, b) => {
+          const numA = parseInt(a.title.replace(/\D/g, "") || "0", 10);
+          const numB = parseInt(b.title.replace(/\D/g, "") || "0", 10);
+          if (numA !== numB) return numA - numB;
+          return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+        });
+        setTryouts(sorted);
       }
       if (error) throw error;
     } catch (err) {
@@ -711,12 +717,24 @@ export default function AdminQuestionsPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Smart JSON Generator — 2-column layout (Teks Bacaan | Soal + Kunci)
 // ─────────────────────────────────────────────────────────────────────────────
+interface ParsedQuestion {
+  subtest: string;
+  text: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  option_e: string;
+  correct_answer: string;
+  explanation: string;
+}
+
 function parseQuestionsToJson(
   readingText: string,
   questionsText: string,
   answerKeyText: string,
   subtest: string
-): object[] {
+): ParsedQuestion[] {
   // 1. Parse answer key: "1. C" or "1 C" or "1.C"
   const answerMap: Record<number, string> = {};
   answerKeyText.split("\n").forEach(line => {
@@ -737,39 +755,41 @@ function parseQuestionsToJson(
   });
   if (cur.length > 0) blocks.push(cur);
 
-  return blocks.map(blockLines => {
-    const filtered = blockLines.filter(l => l.trim());
-    if (!filtered.length) return null;
+  return blocks
+    .map((blockLines): ParsedQuestion | null => {
+      const filtered = blockLines.filter(l => l.trim());
+      if (!filtered.length) return null;
 
-    // Extract question number
-    const numMatch = filtered[0].match(/^\s*(\d+)\s*[.)]/);
-    const qNum = numMatch ? parseInt(numMatch[1]) : 0;
+      // Extract question number
+      const numMatch = filtered[0].match(/^\s*(\d+)\s*[.)]/);
+      const qNum = numMatch ? parseInt(numMatch[1]) : 0;
 
-    const textLines: string[] = [];
-    const opts: Record<string, string> = {};
+      const textLines: string[] = [];
+      const opts: Record<string, string> = {};
 
-    filtered.forEach(line => {
-      const optM = line.match(/^\s*\(?([A-Ea-e])\)?\s*[.)\s]\s*(.+)/);
-      if (optM) {
-        opts[optM[1].toUpperCase()] = optM[2].trim();
-      } else {
-        textLines.push(line.trim());
-      }
-    });
+      filtered.forEach(line => {
+        const optM = line.match(/^\s*\(?([A-Ea-e])\)?\s*[.)\s]\s*(.+)/);
+        if (optM) {
+          opts[optM[1].toUpperCase()] = optM[2].trim();
+        } else {
+          textLines.push(line.trim());
+        }
+      });
 
-    const prefix = readingText.trim() ? readingText.trim() + "\n\n" : "";
-    return {
-      subtest,
-      text: prefix + textLines.join("\n"),
-      option_a: opts["A"] || "",
-      option_b: opts["B"] || "",
-      option_c: opts["C"] || "",
-      option_d: opts["D"] || "",
-      option_e: opts["E"] || "",
-      correct_answer: answerMap[qNum] || "A",
-      explanation: "",
-    };
-  }).filter((x): x is object => x !== null);
+      const prefix = readingText.trim() ? readingText.trim() + "\n\n" : "";
+      return {
+        subtest,
+        text: prefix + textLines.join("\n"),
+        option_a: opts["A"] || "",
+        option_b: opts["B"] || "",
+        option_c: opts["C"] || "",
+        option_d: opts["D"] || "",
+        option_e: opts["E"] || "",
+        correct_answer: answerMap[qNum] || "A",
+        explanation: "",
+      };
+    })
+    .filter((x): x is ParsedQuestion => x !== null);
 }
 
 function GeneratorDialog({

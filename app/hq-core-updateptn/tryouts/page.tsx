@@ -85,7 +85,13 @@ export default function AdminTryoutsPage() {
         .order("scheduled_date", { ascending: false });
 
       if (!error && data) {
-        setTryouts(data as Tryout[]);
+        const sorted = (data as Tryout[]).sort((a, b) => {
+          const numA = parseInt(a.title.replace(/\D/g, "") || "0", 10);
+          const numB = parseInt(b.title.replace(/\D/g, "") || "0", 10);
+          if (numA !== numB) return numA - numB;
+          return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+        });
+        setTryouts(sorted);
       }
     } catch (err) {
       console.error("Error fetching tryouts:", err);
