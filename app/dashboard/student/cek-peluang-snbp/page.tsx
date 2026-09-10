@@ -479,17 +479,13 @@ export default function CekPeluangSNBPPage() {
           </Card>
         </div>
 
-        {/* Both Form and PTN Selection are visible stacked full-width */}
+        {/* Form and PTN Selection stacked */}
         <div className="space-y-6 w-full">
-          <div className="w-full">
-            <SNBPCalculatorForm
-              onCalculate={handleCalculate}
-              initialScore={85}
-            />
-          </div>
-
-          <div className="w-full">
-            <Card className="p-4 md:p-6 bg-white overflow-visible w-full shadow-sm">
+          <SNBPCalculatorForm
+            onCalculate={handleCalculate}
+            initialScore={85}
+          >
+            <Card className="p-4 md:p-6 bg-white overflow-visible w-full shadow-sm border-slate-200">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="h-5 w-5 text-blue-600" />
@@ -623,13 +619,12 @@ export default function CekPeluangSNBPPage() {
                 <p className="text-xs text-amber-800 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>
-                    Pastikan sudah memilih jurusan PTN dan mengisi form di samping, lalu klik <strong>Hitung Peluang SNBP</strong> pada form.
+                    Pastikan sudah mengisi form data di atas dan memilih jurusan PTN, lalu klik tombol <strong>Hitung Peluang SNBP</strong> di bawah.
                   </span>
                 </p>
               </div>
-
             </Card>
-          </div>
+          </SNBPCalculatorForm>
         </div>
 
         {Object.keys(results).length > 0 && (

@@ -96,9 +96,10 @@ interface SNBPData {
 interface Props {
   onCalculate: (data: SNBPData) => void;
   initialScore?: number;
+  children?: React.ReactNode;
 }
 
-export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Props) {
+export default function SNBPCalculatorForm({ onCalculate, initialScore = 0, children }: Props) {
   // Biodata
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
@@ -476,6 +477,9 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
           </Button>
         )}
       </Card>
+
+      {/* Children Slot (Pilih Jurusan PTN) */}
+      {children}
 
       {/* Submit Button */}
       <Button
