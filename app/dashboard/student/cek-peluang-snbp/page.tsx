@@ -456,9 +456,9 @@ export default function CekPeluangSNBPPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6 pb-24">
         
-        <div className="space-y-3 md:space-y-4">
+        <div className="space-y-3 md:space-y-4 w-full">
           <Link href="/dashboard/student">
             <Button variant="ghost" size="sm" className="h-9 text-xs md:text-sm">
               <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-2" />
@@ -466,7 +466,7 @@ export default function CekPeluangSNBPPage() {
             </Button>
           </Link>
           
-          <Card className="p-3 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
+          <Card className="p-3 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0 w-full">
             <Badge className="bg-white/20 text-white border-white/30 mb-2 text-[10px] md:text-xs">
               Kalkulator SNBP 2026
             </Badge>
@@ -480,16 +480,16 @@ export default function CekPeluangSNBPPage() {
         </div>
 
         {/* Both Form and PTN Selection are visible together */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <div className="space-y-6 w-full">
             <SNBPCalculatorForm
               onCalculate={handleCalculate}
               initialScore={85}
             />
           </div>
 
-          <div className="space-y-6">
-            <Card className="p-4 md:p-6 bg-white overflow-visible sticky top-6">
+          <div className="space-y-6 w-full">
+            <Card className="p-4 md:p-6 bg-white overflow-visible sticky top-6 w-full">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="h-5 w-5 text-blue-600" />

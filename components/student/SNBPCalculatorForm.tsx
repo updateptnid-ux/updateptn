@@ -189,9 +189,9 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Info Card */}
-      <Card className="bg-blue-50 border-blue-200 p-3 md:p-4">
+      <Card className="bg-blue-50 border-blue-200 p-3 md:p-4 w-full">
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -204,20 +204,20 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
       </Card>
 
       {/* Data Diri & Sekolah */}
-      <Card className="p-3 md:p-4 space-y-3">
+      <Card className="p-4 md:p-5 space-y-4 w-full shadow-sm">
         <div className="flex items-center gap-2 mb-2">
-          <User className="h-4 w-4 text-blue-600" />
+          <User className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
           <h3 className="text-sm md:text-base font-bold text-slate-900">Data Diri & Sekolah</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
           {/* Provinsi */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full">
             <Label className="text-xs md:text-sm font-semibold text-slate-700">
               Provinsi Sekolah <span className="text-rose-600">*</span>
             </Label>
-            <Select value={province} onValueChange={setProvince}>
-              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm">
+            <Select value={province} onValueChange={(val) => setProvince(val || "")}>
+              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm w-full">
                 <SelectValue placeholder="Pilih provinsi..." />
               </SelectTrigger>
               <SelectContent>
@@ -231,7 +231,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
           </div>
 
           {/* Kota */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full">
             <Label className="text-xs md:text-sm font-semibold text-slate-700">
               Kota/Kabupaten <span className="text-rose-600">*</span>
             </Label>
@@ -239,13 +239,13 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="Contoh: Jakarta Selatan"
-              className="h-10 md:h-11 text-xs md:text-sm"
+              className="h-10 md:h-11 text-xs md:text-sm w-full"
               style={{ fontSize: '16px' }}
             />
           </div>
 
           {/* Nama Sekolah */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full">
             <Label className="text-xs md:text-sm font-semibold text-slate-700">
               Nama Sekolah <span className="text-rose-600">*</span>
             </Label>
@@ -253,18 +253,18 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
               value={schoolName}
               onChange={(e) => setSchoolName(e.target.value)}
               placeholder="Contoh: SMAN 1 Jakarta"
-              className="h-10 md:h-11 text-xs md:text-sm"
+              className="h-10 md:h-11 text-xs md:text-sm w-full"
               style={{ fontSize: '16px' }}
             />
           </div>
 
           {/* Akreditasi */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 w-full">
             <Label className="text-xs md:text-sm font-semibold text-slate-700">
               Akreditasi Sekolah <span className="text-rose-600">*</span>
             </Label>
-            <Select value={accreditation} onValueChange={setAccreditation}>
-              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm">
+            <Select value={accreditation} onValueChange={(val) => setAccreditation(val || "")}>
+              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm w-full">
                 <SelectValue placeholder="Pilih akreditasi..." />
               </SelectTrigger>
               <SelectContent>
@@ -278,12 +278,12 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
           </div>
 
           {/* Kurikulum */}
-          <div className="space-y-1.5 md:col-span-2">
+          <div className="space-y-1.5 md:col-span-2 w-full">
             <Label className="text-xs md:text-sm font-semibold text-slate-700">
               Kurikulum & Jurusan <span className="text-rose-600">*</span>
             </Label>
-            <Select value={curriculum} onValueChange={setCurriculum}>
-              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm">
+            <Select value={curriculum} onValueChange={(val) => setCurriculum(val || "")}>
+              <SelectTrigger className="h-10 md:h-11 text-xs md:text-sm w-full">
                 <SelectValue placeholder="Pilih kurikulum dan jurusan..." />
               </SelectTrigger>
               <SelectContent>
@@ -299,13 +299,13 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
       </Card>
 
       {/* Nilai Raport */}
-      <Card className="p-3 md:p-4 space-y-3">
+      <Card className="p-4 md:p-5 space-y-3 w-full shadow-sm">
         <div className="flex items-center gap-2 mb-2">
-          <BookOpen className="h-4 w-4 text-emerald-600" />
+          <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
           <h3 className="text-sm md:text-base font-bold text-slate-900">Nilai Raport Rata-rata</h3>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           <Label className="text-xs md:text-sm font-semibold text-slate-700">
             Rata-rata Nilai Raport Semester 1-5 <span className="text-rose-600">*</span>
           </Label>
@@ -317,7 +317,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
             value={averageScore}
             onChange={(e) => setAverageScore(parseFloat(e.target.value) || 0)}
             placeholder="Masukkan rata-rata nilai (0-100)"
-            className="h-11 md:h-12 text-sm md:text-base font-bold"
+            className="h-11 md:h-12 text-sm md:text-base font-bold w-full"
             style={{ fontSize: '16px' }}
           />
           <p className="text-[10px] md:text-xs text-slate-500">
@@ -327,10 +327,10 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
       </Card>
 
       {/* Booster Score */}
-      <Card className="p-3 md:p-4 space-y-3">
+      <Card className="p-4 md:p-5 space-y-4 w-full shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-purple-600" />
+            <TrendingUp className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
             <h3 className="text-sm md:text-base font-bold text-slate-900">Booster Score (Nilai Pendukung)</h3>
           </div>
           <Badge variant="outline" className="text-[10px] md:text-xs">Opsional</Badge>
@@ -340,14 +340,14 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
           Masukkan nilai mata pelajaran yang relevan dengan jurusan pilihan (contoh: Matematika & Fisika untuk Teknik)
         </p>
 
-        <div className="space-y-2">
+        <div className="space-y-3 w-full">
           {boosterSubjects.map((subject) => (
-            <div key={subject.id} className="flex gap-2">
+            <div key={subject.id} className="flex gap-2 w-full items-center">
               <Input
                 value={subject.name}
                 onChange={(e) => updateBoosterSubject(subject.id, 'name', e.target.value)}
-                placeholder="Nama mata pelajaran"
-                className="flex-1 h-10 text-xs md:text-sm"
+                placeholder="Nama mata pelajaran (contoh: Matematika)"
+                className="flex-1 h-10 text-xs md:text-sm w-full"
                 style={{ fontSize: '16px' }}
               />
               <Input
@@ -358,7 +358,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
                 value={subject.value}
                 onChange={(e) => updateBoosterSubject(subject.id, 'value', e.target.value)}
                 placeholder="Nilai"
-                className="w-24 h-10 text-center text-xs md:text-sm font-semibold"
+                className="w-24 md:w-32 h-10 text-center text-xs md:text-sm font-semibold shrink-0"
                 style={{ fontSize: '16px' }}
               />
               {boosterSubjects.length > 1 && (
@@ -366,7 +366,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
                   variant="ghost"
                   size="sm"
                   onClick={() => removeBoosterSubject(subject.id)}
-                  className="h-10 w-10 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                  className="h-10 w-10 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -387,10 +387,10 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
       </Card>
 
       {/* Prestasi */}
-      <Card className="p-3 md:p-4 space-y-3">
+      <Card className="p-4 md:p-5 space-y-4 w-full shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Award className="h-4 w-4 text-amber-600" />
+            <Award className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
             <h3 className="text-sm md:text-base font-bold text-slate-900">Prestasi</h3>
           </div>
           <Badge variant="outline" className="text-[10px] md:text-xs">
@@ -403,14 +403,14 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
         </p>
 
         {achievements.length === 0 ? (
-          <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+          <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300 w-full">
             <Award className="h-8 w-8 text-slate-400 mx-auto mb-2" />
             <p className="text-xs text-slate-500">Belum ada prestasi ditambahkan</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             {achievements.map((achievement, index) => (
-              <Card key={achievement.id} className="p-3 bg-slate-50 border-slate-200">
+              <Card key={achievement.id} className="p-3 md:p-4 bg-slate-50 border-slate-200 w-full">
                 <div className="flex items-start justify-between mb-2">
                   <Badge variant="outline" className="text-[10px]">Prestasi {index + 1}</Badge>
                   <Button
@@ -423,25 +423,25 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
                   </Button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
                   <Input
                     value={achievement.name}
                     onChange={(e) => updateAchievement(achievement.id, 'name', e.target.value)}
                     placeholder="Nama lomba/kompetisi"
-                    className="h-9 text-xs"
+                    className="h-9 md:h-10 text-xs md:text-sm w-full"
                     style={{ fontSize: '14px' }}
                   />
                   
                   <Select
                     value={achievement.level}
-                    onValueChange={(value) => updateAchievement(achievement.id, 'level', value)}
+                    onValueChange={(value) => updateAchievement(achievement.id, 'level', value || "")}
                   >
-                    <SelectTrigger className="h-9 text-xs">
+                    <SelectTrigger className="h-9 md:h-10 text-xs md:text-sm w-full">
                       <SelectValue placeholder="Tingkat & juara" />
                     </SelectTrigger>
                     <SelectContent>
                       {ACHIEVEMENT_LEVELS.map((level) => (
-                        <SelectItem key={level} value={level} className="text-xs">
+                        <SelectItem key={level} value={level} className="text-xs md:text-sm">
                           {level}
                         </SelectItem>
                       ))}
@@ -455,7 +455,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
                     value={achievement.year}
                     onChange={(e) => updateAchievement(achievement.id, 'year', e.target.value)}
                     placeholder="Tahun"
-                    className="h-9 text-xs text-center"
+                    className="h-9 md:h-10 text-xs md:text-sm text-center w-full"
                     style={{ fontSize: '14px' }}
                   />
                 </div>
@@ -480,7 +480,7 @@ export default function SNBPCalculatorForm({ onCalculate, initialScore = 0 }: Pr
       {/* Submit Button */}
       <Button
         onClick={handleCalculate}
-        className="w-full h-11 md:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm md:text-base"
+        className="w-full h-11 md:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm md:text-base shadow-md hover:shadow-lg transition-all"
       >
         <Calculator className="h-4 w-4 md:h-5 md:w-5 mr-2" />
         Hitung Peluang SNBP

@@ -933,8 +933,8 @@ export default function CekPeluangPage() {
                             
                             if (filtered.length > 0) {
                               return filtered.map((m) => {
-                                const prodiName = predictionType === "snbp" ? m.nama_prodi : m.prodi;
-                                const ptnName = predictionType === "snbp" ? m.ptn_name : m.univ;
+                                const prodiName = m.prodi || m.nama_prodi || "";
+                                const ptnName = m.univ || m.ptn_name || "";
                                 const isSelected = selectedTargets[pickerSlot] === String(m.id);
                                 const jenjangType = getJenjangType(m.jenjang);
                                 
@@ -951,8 +951,8 @@ export default function CekPeluangPage() {
                                       const total = computeSNBTTotal();
                                       const passing = Number(m.passing_grade_est) || 700;
                                       const diff = total - passing;
-                                      const prodiName = (predictionType === "snbp" ? m.nama_prodi : m.prodi) || '';
-                                      const analysis = analyzeJurusanFit(prodiName, snbtScores);
+                                      const targetProdiName = m.prodi || m.nama_prodi || '';
+                                      const analysis = analyzeJurusanFit(targetProdiName, snbtScores);
                                       
                                       const newWarnings: (string | null)[] = [...targetWarnings];
                                       let warningMessage = '';
@@ -1203,8 +1203,8 @@ export default function CekPeluangPage() {
                       </div>
                     </div>
                     {/* Alternatives Recommendation */}
-                    {(result.status === 'RENTAN' || result.status === 'BERSAING') && (() => {
-                      const getAlternativeProdi = (currentProdi, userScore) => {
+                    {result.percentage < 80 && (() => {
+                      const getAlternativeProdi = (currentProdi: ProdiReferenceItem, userScore: number) => {
                         const alternatives = majors.filter(p => 
                           p.id !== currentProdi.id && 
                           (p.kategori === currentProdi.kategori || (p.prodi || p.nama_prodi || "").includes((currentProdi.prodi || currentProdi.nama_prodi || "").split(" ")[0])) &&
