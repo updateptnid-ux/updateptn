@@ -655,10 +655,9 @@ export default function PricingPage() {
       icon: CheckCircle2,
       type: "subscription",
       features: [
-        { name: "3x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "3x Cek Rasionalisasi SNBT / SNBP", included: true },
         { name: "Analisis Peluang Lolos", included: true },
         { name: "Rekomendasi Jurusan", included: true },
-        { name: "Konsultasi Jurusan", included: false },
       ],
       buttonText: "Beli 3x Cek",
       buttonVariant: "outline",
@@ -676,10 +675,9 @@ export default function PricingPage() {
       icon: Star,
       type: "subscription",
       features: [
-        { name: "5x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "5x Cek Rasionalisasi SNBT / SNBP", included: true },
         { name: "Analisis Peluang Lolos", included: true },
         { name: "Rekomendasi Jurusan", included: true },
-        { name: "Konsultasi Jurusan", included: false },
       ],
       buttonText: "Beli 5x Cek",
     },
@@ -697,15 +695,15 @@ export default function PricingPage() {
       icon: Flame,
       type: "subscription",
       features: [
-        { name: "10x Cek Rasionalisasi SNBT / Mandiri", included: true },
+        { name: "10x Cek Rasionalisasi SNBT / SNBP", included: true },
         { name: "Analisis Peluang Lolos", included: true },
         { name: "Rekomendasi Jurusan", included: true },
-        { name: "Konsultasi Jurusan Khusus", included: true },
       ],
       buttonText: "Beli 10x Cek",
     },
   ];
 
+  const [selectedCekPeluangPlan, setSelectedCekPeluangPlan] = useState<PricingPlan | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<PricingPlan | null>(null);
   const [voucherInput, setVoucherInput] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState<{
@@ -718,6 +716,24 @@ export default function PricingPage() {
   const [voucherSuccess, setVoucherSuccess] = useState("");
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("qris");
+
+  const handleSelectTrack = (track: "snbp" | "snbt") => {
+    if (!selectedCekPeluangPlan) return;
+
+    const trackLabel = track.toUpperCase();
+    const updatedPlan: PricingPlan = {
+      ...selectedCekPeluangPlan,
+      id: `${selectedCekPeluangPlan.id}-${track}`,
+      name: `${selectedCekPeluangPlan.name} (${trackLabel})`,
+      features: selectedCekPeluangPlan.features.map((feature) => ({
+        ...feature,
+        name: feature.name.replace("SNBT / SNBP", trackLabel).replace("SNBT / Mandiri", trackLabel),
+      })),
+    };
+
+    setSelectedCekPeluangPlan(null);
+    handleSelectPlan(updatedPlan);
+  };
 
   const handleSelectPlan = async (plan: PricingPlan) => {
     if (plan.id === "trial") {
@@ -1107,7 +1123,13 @@ export default function PricingPage() {
                               </Button>
                               
                               <Button
-                                onClick={() => handleSelectPlan(plan)}
+                                onClick={() => {
+                                  if (group.key === "cek-peluang" || plan.id.startsWith("cek-peluang")) {
+                                    setSelectedCekPeluangPlan(plan);
+                                  } else {
+                                    handleSelectPlan(plan);
+                                  }
+                                }}
                                 disabled={processingPlan === plan.id}
                                 className={`w-full h-9 md:h-10 font-bold text-xs md:text-sm rounded-lg touch-manipulation ${
                                   plan.popular
@@ -1439,6 +1461,105 @@ export default function PricingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Modal Pemilihan Jalur (SNBP / SNBT) untuk Paket Cek Peluang */}
+      {selectedCekPeluangPlan && (
+        <Dialog
+          open={!!selectedCekPeluangPlan}
+          onOpenChange={(open) => {
+            if (!open) setSelectedCekPeluangPlan(null);
+          }}
+        >
+          <DialogContent className="max-w-md rounded-3xl p-6 sm:p-7">
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 text-xs font-extrabold">
+                  🎯 Cek Peluang PTN
+                </Badge>
+              </div>
+              <DialogTitle className="text-xl font-black text-slate-900">
+                Pilih Jalur Cek Peluang
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Pilih jalur seleksi yang ingin kamu analisis untuk{" "}
+                <span className="font-bold text-slate-800">
+                  {selectedCekPeluangPlan.name}
+                </span>{" "}
+                ({selectedCekPeluangPlan.priceDisplay}).
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3">
+              {/* Pilihan SNBP */}
+              <button
+                type="button"
+                onClick={() => handleSelectTrack("snbp")}
+                className="group relative flex flex-col justify-between p-4 rounded-2xl border-2 border-orange-200 hover:border-orange-500 bg-orange-50/40 hover:bg-orange-50/90 transition-all text-left shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">🟠</span>
+                    <Badge className="bg-orange-500 text-white border-orange-600 text-[10px] font-bold">
+                      Jalur Rapor
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-slate-900 group-hover:text-orange-600 transition-colors">
+                      SNBP
+                    </h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                      Analisis peluang lolos berbasis <strong>nilai rapor semester 1-5</strong> & sertifikat prestasi.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-3 mt-2 border-t border-orange-200/60 flex items-center justify-between text-xs font-bold text-orange-600">
+                  <span>Pilih SNBP</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </button>
+
+              {/* Jalur SNBT */}
+              <button
+                type="button"
+                onClick={() => handleSelectTrack("snbt")}
+                className="group relative flex flex-col justify-between p-4 rounded-2xl border-2 border-blue-200 hover:border-blue-500 bg-blue-50/40 hover:bg-blue-50/90 transition-all text-left shadow-xs hover:shadow-md active:scale-[0.98] cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">🔵</span>
+                    <Badge className="bg-blue-600 text-white border-blue-600 text-[10px] font-bold">
+                      Jalur UTBK
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                      SNBT
+                    </h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                      Rasionalisasi peluang lolos berbasis <strong>skor UTBK & Try Out</strong> subtes lengkap.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-3 mt-2 border-t border-blue-200/60 flex items-center justify-between text-xs font-bold text-blue-600">
+                  <span>Pilih SNBT</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                </div>
+              </button>
+            </div>
+
+            <DialogFooter className="pt-1">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setSelectedCekPeluangPlan(null)}
+                className="w-full sm:w-auto h-10 text-xs font-bold border-slate-200 rounded-xl"
+              >
+                Batal
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Checkout Modal with Optional Voucher Input */}
       {checkoutPlan && (

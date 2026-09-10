@@ -197,18 +197,20 @@ export default function CekPeluangSNBPPage() {
     let percentage = 75;
     let recommendation = "";
 
-        if (diff >= 5) {
+    if (diff >= 5) {
       status = "AMAN";
       percentage = Math.min(98, Math.round(85 + diff * 2));
       recommendation = `Dengan nilai ${finalScore.toFixed(1)} (termasuk booster +${boosterBonus.toFixed(1)} dan prestasi +${achievementBonus}), kamu berada ${diff.toFixed(1)} poin di atas estimasi ${estimasi}. Peluang lolos SANGAT TINGGI! Rasio keketatan ${prodi.rasio_keketatan.toFixed(2)}:1 dengan daya tampung ${prodi.daya_tampung} kursi.`;
     } else if (diff >= 0) {
       status = "BERSAING";
       percentage = Math.round(60 + (diff / 5) * 24);
-      recommendation = `Nilai ${finalScore.toFixed(1)} melampaui estimasi ${estimasi} sebesar +${diff.toFixed(1)}. Kamu berada di zona kompetisi aktif dengan ${prodi.peminat} peminat untuk ${prodi.daya_tampung} kursi (rasio ${prodi.rasio_keketatan.toFixed(2)}:1). ${boosterBonus > 0 ? "Booster score +" + boosterBonus.toFixed(1) + " membantu posisi kamu." : ""}`;
+      const boosterText = boosterBonus > 0 ? `Booster score +${boosterBonus.toFixed(1)} membantu posisi kamu.` : "";
+      recommendation = `Nilai ${finalScore.toFixed(1)} melampaui estimasi ${estimasi} sebesar +${diff.toFixed(1)}. Kamu berada di zona kompetisi aktif dengan ${prodi.peminat} peminat untuk ${prodi.daya_tampung} kursi (rasio ${prodi.rasio_keketatan.toFixed(2)}:1). ${boosterText}`.trim();
     } else {
       status = "RENTAN";
       percentage = Math.max(25, Math.round(60 + diff * 4));
-      recommendation = `Nilai ${finalScore.toFixed(1)} berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi ${estimasi}. Dengan keketatan ${prodi.rasio_keketatan.toFixed(2)}:1, pertimbangkan jurusan ini di pilihan lain atau fokus tingkatkan nilai raport di semester 6. ${achievementBonus > 0 ? "Prestasi +" + achievementBonus + " poin sudah membantu, tapi tetap perlu boost nilai akademik." : "Prestasi akademik atau portofolio bisa jadi penentu."}`;
+      const achievementText = achievementBonus > 0 ? `Prestasi +${achievementBonus} poin sudah membantu, tapi tetap perlu boost nilai akademik.` : "Prestasi akademik atau portofolio bisa jadi penentu.";
+      recommendation = `Nilai ${finalScore.toFixed(1)} berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi ${estimasi}. Dengan keketatan ${prodi.rasio_keketatan.toFixed(2)}:1, pertimbangkan jurusan ini di pilihan lain atau fokus tingkatkan nilai raport di semester 6. ${achievementText}`;
     }
 
     return {
