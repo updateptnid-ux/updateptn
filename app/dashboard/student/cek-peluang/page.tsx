@@ -1202,6 +1202,39 @@ export default function CekPeluangPage() {
                         </div>
                       </div>
                     </div>
+                    {/* Alternatives Recommendation */}
+                    {(result.status === 'RENTAN' || result.status === 'BERSAING') && (() => {
+                      const getAlternativeProdi = (currentProdi, userScore) => {
+                        const alternatives = majors.filter(p => 
+                          p.id !== currentProdi.id && 
+                          (p.kategori === currentProdi.kategori || (p.prodi || p.nama_prodi || "").includes((currentProdi.prodi || currentProdi.nama_prodi || "").split(" ")[0])) &&
+                          (Number(p.passing_grade_est) || 0) <= userScore + 20
+                        ).sort((a, b) => (Number(b.passing_grade_est) || 0) - (Number(a.passing_grade_est) || 0));
+                        return alternatives.slice(0, 2);
+                      };
+                      const alts = getAlternativeProdi(result.prodi, computeSNBTTotal());
+                      if (alts.length === 0) return null;
+                      
+                      return (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-900 mb-2">💡 Rekomendasi Alternatif PTN:</p>
+                          <div className="space-y-2">
+                            {alts.map(alt => (
+                              <div key={alt.id} className="bg-slate-50 rounded-lg p-2 border border-slate-200 flex justify-between items-center">
+                                <div>
+                                  <p className="text-[10px] font-bold text-slate-900">{alt.univ || alt.ptn_name}</p>
+                                  <p className="text-[9px] text-slate-600">{alt.jenjang} {alt.prodi || alt.nama_prodi}</p>
+                                </div>
+                                <Badge className="bg-slate-200 text-slate-700 text-[9px]">
+                                  PG: {alt.passing_grade_est}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                   </Card>
                 );
               })}

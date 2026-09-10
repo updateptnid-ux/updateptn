@@ -40,7 +40,7 @@ export default async function TryoutSnbtPage() {
       .from("tryouts")
       .select("id, title, description, duration_minutes, total_questions, is_free, allow_free_claim")
       .eq("tryout_type", "snbt")
-      .order("created_at", { ascending: false }),
+      .order("title", { ascending: true }),
 
     supabase
       .from("subscriptions")

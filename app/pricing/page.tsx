@@ -1023,12 +1023,12 @@ export default function PricingPage() {
         <section className="py-16 md:py-20 bg-slate-50/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
             {[
+              { key: "cek-peluang", label: "🎯 Paket Cek Peluang PTN Satuan", color: "bg-indigo-500 text-white border-indigo-600", plans: cekPeluangPlans },
               { key: "trial", label: "Trial / Gratis", color: "bg-slate-100 text-slate-700 border-slate-200", plans: subscriptionPlans.filter((p) => p.id === "trial") },
-              { key: "snbt", label: "🔵 Premium SNBT", color: "bg-blue-500 text-white border-blue-600", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-snbt")) },
               { key: "snbp", label: "🟠 Premium SNBP", color: "bg-orange-500 text-white border-orange-600", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-snbp")) },
+              { key: "snbt", label: "🔵 Premium SNBT", color: "bg-blue-500 text-white border-blue-600", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-snbt")) },
               { key: "mandiri", label: "🟢 Premium Mandiri", color: "bg-teal-500 text-white border-teal-600", plans: subscriptionPlans.filter((p) => p.id.startsWith("premium-mandiri")) },
               { key: "vip", label: "👑 VIP All-in-One (SNBT + SNBP + Mandiri)", color: "bg-amber-500 text-white border-amber-600", plans: subscriptionPlans.filter((p) => p.id.startsWith("vip")) },
-              { key: "cek-peluang", label: "🎯 Paket Cek Peluang PTN Satuan", color: "bg-indigo-500 text-white border-indigo-600", plans: cekPeluangPlans },
             ].map((group) => (
               <div key={group.key} className="space-y-6">
                 <div className="flex items-center gap-3">
