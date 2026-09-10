@@ -64,7 +64,7 @@ export default async function TryoutMandiriPage() {
               <div className="flex items-center gap-2">
                 <Badge className="bg-blue-600 text-white text-[10px] md:text-xs font-bold">
                   <Building2 className="h-3 w-3 mr-1" />
-                  Ujian Mandiri 2026
+                  Ujian Mandiri 2027
                 </Badge>
               </div>
               <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-slate-900">
@@ -91,7 +91,7 @@ export default async function TryoutMandiriPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-blue-600 font-bold shrink-0">•</span>
-                      <span>Contoh: Ujian Mandiri UI (SIMAK UI), UGM (UM UGM), ITB (UM ITB)</span>
+                      <span>Contoh: Ujian Mandiri UI (SIMAK UI), UGM (UM UGM), SMMPTN-Barat</span>
                     </li>
                   </ul>
                 </div>

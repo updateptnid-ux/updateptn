@@ -51,7 +51,13 @@ export default async function TryoutSnbtPage() {
       .limit(1)
   ]);
 
-  const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
+  const rawTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
+  const activeTryouts = [...rawTryouts].sort((a, b) => {
+    const numA = parseInt(a.title.replace(/\D/g, "") || "0", 10);
+    const numB = parseInt(b.title.replace(/\D/g, "") || "0", 10);
+    if (numA !== numB) return numA - numB;
+    return a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+  });
   const activeSubscription = subData?.[0] || null;
 
   return (
@@ -64,7 +70,7 @@ export default async function TryoutSnbtPage() {
               <div className="flex items-center gap-2">
                 <Badge className="bg-blue-600 text-white text-[10px] md:text-xs font-bold">
                   <Sparkles className="h-3 w-3 mr-1" />
-                  UTBK-SNBT 2026
+                  UTBK-SNBT 2027
                 </Badge>
               </div>
               <h1 className="text-xl md:text-3xl font-extrabold tracking-tight text-slate-900">

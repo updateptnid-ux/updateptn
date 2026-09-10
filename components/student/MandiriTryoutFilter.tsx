@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import StudentTryoutList from "@/components/StudentTryoutList";
+import { getUnivLogoUrl } from "@/lib/univ-logo";
 
 interface Tryout {
   id: string;
@@ -31,7 +33,7 @@ export default function MandiriTryoutFilter({
   const [activeCategory, setActiveCategory] = useState<string>("Semua");
 
   // Get unique categories present in the active tryouts list
-  const categories = ["Semua", "SSU ITB", "SIMAK UI", "UM-CBT UGM", "Bela Negara UPN Jogja", "SMMPTN-Barat", "Lainnya"];
+  const categories = ["Semua", "SIMAK UI", "UM-CBT UGM", "SMMPTN-Barat", "SSU ITB", "Bela Negara UPN Jogja", "Lainnya"];
 
   // Filter tryouts based on selected category
   const filteredTryouts = tryouts.filter((to) => {
@@ -55,18 +57,31 @@ export default function MandiriTryoutFilter({
           // Only show category if there are tryouts or if it's the "Semua" tab
           if (category !== "Semua" && count === 0) return null;
 
+          const logoUrl = getUnivLogoUrl(category);
+
           return (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all duration-200 ${
+              className={`px-3 py-2 md:px-4 md:py-2 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
                 activeCategory === category
                   ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
                   : "bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600"
               }`}
             >
-              {category}
-              <span className={`ml-2 px-1.5 py-0.5 text-[10px] rounded-full font-extrabold ${
+              {logoUrl && (
+                <div className="w-5 h-5 relative flex-shrink-0 bg-white rounded-full p-0.5 shadow-xs">
+                  <Image
+                    src={logoUrl}
+                    alt={category}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <span>{category}</span>
+              <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-extrabold ${
                 activeCategory === category
                   ? "bg-white/20 text-white"
                   : "bg-slate-100 text-slate-500"

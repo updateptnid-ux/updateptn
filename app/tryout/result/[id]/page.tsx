@@ -49,6 +49,7 @@ export default function TryoutResultPage() {
   const [questionAnalytics, setQuestionAnalytics] = useState<any[]>([]);
   const [filterType, setFilterType] = useState<"all" | "wrong" | "skipped" | "slowest">("all");
   const [showQuestionAnalysis, setShowQuestionAnalysis] = useState(false);
+  const [showSubtestDetails, setShowSubtestDetails] = useState(true);
 
   useEffect(() => {
     // Read saved targets from localStorage
@@ -91,7 +92,7 @@ export default function TryoutResultPage() {
         // 1. Try DB fetch first
         const { data } = await supabase
           .from("results")
-          .select("*, tryouts(title, id)")
+          .select("*, tryouts(title, id, tryout_type, mandiri_category)")
           .eq("id", resultId)
           .single();
 
@@ -154,7 +155,9 @@ export default function TryoutResultPage() {
   const score = Number(result.score) || 0;
   const totalCorrect = result.total_correct || 0;
   const totalQuestions = result.total_questions || 1;
-  const tryoutTitle = result.tryouts?.title || "Try Out SNBT";
+  const isMandiri = result.tryouts?.tryout_type === "mandiri" || result.tryout_type === "mandiri";
+  const mandiriCat = result.tryouts?.mandiri_category || "";
+  const tryoutTitle = result.tryouts?.title || (isMandiri ? `Try Out Mandiri ${mandiriCat}` : "Try Out SNBT");
   const accuracyPct = Math.round((totalCorrect / Math.max(totalQuestions, 1)) * 100);
 
   // --- Performance badge ---
@@ -182,7 +185,7 @@ export default function TryoutResultPage() {
     chanceStatus = "SANGAT AMAN";
     chanceBadgeStyle = "bg-emerald-50 text-emerald-700 border-emerald-200";
     chanceIcon = <TrendingUp className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />;
-    recommendationText = `Skor IRT kamu (${score}) unggul +${diff} poin di atas estimasi keketatan untuk ${targetProdi} di ${targetPtn}. Pilihan ini sangat aman dijadikan Pilihan 1 SNBT. Pertahankan konsistensi ini!`;
+    recommendationText = `Skor kamu (${score}) unggul +${diff} poin di atas estimasi keketatan untuk ${targetProdi} di ${targetPtn}. Pilihan ini sangat aman dijadikan Pilihan 1. Pertahankan konsistensi ini!`;
   } else if (diff >= 0) {
     chancePercent = Math.round(60 + (diff / 20) * 24);
     chanceStatus = "BERSAING";
@@ -245,10 +248,10 @@ export default function TryoutResultPage() {
             {performanceBadge.label}
           </Badge>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-            Hasil Evaluasi Try Out IRT
+            {isMandiri ? `Hasil Evaluasi ${mandiriCat || "Try Out Mandiri"}` : "Hasil Evaluasi Try Out IRT"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
-            {tryoutTitle} • Sistem Pembobotan Item Response Theory (IRT)
+            {tryoutTitle} • Sistem Pembobotan Standar Resmi
           </p>
         </div>
 
@@ -256,7 +259,7 @@ export default function TryoutResultPage() {
         <Card className="bg-white border border-slate-200 shadow-md rounded-3xl p-6 sm:p-8 text-center space-y-6 relative overflow-hidden">
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Skor IRT UTBK Kamu
+              {isMandiri ? `Total Skor ${mandiriCat || "Ujian Mandiri"} Kamu` : "Total Skor IRT UTBK Kamu"}
             </span>
             <div className="text-5xl sm:text-6xl font-black text-blue-600 tracking-tight">
               {score}
@@ -518,44 +521,61 @@ export default function TryoutResultPage() {
         {/* Subtest Breakdown Card */}
         {hasSubtestData && (
           <Card className="bg-white border border-slate-200 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
-              <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
+            <button
+              onClick={() => setShowSubtestDetails(!showSubtestDetails)}
+              className="w-full flex items-center justify-between hover:bg-slate-50 -m-2 p-2 rounded-xl transition-colors cursor-pointer text-left"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Rincian Skor Per Subtes</h3>
+                  <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">
+                    Performa tiap area tes (Klik untuk {showSubtestDetails ? "sembunyikan" : "tampilkan"})
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Rincian Skor Per Subtes</h3>
-                <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">Performa tiap area tes</p>
-              </div>
-            </div>
+              {showSubtestDetails ? (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              )}
+            </button>
 
-            <div className="space-y-4">
-              {subtestNames.map(sub => {
-                const s = subtestScores[sub];
-                const pct = (s.correct / Math.max(s.total, 1)) * 100;
-                let colorClass = "bg-blue-500";
-                if (pct >= 80) colorClass = "bg-emerald-500";
-                else if (pct < 50) colorClass = "bg-blue-300";
-                else if (pct < 70) colorClass = "bg-blue-400";
+            {showSubtestDetails && (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                {subtestNames.map(sub => {
+                  const s = subtestScores[sub];
+                  const pct = (s.correct / Math.max(s.total, 1)) * 100;
+                  let colorClass = "bg-blue-500";
+                  if (pct >= 80) colorClass = "bg-emerald-500";
+                  else if (pct < 50) colorClass = "bg-blue-300";
+                  else if (pct < 70) colorClass = "bg-blue-400";
 
-                return (
-                  <div key={sub} className="space-y-1.5">
-                    <div className="flex justify-between items-end">
-                      <span className="text-xs font-bold text-slate-700">{sub}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-extrabold text-slate-900">{s.irt_score}</span>
-                        <span className="text-[10px] text-slate-500 ml-1">IRT</span>
+                  return (
+                    <div key={sub} className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="flex justify-between items-end">
+                        <span className="text-xs font-bold text-slate-700">{sub}</span>
+                        <div className="text-right">
+                          <span className="text-sm font-extrabold text-slate-900">{s.irt_score || s.weighted || 0}</span>
+                          <span className="text-[10px] text-slate-500 ml-1">{isMandiri ? "Skor" : "IRT"}</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div className={`${colorClass} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium pt-0.5">
+                        <span>Benar: <strong className="text-emerald-600 font-bold">{s.correct}</strong> / {s.total}</span>
+                        {s.wrong !== undefined && s.empty !== undefined && (
+                          <span>Salah: <strong className="text-rose-600 font-bold">{s.wrong}</strong> | Kosong: <strong className="text-amber-600 font-bold">{s.empty}</strong></span>
+                        )}
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div className={`${colorClass} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Benar: <span className="font-bold text-slate-600">{s.correct}</span> dari {s.total} soal
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         )}
 

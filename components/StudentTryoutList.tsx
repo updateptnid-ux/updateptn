@@ -10,6 +10,9 @@ import { Clock, FileText, PlayCircle, Lock, Hourglass, Sparkles, CheckCircle2, B
 import FreeAccessModal from "@/components/FreeAccessModal";
 import { createClient } from "@/lib/supabase/client";
 
+import Image from "next/image";
+import { getUnivLogoUrl } from "@/lib/univ-logo";
+
 interface Tryout {
   id: string;
   title: string;
@@ -17,6 +20,7 @@ interface Tryout {
   total_questions: number;
   is_free: boolean;
   allow_free_claim?: boolean;
+  mandiri_category?: string | null;
 }
 
 interface StudentTryoutListProps {
@@ -181,7 +185,23 @@ export default function StudentTryoutList({
                     </div>
 
                     <div className="space-y-1.5 md:space-y-2">
-                      <h3 className="text-sm md:text-lg font-extrabold text-slate-900 leading-tight md:leading-snug line-clamp-2">{to.title}</h3>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const logoUrl = getUnivLogoUrl(to.mandiri_category || to.title);
+                          return logoUrl ? (
+                            <div className="w-6 h-6 relative flex-shrink-0 bg-white rounded-full p-0.5 border border-slate-200 shadow-xs">
+                              <Image
+                                src={logoUrl}
+                                alt={to.mandiri_category || "Logo PTN"}
+                                fill
+                                className="object-contain"
+                                unoptimized
+                              />
+                            </div>
+                          ) : null;
+                        })()}
+                        <h3 className="text-sm md:text-lg font-extrabold text-slate-900 leading-tight md:leading-snug line-clamp-2">{to.title}</h3>
+                      </div>
                       <p className="text-[10px] md:text-xs text-slate-500 leading-relaxed line-clamp-2">
                         Mencakup Tes Potensi Skolastik (TPS) &amp; Literasi Bahasa Indonesia/Inggris standar resmi.
                       </p>

@@ -43,6 +43,16 @@ const subtesMetadata: Record<string, any> = {
     icon: Brain,
     color: "blue",
   },
+  "pengetahuan-pemahaman-umum": {
+    title: "Pengetahuan & Pemahaman Umum",
+    icon: Target,
+    color: "violet",
+  },
+  "pemahaman-bacaan-menulis": {
+    title: "Pemahaman Bacaan & Menulis",
+    icon: BookOpen,
+    color: "rose",
+  },
   "pengetahuan-kuantitatif": {
     title: "Pengetahuan Kuantitatif",
     icon: Calculator,
