@@ -49,6 +49,16 @@ interface Module {
   subtes_category: string;
 }
 
+const subtestOptions = [
+  { value: "penalaran-umum", label: "Penalaran Umum (PU)" },
+  { value: "pengetahuan-pemahaman-umum", label: "Pengetahuan & Pemahaman Umum (PPU)" },
+  { value: "pemahaman-bacaan-menulis", label: "Pemahaman Bacaan & Menulis (PBM)" },
+  { value: "pengetahuan-kuantitatif", label: "Pengetahuan Kuantitatif (PK)" },
+  { value: "literasi-indonesia", label: "Literasi B. Indonesia" },
+  { value: "literasi-inggris", label: "Literasi B. Inggris" },
+  { value: "penalaran-matematika", label: "Penalaran Matematika (PM)" },
+];
+
 const subtestLabels: Record<string, string> = {
   "penalaran-umum": "Penalaran Umum (PU)",
   "pengetahuan-pemahaman-umum": "Pengetahuan & Pemahaman Umum (PPU)",
@@ -57,6 +67,22 @@ const subtestLabels: Record<string, string> = {
   "literasi-indonesia": "Literasi B. Indonesia",
   "literasi-inggris": "Literasi B. Inggris",
   "penalaran-matematika": "Penalaran Matematika (PM)",
+};
+
+const isSubtestMatch = (catFromDb: string, selected: string) => {
+  if (!selected) return true;
+  if (!catFromDb) return false;
+  const dbNorm = catFromDb.toLowerCase().trim();
+  const selNorm = selected.toLowerCase().trim();
+  if (dbNorm === selNorm) return true;
+  if (selNorm === "pengetahuan-pemahaman-umum" && (dbNorm === "ppu" || dbNorm.includes("pemahaman umum"))) return true;
+  if (selNorm === "pemahaman-bacaan-menulis" && (dbNorm === "pbm" || dbNorm.includes("bacaan"))) return true;
+  if (selNorm === "penalaran-umum" && (dbNorm === "pu" || dbNorm.includes("penalaran umum"))) return true;
+  if (selNorm === "pengetahuan-kuantitatif" && (dbNorm === "pk" || dbNorm.includes("kuantitatif"))) return true;
+  if (selNorm === "literasi-indonesia" && (dbNorm === "lbi" || dbNorm.includes("indonesia"))) return true;
+  if (selNorm === "literasi-inggris" && (dbNorm === "lbe" || dbNorm.includes("inggris"))) return true;
+  if (selNorm === "penalaran-matematika" && (dbNorm === "pm" || dbNorm.includes("matematika"))) return true;
+  return false;
 };
 
 export default function PracticeQuestionsPage() {
@@ -68,7 +94,8 @@ export default function PracticeQuestionsPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<PracticeQuestion | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedModule, setSelectedModule] = useState<string>("");
+  const [selectedSubtest, setSelectedSubtest] = useState<string>("");
+  const [uploadTargetModule, setUploadTargetModule] = useState<string>("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
@@ -86,8 +113,11 @@ export default function PracticeQuestionsPage() {
 
   useEffect(() => {
     fetchModules();
+  }, []);
+
+  useEffect(() => {
     fetchQuestions();
-  }, [selectedModule]);
+  }, [selectedSubtest]);
 
   const fetchModules = async () => {
     try {
@@ -120,7 +150,7 @@ export default function PracticeQuestionsPage() {
       setError(null);
       const supabase = createClient();
       
-      let query = supabase
+      const { data, error } = await supabase
         .from("practice_questions")
         .select(`
           *,
@@ -131,12 +161,6 @@ export default function PracticeQuestionsPage() {
         `)
         .order("question_number");
 
-      if (selectedModule) {
-        query = query.eq("module_id", selectedModule);
-      }
-
-      const { data, error } = await query;
-
       if (error) {
         console.error("Error fetching questions:", error);
         setError("Gagal memuat soal: " + error.message);
@@ -144,10 +168,13 @@ export default function PracticeQuestionsPage() {
       }
       
       if (data) {
-        const mapped = data.map((q: any) => ({
-          ...q,
-          module_title: q.subtes_modules.title,
-        }));
+        const mapped = data
+          .map((q: any) => ({
+            ...q,
+            module_title: q.subtes_modules?.title || "",
+            subtes_category: q.subtes_modules?.subtes_category || "",
+          }))
+          .filter((q: any) => isSubtestMatch(q.subtes_category, selectedSubtest));
         setQuestions(mapped);
       }
     } catch (err: any) {
@@ -161,7 +188,7 @@ export default function PracticeQuestionsPage() {
   const handleCreate = () => {
     setEditingQuestion(null);
     setFormData({
-      module_id: selectedModule || (modules[0]?.id || ""),
+      module_id: uploadTargetModule || (modules[0]?.id || ""),
       question_number: 1,
       question_text: "",
       option_a: "",
@@ -249,7 +276,7 @@ export default function PracticeQuestionsPage() {
       return;
     }
 
-    if (!selectedModule) {
+    if (!uploadTargetModule) {
       alert("Pilih modul target terlebih dahulu!");
       return;
     }
@@ -266,7 +293,7 @@ export default function PracticeQuestionsPage() {
 
       const supabase = createClient();
       const questionsToInsert = data.map((q, idx) => ({
-        module_id: selectedModule,
+        module_id: uploadTargetModule,
         question_number: q.question_number || idx + 1,
         question_text: q.question_text || q.soal || "",
         option_a: q.option_a || q.a || "",
@@ -327,23 +354,19 @@ export default function PracticeQuestionsPage() {
 
   return (
     <div className="space-y-4">
-      {/* Filter by Module */}
+      {/* Filter by Subtes */}
       <div className="flex items-center gap-3">
-        <Label className="font-bold text-sm">Filter Modul:</Label>
+        <Label className="font-bold text-sm">Filter Subtes:</Label>
         <select
-          value={selectedModule}
-          onChange={(e) => setSelectedModule(e.target.value)}
+          value={selectedSubtest}
+          onChange={(e) => setSelectedSubtest(e.target.value)}
           className="h-10 px-3 border border-slate-200 rounded-xl text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-md"
         >
-          <option value="">Semua Subtes & Modul</option>
-          {Object.entries(modulesBySubtest).map(([cat, mods]) => (
-            <optgroup key={cat} label={`📌 Subtes: ${subtestLabels[cat] || cat}`}>
-              {mods.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </optgroup>
+          <option value="">Semua Subtes</option>
+          {subtestOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
         
@@ -539,8 +562,8 @@ export default function PracticeQuestionsPage() {
             <div className="space-y-2">
               <Label>Modul Target *</Label>
               <select
-                value={selectedModule}
-                onChange={(e) => setSelectedModule(e.target.value)}
+                value={uploadTargetModule}
+                onChange={(e) => setUploadTargetModule(e.target.value)}
                 className="w-full h-10 px-3 border rounded-xl text-sm font-medium bg-white"
               >
                 <option value="">-- Pilih Modul Target --</option>
@@ -591,7 +614,7 @@ export default function PracticeQuestionsPage() {
             <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
               Batal
             </Button>
-            <Button onClick={handleBatchUpload} disabled={isSaving || !uploadFile || !selectedModule}>
+            <Button onClick={handleBatchUpload} disabled={isSaving || !uploadFile || !uploadTargetModule}>
               {isSaving ? "Mengupload..." : "Upload"}
             </Button>
           </DialogFooter>

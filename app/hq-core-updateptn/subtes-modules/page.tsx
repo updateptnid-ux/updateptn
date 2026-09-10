@@ -260,8 +260,7 @@ export default function SubtesModulesPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-slate-200 bg-slate-50/50">
-              <TableHead className="font-bold text-slate-700">Kategori</TableHead>
-              <TableHead className="font-bold text-slate-700">Judul Modul</TableHead>
+              <TableHead className="font-bold text-slate-700">Subtes</TableHead>
               <TableHead className="font-bold text-slate-700">Durasi</TableHead>
               <TableHead className="font-bold text-slate-700">Soal</TableHead>
               <TableHead className="font-bold text-slate-700">Tingkat</TableHead>
@@ -273,13 +272,13 @@ export default function SubtesModulesPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-500">
+                <TableCell colSpan={7} className="text-center py-8 text-xs text-slate-500">
                   Memuat data...
                 </TableCell>
               </TableRow>
             ) : filteredModules.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-500">
+                <TableCell colSpan={7} className="text-center py-8 text-xs text-slate-500">
                   {selectedCategory === "ALL" ? "Belum ada data." : `Belum ada modul untuk kategori ${getCategoryLabel(selectedCategory)}.`}
                 </TableCell>
               </TableRow>
@@ -290,10 +289,6 @@ export default function SubtesModulesPage() {
                     <Badge variant="outline" className="text-xs font-semibold">
                       {getCategoryLabel(module.subtes_category)}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm font-bold text-slate-900 leading-tight">{module.title}</p>
-                    <p className="text-xs text-slate-500 line-clamp-1">{module.description}</p>
                   </TableCell>
                   <TableCell className="text-xs text-slate-600">{module.duration_minutes} menit</TableCell>
                   <TableCell className="text-xs text-slate-600">{module.total_questions} soal</TableCell>
