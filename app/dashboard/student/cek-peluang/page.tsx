@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { calculateProbabilityAction } from "@/actions/predict";
 import { hasFeatureAccess } from "@/lib/subscription-helpers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,16 +13,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Target,
-  ShieldCheck,
   ArrowLeft,
   Loader2,
   Building2,
-  BookOpen,
   Search,
   ChevronDown,
   Check,
   Calculator,
-  ArrowRight,
+  Sun,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  Award,
 } from "lucide-react";
 
 interface ProdiReferenceItem {
@@ -34,17 +34,13 @@ interface ProdiReferenceItem {
   jenjang?: string;
   kelompok?: string;
   passing_grade_est?: number | string;
-  // SNBP specific fields
   ptn_name?: string;
   nama_prodi?: string;
   kategori?: string;
-  kode_prodi?: string;
   daya_tampung?: number;
   peminat?: number;
   rasio_keketatan?: number;
-  nilai_raport?: number;
   estimasi_nilai_raport?: number;
-  jenis_portofolio?: string;
 }
 
 interface PredictionResult {
@@ -60,105 +56,52 @@ interface PredictionResult {
 
 export default function CekPeluangPage() {
   const searchParams = useSearchParams();
-  const predictionType = searchParams.get("type") === "snbp" ? "snbp" : "snbt"; // Default to SNBT
+  const predictionType = searchParams.get("type") === "snbp" ? "snbp" : "snbt";
   
-  // Get score from URL parameter if exists
   const urlScore = searchParams.get("score");
-  const initialScore = urlScore 
-    ? parseFloat(urlScore) 
-    : (predictionType === "snbt" ? 0 : 85);
+  const initialScore = urlScore ? parseFloat(urlScore) : (predictionType === "snbt" ? 0 : 85);
   
   const [universities, setUniversities] = useState<string[]>([]);
-  
-  // Pilihan 1
   const [selectedUniv, setSelectedUniv] = useState<string>("");
   const [univSearch, setUnivSearch] = useState<string>("");
   const [isUnivOpen, setIsUnivOpen] = useState<boolean>(false);
   const [majors, setMajors] = useState<ProdiReferenceItem[]>([]);
+  const [snbtScores, setSnbtScores] = useState<Record<string, number>>({
+    penalaran_umum: 667,
+    pemahaman_bacaan_menulis: 678,
+    literasi_bahasa_indonesia: 570,
+    penalaran_matematika: 556,
+    pengetahuan_umum: 547,
+    pengetahuan_kuantitatif: 665,
+    literasi_bahasa_inggris: 736,
+  });
+  const [selectedTargets, setSelectedTargets] = useState<(string | null)[]>([null, null, null, null]);
+  const [isTargetPickerOpen, setIsTargetPickerOpen] = useState<boolean>(false);
+  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const [pickerSearch, setPickerSearch] = useState<string>("");
+  const [targetWarnings, setTargetWarnings] = useState<(string | null)[]>([null, null, null, null]);
+  const [jenjangValidationError, setJenjangValidationError] = useState<string>('');
+  const [multiResults, setMultiResults] = useState<any[] | null>(null);
   const [selectedProdiId, setSelectedProdiId] = useState<string>("");
   const [majorSearch, setMajorSearch] = useState<string>("");
   const [isMajorOpen, setIsMajorOpen] = useState<boolean>(false);
-  
-  // Pilihan 2
-  const [selectedUniv2, setSelectedUniv2] = useState<string>("");
-  const [univSearch2, setUnivSearch2] = useState<string>("");
-  const [isUnivOpen2, setIsUnivOpen2] = useState<boolean>(false);
-  const [majors2, setMajors2] = useState<ProdiReferenceItem[]>([]);
-  const [selectedProdiId2, setSelectedProdiId2] = useState<string>("");
-  const [majorSearch2, setMajorSearch2] = useState<string>("");
-  const [isMajorOpen2, setIsMajorOpen2] = useState<boolean>(false);
-  
-  // Pilihan 3
-  const [selectedUniv3, setSelectedUniv3] = useState<string>("");
-  const [univSearch3, setUnivSearch3] = useState<string>("");
-  const [isUnivOpen3, setIsUnivOpen3] = useState<boolean>(false);
-  const [majors3, setMajors3] = useState<ProdiReferenceItem[]>([]);
-  const [selectedProdiId3, setSelectedProdiId3] = useState<string>("");
-  const [majorSearch3, setMajorSearch3] = useState<string>("");
-  const [isMajorOpen3, setIsMajorOpen3] = useState<boolean>(false);
-  
-  // Pilihan 4
-  const [selectedUniv4, setSelectedUniv4] = useState<string>("");
-  const [univSearch4, setUnivSearch4] = useState<string>("");
-  const [isUnivOpen4, setIsUnivOpen4] = useState<boolean>(false);
-  const [majors4, setMajors4] = useState<ProdiReferenceItem[]>([]);
-  const [selectedProdiId4, setSelectedProdiId4] = useState<string>("");
-  const [majorSearch4, setMajorSearch4] = useState<string>("");
-  const [isMajorOpen4, setIsMajorOpen4] = useState<boolean>(false);
-
   const [score, setScore] = useState<string | number>(initialScore);
   const [result, setResult] = useState<PredictionResult | null>(null);
-  
-  // Mode input: "total" atau "manual"
-  const [inputMode, setInputMode] = useState<"total" | "manual">("total");
-  
-  // Manual subtes scores (untuk SNBT - 7 subtes)
-  const [subtesScores, setSubtesScores] = useState({
-    penalaran_umum: 0,
-    bacaan_menulis: 0,
-    pengetahuan_umum: 0,
-    pengetahuan_kuantitatif: 0,
-    literasi_indonesia: 0,
-    literasi_inggris: 0,
-    penalaran_matematika: 0,
-  });
-  
   const [loadingUnivs, setLoadingUnivs] = useState(true);
   const [loadingMajors, setLoadingMajors] = useState(false);
   const [isPending, startTransition] = useTransition();
-
-  // Auto-calculate total score from subtes (AVERAGE, not SUM)
-  useEffect(() => {
-    if (predictionType === "snbt") {
-      const values = Object.values(subtesScores);
-      const total = values.reduce((sum, val) => sum + val, 0);
-      const average = Math.round(total / values.length); // Divide by 6 (number of subtests)
-      setScore(average);
-    }
-  }, [subtesScores, predictionType]);
-
-  // Quota tracking states
-  const [remainingPredictions, setRemainingPredictions] = useState<number | null>(null);
   const [hasAccess, setHasAccess] = useState<boolean>(false);
-  const [accessMessage, setAccessMessage] = useState<string>("");
+  const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true);
   const [userTier, setUserTier] = useState<string>("Basic");
-  const [quotaError, setQuotaError] = useState<string>("");
-  const [isCheckingAccess, setIsCheckingAccess] = useState<boolean>(true); // NEW: loading state
 
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
-  const univContainerRef2 = useRef<HTMLDivElement>(null);
-  const majorContainerRef2 = useRef<HTMLDivElement>(null);
-  const univContainerRef3 = useRef<HTMLDivElement>(null);
-  const majorContainerRef3 = useRef<HTMLDivElement>(null);
-  const univContainerRef4 = useRef<HTMLDivElement>(null);
-  const majorContainerRef4 = useRef<HTMLDivElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const targetPickerRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch user quota on mount + AUTH GUARD + FEATURE ACCESS CHECK
+  // Check access
   useEffect(() => {
     async function fetchUserQuota() {
-      setIsCheckingAccess(true); // Start loading
+      setIsCheckingAccess(true);
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -168,8 +111,6 @@ export default function CekPeluangPage() {
         }
 
         const now = new Date().toISOString();
-
-        // Cek subscription aktif dari tabel subscriptions
         const { data: subscription } = await supabase
           .from("subscriptions")
           .select("tier, status, expires_at")
@@ -180,72 +121,33 @@ export default function CekPeluangPage() {
           .limit(1)
           .maybeSingle();
 
-        // Check if user is admin (admins bypass all restrictions)
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("prediction_count, role")
+          .select("role")
           .eq("id", user.id)
           .maybeSingle();
 
         const isAdminUser = profileData?.role === "admin";
-        const count = profileData?.prediction_count ?? 0;
-
-        // Determine feature type based on prediction type (SNBP or SNBT)
         const featureType = predictionType === "snbp" ? "snbp" : "snbt";
-        
-        // Check feature access using new helper function
         const accessCheck = hasFeatureAccess(subscription, featureType);
-        
         const tier = subscription?.tier || "Basic";
         
-        // Admins always have access
-        if (isAdminUser) {
+        if (isAdminUser || accessCheck.hasAccess) {
           setHasAccess(true);
-          setAccessMessage("Akses Admin (Unlimited)");
-          setUserTier("Admin");
-          setRemainingPredictions(999);
-        } else if (accessCheck.hasAccess) {
-          // User has valid subscription for this specific feature
-          setHasAccess(true);
-          setAccessMessage(accessCheck.message || "");
-          setUserTier(tier);
-          setRemainingPredictions(999); // Unlimited for premium users
+          setUserTier(isAdminUser ? "Admin" : tier);
         } else {
-          // User does NOT have access to this feature
           setHasAccess(false);
-          setAccessMessage(accessCheck.message || `Fitur ${featureType.toUpperCase()} membutuhkan subscription`);
           setUserTier(tier);
-          setRemainingPredictions(0);
         }
       } catch (err) {
         console.error("Error fetching quota:", err);
         setHasAccess(false);
-        setRemainingPredictions(0);
       } finally {
-        setIsCheckingAccess(false); // Stop loading
+        setIsCheckingAccess(false);
       }
     }
-
     fetchUserQuota();
-  }, [predictionType]); // Re-run when prediction type changes
-
-
-  // Clear result and reset score when switching between SNBP and SNBT
-  useEffect(() => {
-    // Clear previous result when type changes
-    setResult(null);
-    setQuotaError("");
-    
-    // Reset score to default for the new type
-    const defaultScore = predictionType === "snbt" ? 0 : 85;
-    setScore(defaultScore);
-    
-    // Reset selected university and major to first available
-    if (universities.length > 0 && selectedUniv === "") {
-      setSelectedUniv(universities[0]);
-    }
-  }, [predictionType]); // Trigger when switching SNBP ↔ SNBT
-
+  }, [predictionType]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -256,433 +158,137 @@ export default function CekPeluangPage() {
       if (majorContainerRef.current && !majorContainerRef.current.contains(event.target as Node)) {
         setIsMajorOpen(false);
       }
-      if (univContainerRef2.current && !univContainerRef2.current.contains(event.target as Node)) {
-        setIsUnivOpen2(false);
-      }
-      if (majorContainerRef2.current && !majorContainerRef2.current.contains(event.target as Node)) {
-        setIsMajorOpen2(false);
-      }
-      if (univContainerRef3.current && !univContainerRef3.current.contains(event.target as Node)) {
-        setIsUnivOpen3(false);
-      }
-      if (majorContainerRef3.current && !majorContainerRef3.current.contains(event.target as Node)) {
-        setIsMajorOpen3(false);
-      }
-      if (univContainerRef4.current && !univContainerRef4.current.contains(event.target as Node)) {
-        setIsUnivOpen4(false);
-      }
-      if (majorContainerRef4.current && !majorContainerRef4.current.contains(event.target as Node)) {
-        setIsMajorOpen4(false);
+      if (targetPickerRef.current && !targetPickerRef.current.contains(event.target as Node)) {
+        setIsTargetPickerOpen(false);
+        setPickerSlot(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 1. Fetch Complete List of Unique Universities from prodi_reference or JSON fallback
+  // Load universities
   useEffect(() => {
     async function loadUniversities() {
       try {
         setLoadingUnivs(true);
-        
-        if (predictionType === "snbp") {
-          // Load from SNBP JSON
-          const res = await fetch("/data_snbp.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.ptn_name).filter(Boolean))).sort() as string[];
-            setUniversities(uniqueUnivs);
-            if (uniqueUnivs.length > 0) {
-              setSelectedUniv(uniqueUnivs[0]);
-            }
+        const jsonFile = predictionType === "snbp" ? "/data_snbp.json" : "/data_snbt.json";
+        const res = await fetch(jsonFile);
+        if (res.ok) {
+          const localData = await res.json();
+          const univField = predictionType === "snbp" ? "ptn_name" : "univ";
+          const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item[univField]).filter(Boolean))).sort() as string[];
+          setUniversities(uniqueUnivs);
+          if (uniqueUnivs.length > 0) {
+            setSelectedUniv(uniqueUnivs[0]);
           }
-        } else {
-          // Load from SNBT (existing logic)
-          const supabase = createClient();
-
-          let allData: any[] = [];
-          let from = 0;
-          const batchSize = 1000;
-          let hasMore = true;
-
-          while (hasMore) {
-            const { data, error } = await supabase
-              .from("prodi_reference")
-              .select("univ")
-              .order("univ", { ascending: true })
-              .range(from, from + batchSize - 1);
-
-            if (error) {
-              console.error("DB error:", error);
-              break;
-            }
-
-            if (data && data.length > 0) {
-              allData = [...allData, ...data];
-              from += batchSize;
-              if (data.length < batchSize) hasMore = false;
-            } else {
-              hasMore = false;
-            }
-          }
-
-          if (allData.length > 0) {
-            const uniqueUnivs = Array.from(new Set(allData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
-            setUniversities(uniqueUnivs);
-            if (uniqueUnivs.length > 0) {
-              setSelectedUniv(uniqueUnivs[0]);
-            }
-          } else {
-            // Fallback to local /data_snbt.json
-            const res = await fetch("/data_snbt.json");
-            if (res.ok) {
-              const localData = await res.json();
-              const uniqueUnivs = Array.from(new Set(localData.map((item: any) => item.univ).filter(Boolean))).sort() as string[];
-              setUniversities(uniqueUnivs);
-              if (uniqueUnivs.length > 0) {
-                setSelectedUniv(uniqueUnivs[0]);
-              }
-            } else {
-              const fallbackUnivs = [
-                "UNIVERSITAS INDONESIA",
-                "INSTITUT TEKNOLOGI BANDUNG",
-                "UNIVERSITAS GADJAH MADA",
-                "UNIVERSITAS BRAWIJAYA",
-                "UNIVERSITAS AIRLANGGA",
-                "UNIVERSITAS DIPONEGORO",
-                "UNIVERSITAS PADJADJARAN",
-                "INSTITUT TEKNOLOGI SEPULUH NOPEMBER",
-              ];
-              setUniversities(fallbackUnivs);
-              setSelectedUniv(fallbackUnivs[0]);
-            }
+          // set majors to full list so jurusan picker can choose across PTN
+          setMajors(localData);
+          if (localData.length > 0 && !selectedProdiId) {
+            setSelectedProdiId(String(localData[0].id));
           }
         }
       } catch (err) {
-        console.error("Error loading PTN list:", err);
+        console.error("Error loading universities:", err);
       } finally {
         setLoadingUnivs(false);
       }
     }
-
     loadUniversities();
   }, [predictionType]);
 
-  // 2. Fetch majors — JSON lokal sebagai primary source (passing_grade_est verified)
-  useEffect(() => {
-    if (!selectedUniv) return;
+  // Note: `majors` is set to the full dataset on loadUniversities so picker can select across PTN
 
-    async function loadMajorsForUniv() {
-      try {
-        setLoadingMajors(true);
-
-        if (predictionType === "snbp") {
-          // Load from SNBP JSON
-          const res = await fetch("/data_snbp.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv);
-            if (filtered.length > 0) {
-              setMajors(filtered);
-              setSelectedProdiId(String(filtered[0].id));
-              return;
-            }
-          }
-        } else {
-          // Load from SNBT — PRIMARY: local data_snbt.json — data verified & selalu sinkron
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.univ === selectedUniv);
-            if (filtered.length > 0) {
-              setMajors(filtered);
-              setSelectedProdiId(String(filtered[0].id));
-              return;
-            }
-          }
-
-          // FALLBACK: Supabase jika JSON tidak ada data untuk universitas ini
-          const supabase = createClient();
-          const { data, error } = await supabase
-            .from("prodi_reference")
-            .select("id, univ, prodi, jenjang, kelompok, passing_grade_est")
-            .eq("univ", selectedUniv)
-            .limit(1000)
-            .order("prodi", { ascending: true });
-
-          if (!error && data && data.length > 0) {
-            setMajors(data as ProdiReferenceItem[]);
-            setSelectedProdiId(String(data[0].id));
-          } else {
-            // Last resort sample data
-            const sample = [
-              { id: "1", univ: selectedUniv, prodi: "Ilmu Komputer", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 715 },
-              { id: "2", univ: selectedUniv, prodi: "Kedokteran", jenjang: "S1", kelompok: "Saintek", passing_grade_est: 735 },
-              { id: "3", univ: selectedUniv, prodi: "Manajemen", jenjang: "S1", kelompok: "Soshum", passing_grade_est: 690 },
-            ];
-            setMajors(sample);
-            setSelectedProdiId("1");
-          }
-        }
-      } catch (err) {
-        console.error("Error loading majors:", err);
-      } finally {
-        setLoadingMajors(false);
-      }
-    }
-
-    loadMajorsForUniv();
-  }, [selectedUniv, predictionType]);
-
-  // Fetch majors for Pilihan 2
-  useEffect(() => {
-    if (!selectedUniv2) return;
-
-    async function loadMajorsForUniv2() {
-      try {
-        if (predictionType === "snbp") {
-          const res = await fetch("/data_snbp.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv2);
-            if (filtered.length > 0) {
-              setMajors2(filtered);
-              setSelectedProdiId2(String(filtered[0].id));
-              return;
-            }
-          }
-        } else {
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.univ === selectedUniv2);
-            if (filtered.length > 0) {
-              setMajors2(filtered);
-              setSelectedProdiId2(String(filtered[0].id));
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error loading majors 2:", err);
-      }
-    }
-
-    loadMajorsForUniv2();
-  }, [selectedUniv2, predictionType]);
-
-  // Fetch majors for Pilihan 3
-  useEffect(() => {
-    if (!selectedUniv3) return;
-
-    async function loadMajorsForUniv3() {
-      try {
-        if (predictionType === "snbp") {
-          const res = await fetch("/data_snbp.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv3);
-            if (filtered.length > 0) {
-              setMajors3(filtered);
-              setSelectedProdiId3(String(filtered[0].id));
-              return;
-            }
-          }
-        } else {
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.univ === selectedUniv3);
-            if (filtered.length > 0) {
-              setMajors3(filtered);
-              setSelectedProdiId3(String(filtered[0].id));
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error loading majors 3:", err);
-      }
-    }
-
-    loadMajorsForUniv3();
-  }, [selectedUniv3, predictionType]);
-
-  // Fetch majors for Pilihan 4
-  useEffect(() => {
-    if (!selectedUniv4) return;
-
-    async function loadMajorsForUniv4() {
-      try {
-        if (predictionType === "snbp") {
-          const res = await fetch("/data_snbp.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.ptn_name === selectedUniv4);
-            if (filtered.length > 0) {
-              setMajors4(filtered);
-              setSelectedProdiId4(String(filtered[0].id));
-              return;
-            }
-          }
-        } else {
-          const res = await fetch("/data_snbt.json");
-          if (res.ok) {
-            const localData = await res.json();
-            const filtered = localData.filter((item: any) => item.univ === selectedUniv4);
-            if (filtered.length > 0) {
-              setMajors4(filtered);
-              setSelectedProdiId4(String(filtered[0].id));
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Error loading majors 4:", err);
-      }
-    }
-
-    loadMajorsForUniv4();
-  }, [selectedUniv4, predictionType]);
-
-  // Submit Handler for Prediction Calculation
+  // Calculate prediction
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // PREVENT AUTO-SCROLL: Save scroll position before state changes
     const scrollY = window.scrollY;
+    setResult(null);
     
-    setQuotaError("");
-    setResult(null); // Clear previous result
+    setTimeout(() => window.scrollTo(0, scrollY), 0);
     
-    // Restore scroll position immediately to prevent jump
-    setTimeout(() => {
-      window.scrollTo(0, scrollY);
-    }, 0);
-    
-    if (!selectedUniv || !selectedProdiId) return;
+    if (!selectedProdiId) return;
     const numScore = Number(score) || (predictionType === "snbt" ? 720 : 85);
 
     startTransition(async () => {
       try {
-        // Find selected prodi object
-        let currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
+        const currentProdi = majors.find((m) => String(m.id) === String(selectedProdiId));
+        if (!currentProdi) return;
         
-        if (predictionType === "snbp") {
-          // SNBP Logic: Based on nilai raport (grade-based)
-          if (!currentProdi) return;
-          
-          const estimasiNilai = currentProdi.estimasi_nilai_raport || 80;
-          const rasioKeketatan = currentProdi.rasio_keketatan || 1;
-          const diff = numScore - estimasiNilai;
-          
-          let percentage = 75;
-          let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
-          let recommendation = "";
+        let percentage = 75;
+        let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
+        let recommendation = "";
+        let passingGrade = 0;
+        let diff = 0;
 
-          // SNBP calculation logic
+        if (predictionType === "snbp") {
+          passingGrade = currentProdi.estimasi_nilai_raport || 80;
+          diff = numScore - passingGrade;
+          const rasio = currentProdi.rasio_keketatan || 1;
+          
           if (diff >= 5) {
             status = "AMAN";
             percentage = Math.min(98, Math.round(85 + diff * 2));
-            recommendation = `Rata-rata raport kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi (${estimasiNilai}). Dengan rasio keketatan ${rasioKeketatan.toFixed(2)}:1, peluang kamu di ${currentProdi.nama_prodi} - ${currentProdi.ptn_name} SANGAT TINGGI!`;
+            recommendation = `Nilai ${numScore} berada +${diff.toFixed(1)} di atas estimasi ${passingGrade}. Rasio ${rasio.toFixed(1)}:1. Peluang SANGAT TINGGI!`;
           } else if (diff >= 0) {
             status = "BERSAING";
             percentage = Math.round(60 + (diff / 5) * 24);
-            recommendation = `Rata-rata raport kamu (${numScore}) melampaui estimasi (${estimasiNilai}) sebesar +${diff.toFixed(1)} poin. Rasio keketatan ${rasioKeketatan.toFixed(2)}:1. Berada di zona kompetisi aktif.`;
+            recommendation = `Nilai ${numScore} melampaui estimasi ${passingGrade} sebesar +${diff.toFixed(1)}. Zona kompetisi aktif.`;
           } else {
             status = "RENTAN";
             percentage = Math.max(25, Math.round(60 + diff * 4));
-            recommendation = `Rata-rata raport kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${estimasiNilai}). Dengan rasio keketatan ${rasioKeketatan.toFixed(2)}:1, pertimbangkan jurusan ini di pilihan ke-2 atau tingkatkan nilai raport.`;
+            recommendation = `Nilai ${numScore} berjarak ${Math.abs(diff).toFixed(1)} di bawah estimasi ${passingGrade}. Pertimbangkan pilihan ke-2.`;
           }
-
-          setResult({
-            score: numScore,
-            passingGrade: estimasiNilai,
-            diff,
-            percentage,
-            status,
-            majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.nama_prodi}`,
-            universityName: currentProdi.ptn_name || "",
-            recommendation,
-          });
-          
-          // Maintain scroll position after result is set
-          setTimeout(() => {
-            window.scrollTo(0, scrollY);
-          }, 10);
         } else {
-          // SNBT Logic: Use passing_grade_est from local data
-          if (currentProdi?.passing_grade_est) {
-            const pg = Number(currentProdi.passing_grade_est);
-            const diff = numScore - pg;
-            let percentage = 75;
-            let status: "AMAN" | "BERSAING" | "RENTAN" = "BERSAING";
-            let recommendation = "";
-
-            if (diff >= 20) {
-              status = "AMAN";
-              percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
-              recommendation = `Skor kamu (${numScore}) berada +${diff.toFixed(1)} poin di atas estimasi keketatan (${pg}). Peluang kelulusan di ${currentProdi.prodi} - ${selectedUniv} SANGAT TINGGI!`;
-            } else if (diff >= 0) {
-              status = "BERSAING";
-              percentage = Math.round(60 + (diff / 20) * 24);
-              recommendation = `Skor kamu (${numScore}) melampaui estimasi passing grade (${pg}) sebesar +${diff.toFixed(1)} poin. Berada di zona kompetisi aktif.`;
-            } else {
-              status = "RENTAN";
-              percentage = Math.max(25, Math.round(60 + diff * 1.2));
-              recommendation = `Skor kamu (${numScore}) berjarak ${Math.abs(diff).toFixed(1)} poin di bawah estimasi (${pg}). Pertimbangkan jurusan ini di Pilihan 2.`;
-            }
-
-            setResult({
-              score: numScore,
-              passingGrade: pg,
-              diff,
-              percentage,
-              status,
-              majorName: `${currentProdi.jenjang ? `${currentProdi.jenjang} ` : ""}${currentProdi.prodi}`,
-              universityName: selectedUniv,
-              recommendation,
-            });
-            
-            // Maintain scroll position after result is set
-            setTimeout(() => {
-              window.scrollTo(0, scrollY);
-            }, 10);
+          passingGrade = Number(currentProdi.passing_grade_est) || 700;
+          diff = numScore - passingGrade;
+          
+          if (diff >= 20) {
+            status = "AMAN";
+            percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+            recommendation = `Skor ${numScore} berada +${diff.toFixed(1)} di atas passing grade ${passingGrade}. Peluang SANGAT TINGGI!`;
+          } else if (diff >= 0) {
+            status = "BERSAING";
+            percentage = Math.round(60 + (diff / 20) * 24);
+            recommendation = `Skor ${numScore} melampaui passing grade ${passingGrade} sebesar +${diff.toFixed(1)}. Zona kompetisi aktif.`;
+          } else {
+            status = "RENTAN";
+            percentage = Math.max(25, Math.round(60 + diff * 1.2));
+            recommendation = `Skor ${numScore} berjarak ${Math.abs(diff).toFixed(1)} di bawah passing grade ${passingGrade}. Pertimbangkan pilihan 2.`;
           }
         }
+
+        const prodiName = predictionType === "snbp" ? currentProdi.nama_prodi : currentProdi.prodi;
+        const univName = predictionType === "snbp" ? currentProdi.ptn_name : currentProdi.univ;
+
+        setResult({
+          score: numScore,
+          passingGrade,
+          diff,
+          percentage,
+          status,
+          majorName: `${currentProdi.jenjang || "S1"} ${prodiName}`,
+          universityName: univName || "",
+          recommendation,
+        });
+        
+        setTimeout(() => window.scrollTo(0, scrollY), 10);
       } catch (error) {
-        console.error("Error during analysis:", error);
-        setQuotaError("Terjadi kesalahan saat menganalisis. Silakan coba lagi.");
+        console.error("Error:", error);
       }
     });
   };
 
-  // Improved search with normalization and scoring
-  const normalizeText = (text: string): string => {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ') // normalize multiple spaces
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents
-  };
-
-  // Calculate search relevance score
+  // Search helpers
+  const normalizeText = (text: string) => text.toLowerCase().trim().replace(/\s+/g, ' ');
+  
   const getRelevanceScore = (text: string, search: string): number => {
     const normalizedText = normalizeText(text);
     const normalizedSearch = normalizeText(search);
-    
     if (!normalizedSearch) return 1;
-    if (normalizedText === normalizedSearch) return 100; // exact match
-    if (normalizedText.startsWith(normalizedSearch)) return 80; // starts with
-    if (normalizedText.includes(normalizedSearch)) return 60; // contains
-    
-    // Check word-by-word match
-    const words = normalizedSearch.split(' ').filter(w => w.length > 0);
-    const matchedWords = words.filter(word => normalizedText.includes(word));
-    if (matchedWords.length > 0) {
-      return (matchedWords.length / words.length) * 40; // partial match
-    }
-    
+    if (normalizedText === normalizedSearch) return 100;
+    if (normalizedText.startsWith(normalizedSearch)) return 80;
+    if (normalizedText.includes(normalizedSearch)) return 60;
     return 0;
   };
 
@@ -692,1149 +298,934 @@ export default function CekPeluangPage() {
     .sort((a, b) => b.score - a.score)
     .map(item => item.univ);
 
-  // Enhanced major search with better matching and sorting
   const filteredMajors = majors
     .map((m) => {
-      const searchTerm = normalizeText(majorSearch);
-      
-      // If no search, return all with neutral score
-      if (!searchTerm) return { major: m, score: 1 };
-      
-      // Get prodi name based on type
       const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
-      
-      // Calculate scores for different fields
-      const prodiScore = getRelevanceScore(prodiName, searchTerm);
-      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
-      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
-      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
-      
-      // Combined full text score
-      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
-      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
-      
-      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
-      
-      return { major: m, score: totalScore };
+      const score = getRelevanceScore(prodiName, majorSearch);
+      return { major: m, score };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.major);
+
+  // Picker-specific filtered majors (search inside picker)
+  const filteredPickerMajors = majors
+    .map((m) => {
+      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
+      const score = getRelevanceScore(prodiName, pickerSearch);
+      return { major: m, score };
     })
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .map(item => item.major);
 
   const selectedProdiObj = majors.find((m) => String(m.id) === String(selectedProdiId));
-  const selectedProdiObj2 = majors2.find((m) => String(m.id) === String(selectedProdiId2));
-  const selectedProdiObj3 = majors3.find((m) => String(m.id) === String(selectedProdiId3));
-  const selectedProdiObj4 = majors4.find((m) => String(m.id) === String(selectedProdiId4));
 
-  // Filtered majors for each selection
-  const filteredMajors2 = majors2
-    .map((m) => {
-      const searchTerm = normalizeText(majorSearch2);
-      if (!searchTerm) return { major: m, score: 1 };
-      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
-      const prodiScore = getRelevanceScore(prodiName, searchTerm);
-      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
-      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
-      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
-      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
-      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
-      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
-      return { major: m, score: totalScore };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(item => item.major);
+  const computeSNBTTotal = () => {
+    const vals = Object.values(snbtScores);
+    if (vals.length === 0) return 0;
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return Math.round(avg);
+  };
 
-  const filteredMajors3 = majors3
-    .map((m) => {
-      const searchTerm = normalizeText(majorSearch3);
-      if (!searchTerm) return { major: m, score: 1 };
-      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
-      const prodiScore = getRelevanceScore(prodiName, searchTerm);
-      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
-      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
-      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
-      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
-      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
-      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
-      return { major: m, score: totalScore };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(item => item.major);
+  // Smart Guard: Analisis jurusan berdasarkan kategori
+  const analyzeJurusanFit = (prodiName: string, scores: Record<string, number>) => {
+    const prodiLower = prodiName.toLowerCase();
+    const suggestions: string[] = [];
+    const warnings: string[] = [];
+    
+    // Kategori Teknik - butuh PM & PK tinggi
+    if (prodiLower.includes('teknik') || prodiLower.includes('engineering') || 
+        prodiLower.includes('informatika') || prodiLower.includes('komputer')) {
+      if (scores.penalaran_matematika < 600) {
+        warnings.push('Penalaran Matematika masih rendah untuk jurusan Teknik (idealnya 650+)');
+        suggestions.push('Fokus tingkatkan PM dengan latihan soal matematika intensif');
+      }
+      if (scores.pengetahuan_kuantitatif < 650) {
+        warnings.push('Pengetahuan Kuantitatif perlu ditingkatkan (idealnya 700+)');
+        suggestions.push('Perbanyak latihan soal kuantitatif dan logika matematika');
+      }
+    }
+    
+    // Kategori Kesehatan - butuh semua subtes balanced
+    if (prodiLower.includes('kedokteran') || prodiLower.includes('farmasi') || 
+        prodiLower.includes('kesehatan') || prodiLower.includes('keperawatan')) {
+      const allScores = Object.values(scores);
+      const minScore = Math.min(...allScores);
+      const maxScore = Math.max(...allScores);
+      if (maxScore - minScore > 150) {
+        warnings.push('Jurusan Kesehatan butuh skor balanced di semua subtes');
+        suggestions.push('Fokus perbaiki subtes terendah agar lebih seimbang');
+      }
+      if (scores.literasi_bahasa_indonesia < 600) {
+        warnings.push('Literasi B. Indonesia penting untuk membaca soal medis (idealnya 650+)');
+      }
+    }
+    
+    // Kategori Sosial/Hukum - butuh PBM & LBI tinggi
+    if (prodiLower.includes('hukum') || prodiLower.includes('ekonomi') || 
+        prodiLower.includes('manajemen') || prodiLower.includes('akuntansi') ||
+        prodiLower.includes('psikologi') || prodiLower.includes('komunikasi')) {
+      if (scores.pemahaman_bacaan_menulis < 650) {
+        warnings.push('Pemahaman Bacaan & Menulis krusial untuk jurusan Sosial (idealnya 700+)');
+        suggestions.push('Perbanyak baca artikel akademik dan latihan analisis teks');
+      }
+      if (scores.literasi_bahasa_indonesia < 600) {
+        warnings.push('Literasi B. Indonesia perlu ditingkatkan (idealnya 650+)');
+      }
+    }
+    
+    // Kategori IPA Murni - butuh PU & PK tinggi
+    if (prodiLower.includes('fisika') || prodiLower.includes('kimia') || 
+        prodiLower.includes('biologi') || prodiLower.includes('matematika')) {
+      if (scores.penalaran_umum < 650) {
+        warnings.push('Penalaran Umum penting untuk analisis IPA (idealnya 700+)');
+      }
+      if (scores.pengetahuan_kuantitatif < 650) {
+        warnings.push('Pengetahuan Kuantitatif perlu lebih tinggi (idealnya 700+)');
+      }
+    }
+    
+    // Kategori Bahasa/Sastra - butuh LBI & LBIng tinggi
+    if (prodiLower.includes('sastra') || prodiLower.includes('bahasa') || 
+        prodiLower.includes('linguistik') || prodiLower.includes('pendidikan bahasa')) {
+      if (scores.literasi_bahasa_indonesia < 650) {
+        warnings.push('Literasi B. Indonesia harus tinggi untuk jurusan Bahasa (idealnya 750+)');
+      }
+      if (scores.literasi_bahasa_inggris < 700) {
+        warnings.push('Literasi B. Inggris perlu ditingkatkan (idealnya 750+)');
+      }
+    }
+    
+    return { warnings, suggestions };
+  };
 
-  const filteredMajors4 = majors4
-    .map((m) => {
-      const searchTerm = normalizeText(majorSearch4);
-      if (!searchTerm) return { major: m, score: 1 };
-      const prodiName = predictionType === "snbp" ? (m.nama_prodi || "") : (m.prodi || "");
-      const prodiScore = getRelevanceScore(prodiName, searchTerm);
-      const jenjangScore = m.jenjang ? getRelevanceScore(m.jenjang, searchTerm) * 0.3 : 0;
-      const kelompokScore = m.kelompok ? getRelevanceScore(m.kelompok, searchTerm) * 0.2 : 0;
-      const kategoriScore = predictionType === "snbp" && m.kategori ? getRelevanceScore(m.kategori, searchTerm) * 0.2 : 0;
-      const fullText = `${prodiName} ${m.jenjang || ''} ${m.kelompok || ''} ${m.kategori || ''}`;
-      const fullScore = getRelevanceScore(fullText, searchTerm) * 0.5;
-      const totalScore = Math.max(prodiScore, fullScore) + jenjangScore + kelompokScore + kategoriScore;
-      return { major: m, score: totalScore };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(item => item.major);
+  // Validasi kombinasi jenjang sesuai aturan SNBT
+  const validateJenjangCombination = (targets: (string | null)[]) => {
+    const selectedMajors = targets
+      .map(t => t ? majors.find(m => String(m.id) === String(t)) : null)
+      .filter(Boolean) as ProdiReferenceItem[];
+    
+    if (selectedMajors.length === 0) return { valid: true, message: '' };
+    
+    // Count jenjang types
+    const jenjangCounts = {
+      S1: 0,
+      D4: 0,
+      D3: 0
+    };
+    
+    selectedMajors.forEach(m => {
+      const jenjang = m.jenjang?.toUpperCase() || 'S1';
+      if (jenjang.includes('S1') || jenjang.includes('SARJANA')) {
+        jenjangCounts.S1++;
+      } else if (jenjang.includes('D4') || jenjang.includes('D-IV') || jenjang.includes('DIPLOMA EMPAT')) {
+        jenjangCounts.D4++;
+      } else if (jenjang.includes('D3') || jenjang.includes('D-III') || jenjang.includes('DIPLOMA TIGA')) {
+        jenjangCounts.D3++;
+      }
+    });
+    
+    const totalSelected = selectedMajors.length;
+    const vokasiCount = jenjangCounts.D3 + jenjangCounts.D4;
+    const akademisCount = jenjangCounts.S1;
+    
+    // Aturan 1 Pilihan: Bebas
+    if (totalSelected === 1) {
+      return { valid: true, message: '' };
+    }
+    
+    // Aturan 2 Pilihan: Bebas kombinasi apa pun
+    if (totalSelected === 2) {
+      return { valid: true, message: '' };
+    }
+    
+    // Aturan 3 Pilihan: Wajib campuran Sarjana dan Vokasi
+    if (totalSelected === 3) {
+      if (akademisCount > 0 && vokasiCount > 0) {
+        return { valid: true, message: '' };
+      } else {
+        return { 
+          valid: false, 
+          message: '❌ Aturan 3 Pilihan: Wajib mencampurkan jenjang Sarjana (S1) dan Vokasi (D3/D4). Contoh: 2 S1 + 1 D3/D4 atau 1 S1 + 2 D3/D4'
+        };
+      }
+    }
+    
+    // Aturan 4 Pilihan: Wajib kombinasi akademis & vokasi, minimal 1 D3
+    if (totalSelected === 4) {
+      if (akademisCount > 0 && vokasiCount > 0 && jenjangCounts.D3 >= 1) {
+        return { valid: true, message: '' };
+      } else {
+        let errorMsg = '❌ Aturan 4 Pilihan: ';
+        if (akademisCount === 0 || vokasiCount === 0) {
+          errorMsg += 'Wajib kombinasi Sarjana (S1) dan Vokasi (D3/D4). ';
+        }
+        if (jenjangCounts.D3 === 0) {
+          errorMsg += 'Minimal 1 program studi Diploma Tiga (D3) wajib dipilih.';
+        }
+        return { valid: false, message: errorMsg };
+      }
+    }
+    
+    return { valid: true, message: '' };
+  };
+
+  // Get jenjang type from major
+  const getJenjangType = (jenjang: string | undefined): 'S1' | 'D4' | 'D3' => {
+    if (!jenjang) return 'S1';
+    const j = jenjang.toUpperCase();
+    if (j.includes('S1') || j.includes('SARJANA')) return 'S1';
+    if (j.includes('D4') || j.includes('D-IV') || j.includes('DIPLOMA EMPAT')) return 'D4';
+    if (j.includes('D3') || j.includes('D-III') || j.includes('DIPLOMA TIGA')) return 'D3';
+    return 'S1';
+  };
+
+  // Get suggested jenjang based on current selection
+  const getSuggestedJenjang = (currentTargets: (string | null)[], currentSlot: number): string[] => {
+    const selected = currentTargets
+      .map((t, i) => i === currentSlot ? null : t) // exclude current slot
+      .filter(Boolean)
+      .map(t => majors.find(m => String(m.id) === String(t)))
+      .filter(Boolean) as ProdiReferenceItem[];
+    
+    if (selected.length === 0) return []; // No restriction for first choice
+    
+    const jenjangCounts = { S1: 0, D4: 0, D3: 0 };
+    selected.forEach(m => {
+      const type = getJenjangType(m.jenjang);
+      jenjangCounts[type]++;
+    });
+    
+    const totalSelected = selected.length;
+    const targetTotal = currentTargets.filter(t => t !== null).length;
+    
+    // If selecting 3rd choice and already have 2 S1
+    if (totalSelected === 2 && targetTotal === 3) {
+      if (jenjangCounts.S1 === 2) {
+        return ['D3', 'D4']; // Must pick vokasi
+      }
+      if (jenjangCounts.D3 + jenjangCounts.D4 === 2) {
+        return ['S1']; // Must pick sarjana
+      }
+    }
+    
+    // If selecting 4th choice
+    if (totalSelected === 3 && targetTotal === 4) {
+      const vokasiCount = jenjangCounts.D3 + jenjangCounts.D4;
+      const akademisCount = jenjangCounts.S1;
+      
+      // If no D3 yet, must pick D3
+      if (jenjangCounts.D3 === 0) {
+        return ['D3'];
+      }
+      // If all S1 so far, must pick vokasi
+      if (akademisCount === 3) {
+        return ['D3', 'D4'];
+      }
+      // If all vokasi so far, must pick S1
+      if (vokasiCount === 3) {
+        return ['S1'];
+      }
+    }
+    
+    return []; // No restriction
+  };
+
+  // Get helper text for picker
+  const getPickerHelperText = (currentTargets: (string | null)[], currentSlot: number): string => {
+    const suggested = getSuggestedJenjang(currentTargets, currentSlot);
+    if (suggested.length === 0) return '';
+    
+    if (suggested.includes('D3') && suggested.length === 1) {
+      return '⚠️ Pilihan ke-4 wajib Diploma Tiga (D3)';
+    }
+    if (suggested.includes('D3') && suggested.includes('D4')) {
+      return '💡 Disarankan pilih Vokasi (D3/D4) untuk memenuhi aturan kombinasi';
+    }
+    if (suggested.includes('S1') && suggested.length === 1) {
+      return '💡 Disarankan pilih Sarjana (S1) untuk memenuhi aturan kombinasi';
+    }
+    return '';
+  };
+
+  // Render status badge
+  const renderStatusBadge = (status: string) => {
+    if (status === "AMAN") {
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          AMAN
+        </Badge>
+      );
+    } else if (status === "BERSAING") {
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-0.5">
+          <TrendingUp className="h-3 w-3 mr-1" />
+          BERSAING
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs px-2 py-0.5">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          RENTAN
+        </Badge>
+      );
+    }
+  };
+
+  if (isCheckingAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="max-w-2xl mx-auto p-3 md:p-6 space-y-4 text-center py-12">
+        <Target className="h-12 w-12 md:h-16 md:w-16 text-amber-600 mx-auto" />
+        <h1 className="text-lg md:text-2xl font-bold text-slate-900">Subscription Diperlukan</h1>
+        <p className="text-sm md:text-base text-slate-600">
+          Untuk mengakses Cek Peluang {predictionType.toUpperCase()}, kamu perlu berlangganan paket Premium.
+        </p>
+        <div className="flex gap-2 justify-center">
+          <Link href="/pricing">
+            <Button className="h-10 text-sm bg-blue-600 hover:bg-blue-700">
+              Lihat Paket
+            </Button>
+          </Link>
+          <Link href="/dashboard/student">
+            <Button variant="outline" className="h-10 text-sm">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Kembali
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl w-full mx-auto space-y-8 py-4 font-sans">
-      {/* Loading State - Show while checking access */}
-      {isCheckingAccess && (
-        <div className="max-w-2xl mx-auto space-y-6 text-center py-24">
-          <div className="flex justify-center">
-            <Loader2 className="h-12 w-12 text-blue-500 animate-spin" />
-          </div>
-          <p className="text-sm text-slate-600 font-medium">
-            Memeriksa akses fitur...
-          </p>
+    <div className="w-full min-h-screen bg-slate-50">
+      <div className="max-w-4xl mx-auto p-3 md:p-6 space-y-3 md:space-y-4 pb-20">
+        
+        {/* ===== SECTION: HEADER ===== */}
+        <div className="space-y-3 md:space-y-4">
+          <Link href="/dashboard/student">
+            <Button variant="ghost" size="sm" className="h-9 text-xs md:text-sm">
+              <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-2" />
+              Kembali ke Dashboard
+            </Button>
+          </Link>
+          
+          <Card className="p-3 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
+            <Badge className="bg-white/20 text-white border-white/30 mb-2 text-[10px] md:text-xs">
+              Kalkulator {predictionType.toUpperCase()} 2026
+            </Badge>
+            <h1 className="text-lg md:text-3xl font-black">
+              Cek Peluang {predictionType.toUpperCase()}
+            </h1>
+            <p className="text-xs md:text-base text-blue-50 mt-1.5 md:mt-2">
+              {predictionType === "snbp" 
+                ? "Hitung peluang kelulusan SNBP berdasarkan nilai raport, booster score, dan prestasi kamu"
+                : "Hitung peluang kelulusan SNBT berdasarkan skor UTBK kamu"}
+            </p>
+          </Card>
         </div>
-      )}
 
-      {/* No Access - Simple blocking UI */}
-      {!isCheckingAccess && remainingPredictions !== null && !hasAccess && (
-        <div className="max-w-2xl mx-auto space-y-6 text-center py-12">
-          <div className="space-y-4">
-            <div className="flex justify-center">
-              <div className="h-20 w-20 rounded-full bg-amber-100 flex items-center justify-center">
-                <Target className="h-10 w-10 text-amber-600" />
-              </div>
-            </div>
+        {/* Form */}
+        <Card className="p-3 md:p-4">
+          <form onSubmit={handleAnalyze} className="space-y-3">
             
-            <div className="space-y-3">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Subscription {predictionType.toUpperCase()} Diperlukan
-              </h1>
-              <p className="text-slate-600 text-sm sm:text-base max-w-lg mx-auto">
-                {accessMessage || `Untuk mengakses Cek Peluang ${predictionType.toUpperCase()}, kamu perlu berlangganan Premium ${predictionType.toUpperCase()} atau VIP All-in-One.`}
-              </p>
-              
-              {userTier !== "Basic" && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm max-w-md mx-auto">
-                  <p className="text-amber-900 font-semibold">
-                    Subscription Aktif: <span className="font-bold">{userTier}</span>
-                  </p>
-                  <p className="text-amber-700 text-xs mt-1">
-                    Paket ini tidak mencakup {predictionType.toUpperCase()}. Upgrade untuk akses fitur ini.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+            {/* PTN selector removed — jurusan picker supports cross-PTN selection */}
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
-            <Link href={`/pricing?feature=cek-peluang-${predictionType}`} className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
-                Lihat Paket Premium {predictionType.toUpperCase()}
-              </Button>
-            </Link>
-            <Link href="/dashboard/student" className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto h-11 px-6 border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Kembali
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
+            {/* Top jurusan dropdown removed for new design */}
 
-      {/* Main Content - Clean UI for users with access */}
-      {!isCheckingAccess && hasAccess && (
-        <>
-      {/* Back Button */}
-      <div className="mb-4">
-        <Link href="/dashboard/student">
-          <Button variant="ghost" className="h-9 px-3 text-xs font-semibold text-slate-700 hover:text-blue-600 hover:bg-blue-50">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Kembali ke Beranda
-          </Button>
-        </Link>
-      </div>
-
-      {/* Header Title */}
-      <div className="text-center space-y-3 mb-6">
-        <div className="flex justify-center mb-3">
-          <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs font-bold px-4 py-1.5 rounded-full">
-            📊 RASIONALISASI {predictionType === "snbp" ? "SNBP" : "SNBT"} 2026
-          </Badge>
-        </div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900">
-          Analisis <span className="text-blue-600">Peluang</span>
-        </h1>
-        <p className="text-slate-600 text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">
-          {predictionType === "snbp" 
-            ? "Bandingkan rata-rata nilai raport kamu dengan estimasi keketatan 5.100+ Jurusan SNBP 2026."
-            : "Bandingkan skor IRT Try Out kamu dengan estimasi keketatan 4.900+ Jurusan di PTN Impian."
-          }
-        </p>
-      </div>
-
-      {/* Quota Error Alert */}
-      {quotaError && (
-        <div className="border border-rose-200 bg-rose-50 rounded-2xl p-4">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-bold text-rose-900 mb-2">{quotaError}</p>
-              <Link href="/pricing">
-                <Button className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl h-10 px-6">
-                  Lihat Paket CEK PELUANG PTN
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Input Form Card - New Two-Column Layout */}
-      <div className="space-y-4" style={{ overflow: "visible" }}>
-        {loadingUnivs ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-3">
-            <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-            <p className="text-xs font-semibold text-blue-400">Memuat Database 4.900+ PTN & Jurusan...</p>
-          </div>
-        ) : (
-          <form onSubmit={handleAnalyze} className="space-y-4" style={{ overflow: "visible" }}>
-            {/* SNBP Calculator Link Banner (if SNBP) */}
-            {predictionType === "snbp" && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-xl border border-blue-200">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg shrink-0">
-                      <Calculator className="h-4 w-4 text-blue-600" />
+            {/* Score Input or SNBT Sliders + Targets (new layout) */}
+            {predictionType === "snbt" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                {/* Left: Skor Simulasi - Compact but readable */}
+                <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Calculator className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-900 mb-0.5">
-                        Belum tahu rata-rata nilai raport kamu?
-                      </p>
-                      <p className="text-[10px] text-slate-600">
-                        Gunakan kalkulator detail untuk menghitung nilai per mata pelajaran
-                      </p>
+                      <h3 className="text-sm md:text-base font-bold text-slate-900">Skor Simulasi</h3>
+                      <p className="text-xs text-slate-500">Sesuaikan skor UTBK kamu</p>
                     </div>
                   </div>
-                  <Link href="/dashboard/student/kalkulator-snbp">
-                    <Button
-                      type="button"
-                      className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs whitespace-nowrap"
-                    >
-                      Buka Kalkulator
-                      <ArrowRight className="h-3 w-3 ml-2" />
-                    </Button>
-                  </Link>
+
+                  <div className="space-y-3">
+                    {[
+                      { key: 'penalaran_umum', label: 'Penalaran Umum' },
+                      { key: 'pengetahuan_umum', label: 'Pengetahuan & Pemahaman Umum' },
+                      { key: 'pemahaman_bacaan_menulis', label: 'Pemahaman Bacaan & Menulis' },
+                      { key: 'pengetahuan_kuantitatif', label: 'Pengetahuan Kuantitatif' },
+                      { key: 'literasi_bahasa_indonesia', label: 'Literasi Bahasa Indonesia' },
+                      { key: 'literasi_bahasa_inggris', label: 'Literasi Bahasa Inggris' },
+                      { key: 'penalaran_matematika', label: 'Penalaran Matematika' },
+                    ].map((s) => (
+                      <div key={s.key} className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs md:text-sm text-slate-700 font-semibold truncate pr-2">{s.label}</span>
+                            <span className="text-lg md:text-xl font-black text-blue-600">{snbtScores[s.key]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={200}
+                            max={1000}
+                            value={snbtScores[s.key]}
+                            onChange={(e) => setSnbtScores(prev => ({ ...prev, [s.key]: Number(e.target.value) }))}
+                            className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer"
+                            style={{
+                              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${((snbtScores[s.key] - 200) / 800) * 100}%, #e2e8f0 ${((snbtScores[s.key] - 200) / 800) * 100}%, #e2e8f0 100%)`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Total Score Display */}
+                  <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs md:text-sm font-bold text-slate-700">Skor Rata-rata</span>
+                      <span className="text-2xl md:text-3xl font-black text-blue-600">{computeSNBTTotal()}</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Right: Jurusan Target - Compact */}
+                <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Target className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm md:text-base font-bold text-slate-900">Jurusan Target</h3>
+                      <p className="text-xs text-slate-500">Pilih hingga 4 jurusan</p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                    Pilih hingga 4 jurusan untuk dianalisa peluang kelulusannya. 
+                    <span className="font-bold text-blue-600"> Perhatian:</span> Untuk 3-4 pilihan, wajib campurkan <Badge className="inline-flex items-center bg-blue-100 text-blue-700 border-blue-300 text-[10px] px-1 py-0">S1</Badge> dan <Badge className="inline-flex items-center bg-purple-100 text-purple-700 border-purple-300 text-[10px] px-1 py-0">Vokasi</Badge>.
+                  </p>
+
+                  <div className="space-y-2.5 mb-4">
+                    {selectedTargets.map((t, idx) => {
+                      const found = t ? majors.find(m => String(m.id) === String(t)) : null;
+                      const label = found ? (found.prodi || found.nama_prodi || 'Terpilih') : 'Pilih Jurusan';
+                      const ptnLabel = found ? (found.ptn_name || found.univ || '') : '';
+                      const jenjangLabel = found ? (found.jenjang || 'S1') : '';
+                      
+                      return (
+                        <div key={idx}>
+                          <button
+                            type="button"
+                            onClick={() => { 
+                              setPickerSlot(idx); 
+                              setIsTargetPickerOpen(true);
+                              setPickerSearch('');
+                            }}
+                            className={`w-full text-left px-3.5 py-3 rounded-lg border-2 transition-all touch-manipulation ${
+                              pickerSlot === idx && isTargetPickerOpen
+                                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                                : found 
+                                  ? 'border-emerald-300 bg-emerald-50/50 hover:border-emerald-400 hover:shadow-sm'
+                                  : 'border-slate-200 hover:border-blue-300 bg-white hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <span className="h-7 w-7 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center text-sm font-bold text-slate-700 shrink-0">
+                                {idx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <div className={`text-sm font-bold truncate flex-1 ${found ? 'text-slate-900' : 'text-slate-400'}`}>
+                                    {label}
+                                  </div>
+                                  {found && (
+                                    <Badge className={`text-[10px] px-1.5 py-0.5 font-bold shrink-0 ${
+                                      jenjangLabel.toUpperCase().includes('S1') || jenjangLabel.toUpperCase().includes('SARJANA')
+                                        ? 'bg-blue-100 text-blue-700 border-blue-300'
+                                        : 'bg-purple-100 text-purple-700 border-purple-300'
+                                    }`}>
+                                      {jenjangLabel.toUpperCase()}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {ptnLabel && (
+                                  <div className="text-xs text-slate-500 truncate mt-0.5">
+                                    {ptnLabel}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                          
+                          {targetWarnings[idx] && (
+                            <div className="mt-2 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-xl shadow-sm">
+                              <div className="flex items-start gap-3">
+                                <div className="p-1.5 bg-amber-100 rounded-lg shrink-0">
+                                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-amber-900 mb-2">⚠️ Analisis Smart Guard</p>
+                                  <div className="text-xs text-amber-900 leading-relaxed space-y-1.5 whitespace-pre-line">
+                                    {targetWarnings[idx]}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!selectedTargets[idx]) return;
+                                      const newTargets = [...selectedTargets];
+                                      const item = newTargets.splice(idx, 1)[0];
+                                      newTargets.unshift(item);
+                                      setSelectedTargets(newTargets);
+                                      
+                                      const newWarnings: (string | null)[] = [null, null, null, null];
+                                      setTargetWarnings(newWarnings);
+                                    }}
+                                    className="mt-2.5 text-xs bg-white hover:bg-amber-50 px-3 py-2 rounded-lg border-2 border-amber-400 text-amber-900 font-bold transition-all touch-manipulation inline-flex items-center gap-2 shadow-sm"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4" />
+                                    </svg>
+                                    Pindahkan ke Pilihan 1
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Jenjang Validation Error */}
+                  {jenjangValidationError && (
+                    <div className="mb-4 p-4 bg-rose-50 border-2 border-rose-400 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 bg-rose-100 rounded-lg shrink-0">
+                          <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-rose-900 mb-1.5">Kombinasi Jenjang Tidak Valid</p>
+                          <p className="text-xs text-rose-800 leading-relaxed">{jenjangValidationError}</p>
+                          <div className="mt-2 p-2 bg-white/60 rounded-lg border border-rose-200">
+                            <p className="text-[11px] font-semibold text-rose-900 mb-1">📋 Ketentuan Resmi SNBT:</p>
+                            <ul className="text-[11px] text-rose-800 space-y-0.5 ml-4 list-disc">
+                              <li><strong>1 Pilihan:</strong> Bebas (S1/D4/D3)</li>
+                              <li><strong>2 Pilihan:</strong> Bebas kombinasi</li>
+                              <li><strong>3 Pilihan:</strong> Wajib campuran Sarjana + Vokasi</li>
+                              <li><strong>4 Pilihan:</strong> Campuran Sarjana + Vokasi, minimal 1 D3</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      // Validasi jenjang terlebih dahulu
+                      const validation = validateJenjangCombination(selectedTargets);
+                      if (!validation.valid) {
+                        setJenjangValidationError(validation.message);
+                        return;
+                      }
+                      
+                      const total = computeSNBTTotal();
+                      const results: any[] = [];
+                      selectedTargets.forEach((t, i) => {
+                        if (!t) return;
+                        const prodi = majors.find(m => String(m.id) === String(t));
+                        if (!prodi) return;
+                        const passing = Number(prodi.passing_grade_est) || 700;
+                        const diff = total - passing;
+                        let percentage = 60;
+                        let status = 'BERSAING';
+                        if (diff >= 20) {
+                          status = 'AMAN';
+                          percentage = Math.min(98, Math.round(85 + (diff - 20) * 0.4));
+                        } else if (diff >= 0) {
+                          status = 'BERSAING';
+                          percentage = Math.round(60 + (diff / 20) * 24);
+                        } else {
+                          status = 'RENTAN';
+                          percentage = Math.max(25, Math.round(60 + diff * 1.2));
+                        }
+                        results.push({ slot: i + 1, prodi, passing, diff, percentage, status });
+                      });
+                      setMultiResults(results);
+                    }}
+                    disabled={jenjangValidationError !== ''}
+                    className={`w-full font-bold py-3 md:py-3.5 rounded-lg text-sm md:text-base shadow-lg hover:shadow-xl transition-all touch-manipulation h-11 md:h-12 flex items-center justify-center gap-2 ${
+                      jenjangValidationError 
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white'
+                    }`}
+                  >
+                    <Target className="h-5 w-5" />
+                    Lihat Hasil Analisis
+                  </Button>
+
+                  {isTargetPickerOpen && pickerSlot !== null && (
+                    <div ref={targetPickerRef} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onClick={() => { setIsTargetPickerOpen(false); setPickerSlot(null); }}>
+                      <div className="bg-white border-2 border-blue-300 rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-4 border-b border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-base font-black text-slate-900">Pilih Jurusan Target #{pickerSlot + 1}</h3>
+                            <button 
+                              onClick={() => { setIsTargetPickerOpen(false); setPickerSlot(null); }}
+                              className="p-2 hover:bg-slate-100 rounded-full transition-colors touch-manipulation"
+                            >
+                              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          
+                          {/* Helper Text */}
+                          {getPickerHelperText(selectedTargets, pickerSlot) && (
+                            <div className="mb-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-xs font-semibold text-blue-900">
+                                {getPickerHelperText(selectedTargets, pickerSlot)}
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="relative">
+                            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                            <input
+                              type="text"
+                              value={pickerSearch}
+                              onChange={(e) => setPickerSearch(e.target.value)}
+                              placeholder="Ketik nama jurusan atau PTN..."
+                              className="w-full h-10 pl-10 pr-3 text-base bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800 touch-manipulation"
+                              style={{ fontSize: '16px' }}
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                          {(() => {
+                            const suggested = getSuggestedJenjang(selectedTargets, pickerSlot);
+                            let filtered = filteredPickerMajors;
+                            
+                            // Apply smart filtering if suggested jenjang exists
+                            if (suggested.length > 0) {
+                              filtered = filtered.filter(m => {
+                                const jType = getJenjangType(m.jenjang);
+                                return suggested.includes(jType);
+                              });
+                            }
+                            
+                            if (filtered.length > 0) {
+                              return filtered.map((m) => {
+                                const prodiName = predictionType === "snbp" ? m.nama_prodi : m.prodi;
+                                const ptnName = predictionType === "snbp" ? m.ptn_name : m.univ;
+                                const isSelected = selectedTargets[pickerSlot] === String(m.id);
+                                const jenjangType = getJenjangType(m.jenjang);
+                                
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const newTargets = [...selectedTargets];
+                                      newTargets[pickerSlot] = String(m.id);
+                                      setSelectedTargets(newTargets);
+
+                                      // Enhanced Smart Guard with detailed analysis
+                                      const total = computeSNBTTotal();
+                                      const passing = Number(m.passing_grade_est) || 700;
+                                      const diff = total - passing;
+                                      const prodiName = (predictionType === "snbp" ? m.nama_prodi : m.prodi) || '';
+                                      const analysis = analyzeJurusanFit(prodiName, snbtScores);
+                                      
+                                      const newWarnings: (string | null)[] = [...targetWarnings];
+                                      let warningMessage = '';
+                                      
+                                      // Warning 1: Passing Grade Check
+                                      if (diff < -30) {
+                                        warningMessage += `⚠️ Passing grade ${passing} lebih tinggi ${Math.abs(diff).toFixed(0)} poin dari skor kamu (${total}). `;
+                                      } else if (diff < 0) {
+                                        warningMessage += `📊 Skor kamu ${Math.abs(diff).toFixed(0)} poin di bawah passing grade ${passing}. `;
+                                      }
+                                      
+                                      // Warning 2: Kategori-specific warnings
+                                      if (analysis.warnings.length > 0) {
+                                        warningMessage += '\n\n📚 ' + analysis.warnings.join(' | ');
+                                      }
+                                      
+                                      // Warning 3: Suggestions
+                                      if (analysis.suggestions.length > 0) {
+                                        warningMessage += '\n\n💡 Tips: ' + analysis.suggestions.join(' • ');
+                                      }
+                                      
+                                      // Warning 4: Placement recommendation
+                                      if (pickerSlot > 0 && diff < -50) {
+                                        warningMessage += `\n\n⚡ Rekomendasi: Jurusan ini terlalu tinggi untuk pilihan ${pickerSlot + 1}. Pertimbangkan sebagai pilihan cadangan atau tingkatkan skor terlebih dahulu.`;
+                                      }
+                                      
+                                      newWarnings[pickerSlot] = warningMessage.trim() || null;
+                                      setTargetWarnings(newWarnings);
+
+                                      // Validasi kombinasi jenjang
+                                      const validation = validateJenjangCombination(newTargets);
+                                      setJenjangValidationError(validation.valid ? '' : validation.message);
+
+                                      setIsTargetPickerOpen(false);
+                                      setPickerSlot(null);
+                                      setPickerSearch('');
+                                    }}
+                                    className={`w-full text-left px-3 md:px-4 py-3 rounded-xl font-bold flex items-center justify-between transition-colors touch-manipulation ${
+                                      isSelected
+                                        ? "bg-blue-700 text-white"
+                                        : "text-slate-800 hover:bg-blue-50 active:bg-blue-100"
+                                    }`}
+                                  >
+                                    <div className="flex-1 min-w-0 pr-3">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div className="font-black text-xs md:text-sm leading-tight flex-1">{ptnName}</div>
+                                        <Badge className={`text-[10px] px-1.5 py-0.5 font-bold shrink-0 ${
+                                          jenjangType === 'S1'
+                                            ? 'bg-blue-500 text-white border-0'
+                                            : jenjangType === 'D4'
+                                            ? 'bg-purple-500 text-white border-0'
+                                            : 'bg-green-500 text-white border-0'
+                                        }`}>
+                                          {jenjangType}
+                                        </Badge>
+                                      </div>
+                                      <div className={`text-[10px] md:text-xs leading-tight ${isSelected ? 'opacity-90' : 'opacity-70'}`}>{prodiName}</div>
+                                    </div>
+                                    {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                                  </button>
+                                );
+                              });
+                            } else {
+                              return (
+                                <div className="p-8 text-center space-y-2">
+                                  <p className="text-sm text-slate-600 font-medium">
+                                    {suggested.length > 0 
+                                      ? `Tidak ada jurusan ${suggested.join('/')} yang cocok dengan pencarian "${pickerSearch}"`
+                                      : `Jurusan "${pickerSearch}" tidak ditemukan`
+                                    }
+                                  </p>
+                                  <p className="text-xs text-slate-400">
+                                    Coba cari dengan nama PTN atau jurusan lain
+                                  </p>
+                                </div>
+                              );
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs md:text-sm font-bold text-slate-900 mb-2 block">
+                  {predictionType === "snbp" ? "Rata-rata Nilai Raport" : "Skor UTBK"} <span className="text-rose-600">*</span>
+                </Label>
+                <div className="relative">
+                  <Calculator className="h-4 w-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Input
+                    type="number"
+                    value={score}
+                    onChange={(e) => setScore(e.target.value)}
+                    placeholder={predictionType === "snbp" ? "85.5" : "720"}
+                    className="pl-10 h-11 md:h-12 text-base font-bold"
+                    style={{ fontSize: '16px' }}
+                    min={predictionType === "snbp" ? 0 : 200}
+                    max={predictionType === "snbp" ? 100 : 1000}
+                    step={predictionType === "snbp" ? 0.1 : 1}
+                    required
+                  />
+                </div>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-1">
+                  {predictionType === "snbp" ? "Masukkan rata-rata nilai raport semester 1-5" : "Masukkan total skor UTBK kamu (200-1000)"}
+                </p>
               </div>
             )}
 
-            {/* Two-Column Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ overflow: "visible" }}>
-              {/* LEFT CARD: Skor Simulasi */}
-              <Card className="p-4 border-2 border-slate-200 bg-white rounded-xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1.5 bg-blue-100 rounded-lg">
-                    <Target className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900">Skor Simulasi</h3>
+            {/* Submit removed in new design (results shown via Hasil Analisis tab) */}
+          </form>
+        </Card>
+        
+        {/* ===== SECTION: HASIL ANALISIS ===== */}
+        {multiResults && multiResults.length > 0 && (
+          <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Modern Header */}
+            <Card className="p-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white border-0 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-100 mb-0.5">Hasil Analisis Peluang</p>
+                  <h2 className="text-xl md:text-2xl font-black">Skor Rata-rata {computeSNBTTotal()}</h2>
                 </div>
+                <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                  <Award className="h-6 w-6" />
+                </div>
+              </div>
+            </Card>
 
-                {predictionType === "snbt" ? (
-                  <>
-                    {/* Slider per subtes - Horizontal Layout (7 SUBTES) */}
-                    <div className="space-y-3 mb-3">
-                      {/* 1. Penalaran Umum (PU) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Penalaran Umum</span>
+            {/* Modern Result Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {multiResults.map((result, index) => {
+                const prodiName = result.prodi.prodi || result.prodi.nama_prodi;
+                const ptnName = result.prodi.univ || result.prodi.ptn_name;
+                
+                return (
+                  <Card key={index} className={`p-4 border-2 bg-white shadow-lg hover:shadow-xl transition-shadow ${
+                    result.status === 'AMAN' ? 'border-emerald-400' :
+                    result.status === 'BERSAING' ? 'border-blue-400' : 'border-amber-400'
+                  }`}>
+                    {/* Header Section */}
+                    <div className="flex items-start justify-between mb-3 pb-3 border-b">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                            result.status === 'AMAN' ? 'bg-emerald-100 text-emerald-700' :
+                            result.status === 'BERSAING' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {result.slot}
+                          </div>
+                          <Badge className={`font-bold text-xs ${
+                            result.status === 'AMAN' ? 'bg-emerald-500' :
+                            result.status === 'BERSAING' ? 'bg-blue-500' : 'bg-amber-500'
+                          } text-white border-0`}>
+                            {result.status}
+                          </Badge>
                         </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.penalaran_umum}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, penalaran_umum: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.penalaran_umum}</span>
+                        <h3 className="text-sm font-black text-slate-900 mb-1 line-clamp-1">
+                          {ptnName}
+                        </h3>
+                        <p className="text-xs text-slate-600 line-clamp-1">{prodiName}</p>
                       </div>
-
-                      {/* 2. Bacaan dan Menulis (KMBM) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Bacaan dan Menulis</span>
+                      <div className="text-right shrink-0">
+                        <div className={`text-3xl font-black leading-none ${
+                          result.status === 'AMAN' ? 'text-emerald-600' :
+                          result.status === 'BERSAING' ? 'text-blue-600' : 'text-amber-600'
+                        }`}>
+                          {result.percentage}
+                          <span className="text-base">%</span>
                         </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.bacaan_menulis}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, bacaan_menulis: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.bacaan_menulis}</span>
-                      </div>
-
-                      {/* 3. Pengetahuan Umum (PPU) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Pengetahuan Umum</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.pengetahuan_umum}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, pengetahuan_umum: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.pengetahuan_umum}</span>
-                      </div>
-
-                      {/* 4. Pengetahuan Kuantitatif (PK) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Pengetahuan Kuantitatif</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.pengetahuan_kuantitatif}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, pengetahuan_kuantitatif: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.pengetahuan_kuantitatif}</span>
-                      </div>
-
-                      {/* 5. Literasi Bahasa Indonesia (LBI) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Literasi Bahasa Indonesia</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.literasi_indonesia}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, literasi_indonesia: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.literasi_indonesia}</span>
-                      </div>
-
-                      {/* 6. Literasi Bahasa Inggris (LBIng) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Literasi Bahasa Inggris</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.literasi_inggris}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, literasi_inggris: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.literasi_inggris}</span>
-                      </div>
-
-                      {/* 7. Penalaran Matematika (PM) */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[140px]">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div>
-                          <span className="text-[9px] font-semibold text-slate-700">Penalaran Matematika</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={subtesScores.penalaran_matematika}
-                          onChange={(e) => setSubtesScores({ ...subtesScores, penalaran_matematika: Number(e.target.value) })}
-                          className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                        />
-                        <span className="text-xs font-bold text-slate-900 w-10 text-right">{subtesScores.penalaran_matematika}</span>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Peluang</p>
                       </div>
                     </div>
 
-                    {/* Total Skor - Visible */}
-                    <div className="mt-4 pt-3 border-t border-slate-200">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">RATA-RATA SKOR</span>
-                        <span className="text-3xl font-black text-blue-600">{score}</span>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="text-center p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                        <p className="text-[10px] text-slate-600 font-semibold mb-1">Skor</p>
+                        <p className="text-lg font-black text-blue-700">{computeSNBTTotal()}</p>
                       </div>
-                      <p className="text-[8px] text-slate-500 mt-1">Total skor = rata-rata dari 7 subtes</p>
-                    </div>
-
-                    {/* Info Box */}
-                    <div className="mt-3 bg-blue-50 rounded-lg p-2 border border-blue-200">
-                      <div className="flex items-start gap-1.5">
-                        <div className="p-1 bg-blue-200 rounded shrink-0">
-                          <Calculator className="h-2.5 w-2.5 text-blue-700" />
-                        </div>
-                        <p className="text-[8px] text-slate-700 leading-snug">
-                          Input skor IRT untuk 7 subtes SNBT (TPS: PU, KMBM, PPU, PK | Literasi: LBI, LBIng, PM)
+                      <div className="text-center p-2 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg">
+                        <p className="text-[10px] text-slate-600 font-semibold mb-1">PG</p>
+                        <p className="text-lg font-black text-slate-700">{result.passing}</p>
+                      </div>
+                      <div className={`text-center p-2 rounded-lg ${
+                        result.diff >= 0
+                          ? 'bg-gradient-to-br from-emerald-50 to-emerald-100'
+                          : 'bg-gradient-to-br from-rose-50 to-rose-100'
+                      }`}>
+                        <p className="text-[10px] text-slate-600 font-semibold mb-1">Gap</p>
+                        <p className={`text-lg font-black ${
+                          result.diff >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                        }`}>
+                          {result.diff >= 0 ? '+' : ''}{result.diff.toFixed(0)}
                         </p>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    {/* SNBP - Direct Input */}
+
+                    {/* Progress Bar */}
                     <div className="mb-3">
-                      <Label htmlFor="score" className="text-[10px] font-bold text-slate-700 mb-2 block uppercase tracking-wide">
-                        RATA-RATA NILAI RAPORT
-                      </Label>
-                      <Input
-                        id="score"
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.01}
-                        value={score}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setScore(val === "" ? "" : Number(val));
-                        }}
-                        required
-                        style={{ fontSize: '16px' }}
-                        className="h-12 rounded-lg text-2xl font-black text-blue-700 bg-blue-50 border-2 border-blue-200 text-center focus:border-blue-500"
-                      />
-                      <p className="text-[9px] text-slate-500 mt-1.5 text-center">
-                        Masukkan rata-rata nilai raport semester 1-5
-                      </p>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-700">Progress</span>
+                        <span className="text-[10px] font-bold text-slate-900">{result.percentage}%</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            result.status === 'AMAN' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' :
+                            result.status === 'BERSAING' ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                            'bg-gradient-to-r from-amber-500 to-amber-600'
+                          }`}
+                          style={{ width: `${result.percentage}%` }}
+                        />
+                      </div>
                     </div>
 
-                    <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-200">
+                    {/* Recommendation Box */}
+                    <div className={`rounded-lg p-3 ${
+                      result.status === 'AMAN' ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200' :
+                      result.status === 'BERSAING' ? 'bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200' :
+                      'bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200'
+                    }`}>
                       <div className="flex items-start gap-2">
-                        <div className="p-1 bg-blue-200 rounded shrink-0">
-                          <Calculator className="h-3 w-3 text-blue-700" />
+                        <div className={`mt-0.5 h-5 w-5 rounded-md flex items-center justify-center shrink-0 ${
+                          result.status === 'AMAN' ? 'bg-emerald-200' :
+                          result.status === 'BERSAING' ? 'bg-blue-200' : 'bg-amber-200'
+                        }`}>
+                          <TrendingUp className={`h-3 w-3 ${
+                            result.status === 'AMAN' ? 'text-emerald-700' :
+                            result.status === 'BERSAING' ? 'text-blue-700' : 'text-amber-700'
+                          }`} />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[9px] font-bold text-slate-900 mb-0.5">
-                            Gunakan Kalkulator SNBP
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black text-slate-900 mb-1">
+                            {result.status === 'AMAN' ? 'Strategi Pertahankan' :
+                             result.status === 'BERSAING' ? 'Strategi Tingkatkan' : 'Strategi Perbaiki'}
                           </p>
-                          <p className="text-[8px] text-slate-600 leading-snug">
-                            Hitung nilai raport detail per mata pelajaran.
+                          <p className="text-[10px] text-slate-700 leading-relaxed">
+                            {result.status === 'AMAN' 
+                              ? `Peluang sangat baik. Fokus pertahankan performa dengan tryout rutin dan maksimalkan subtes yang masih bisa ditingkatkan.`
+                              : result.status === 'BERSAING'
+                              ? `Target tingkatkan 20-30 poin dengan fokus pada 3 subtes tertinggi. Siapkan juga opsi cadangan yang lebih aman.`
+                              : `Perlu peningkatan signifikan 40+ poin atau pertimbangkan jurusan dengan passing grade lebih realistis untuk pilihan ini.`
+                            }
                           </p>
                         </div>
                       </div>
                     </div>
-                  </>
-                )}
-              </Card>
-
-              {/* RIGHT CARD: Jurusan Target */}
-              <Card className="p-4 border-2 border-slate-200 bg-white rounded-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Jurusan Target</h3>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-                  Pilih hingga 4 jurusan untuk dianalisa peluang kelulusannya berdasarkan skor simulasi kamu.
-                </p>
-
-                <div className="space-y-3">
-                  {/* PILIHAN 1 - PTN Dropdown */}
-                  <div className="space-y-2 pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">1</Badge>
-                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
-                    </div>
-                    
-                    {/* PTN Selection - Fixed positioning */}
-                    <div className="space-y-2" style={{ position: "relative" }}>
-                      <div ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          onClick={() => { 
-                            setIsUnivOpen(!isUnivOpen); 
-                            setIsMajorOpen(false); 
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="truncate text-left flex-1">{selectedUniv || "Pilih PTN"}</span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isUnivOpen && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={univSearch}
-                                onChange={(e) => setUnivSearch(e.target.value)}
-                                placeholder="Cari PTN..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredUnivs.slice(0, 50).map((univName) => (
-                                <button
-                                  key={univName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUniv(univName);
-                                    setIsUnivOpen(false);
-                                    setUnivSearch("");
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                    selectedUniv === univName
-                                      ? "bg-blue-700 text-white"
-                                      : "text-slate-800 hover:bg-blue-50"
-                                  }`}
-                                >
-                                  {univName}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Jurusan Selection - Fixed positioning */}
-                      <div ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          disabled={loadingMajors || majors.length === 0}
-                          onClick={() => { 
-                            setIsMajorOpen(!isMajorOpen); 
-                            setIsUnivOpen(false); 
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
-                        >
-                          <span className="truncate text-left flex-1">
-                            {selectedProdiObj
-                              ? (predictionType === "snbp" ? selectedProdiObj.nama_prodi : selectedProdiObj.prodi)
-                              : (loadingMajors ? "Memuat..." : "Pilih Jurusan")}
-                          </span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isMajorOpen && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={majorSearch}
-                                onChange={(e) => setMajorSearch(e.target.value)}
-                                placeholder="Cari jurusan..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredMajors.slice(0, 50).map((m) => {
-                                const isSelected = String(m.id) === String(selectedProdiId);
-                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedProdiId(String(m.id));
-                                      setIsMajorOpen(false);
-                                      setMajorSearch("");
-                                    }}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    
-                      {selectedProdiObj && (
-                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
-                          <Check className="h-3.5 w-3.5" />
-                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* PILIHAN 2 - Fully Functional */}
-                  <div className="space-y-2 pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">2</Badge>
-                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
-                    </div>
-                    
-                    <div className="space-y-2" style={{ position: "relative" }}>
-                      {/* PTN Selection 2 */}
-                      <div ref={univContainerRef2} style={{ position: "relative", zIndex: isUnivOpen2 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          onClick={() => { 
-                            setIsUnivOpen2(!isUnivOpen2); 
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="truncate text-left flex-1">{selectedUniv2 || "Pilih PTN"}</span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen2 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isUnivOpen2 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={univSearch2}
-                                onChange={(e) => setUnivSearch2(e.target.value)}
-                                placeholder="Cari PTN..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredUnivs.slice(0, 50).map((univName) => (
-                                <button
-                                  key={univName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUniv2(univName);
-                                    setIsUnivOpen2(false);
-                                    setUnivSearch2("");
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                    selectedUniv2 === univName
-                                      ? "bg-blue-700 text-white"
-                                      : "text-slate-800 hover:bg-blue-50"
-                                  }`}
-                                >
-                                  {univName}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Jurusan Selection 2 */}
-                      <div ref={majorContainerRef2} style={{ position: "relative", zIndex: isMajorOpen2 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          disabled={!selectedUniv2 || majors2.length === 0}
-                          onClick={() => { 
-                            setIsMajorOpen2(!isMajorOpen2); 
-                            setIsUnivOpen2(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="truncate text-left flex-1">
-                            {selectedProdiObj2
-                              ? (predictionType === "snbp" ? selectedProdiObj2.nama_prodi : selectedProdiObj2.prodi)
-                              : (!selectedUniv2 ? "Pilih PTN dulu" : "Pilih Jurusan")}
-                          </span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen2 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isMajorOpen2 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={majorSearch2}
-                                onChange={(e) => setMajorSearch2(e.target.value)}
-                                placeholder="Cari jurusan..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredMajors2.slice(0, 50).map((m) => {
-                                const isSelected = String(m.id) === String(selectedProdiId2);
-                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedProdiId2(String(m.id));
-                                      setIsMajorOpen2(false);
-                                      setMajorSearch2("");
-                                    }}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    
-                      {selectedProdiObj2 && (
-                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
-                          <Check className="h-3.5 w-3.5" />
-                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* PILIHAN 3 - Fully Functional */}
-                  <div className="space-y-2 pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">3</Badge>
-                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
-                    </div>
-                    
-                    <div className="space-y-2" style={{ position: "relative" }}>
-                      {/* PTN Selection 3 */}
-                      <div ref={univContainerRef3} style={{ position: "relative", zIndex: isUnivOpen3 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          onClick={() => { 
-                            setIsUnivOpen3(!isUnivOpen3); 
-                            setIsMajorOpen3(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="truncate text-left flex-1">{selectedUniv3 || "Pilih PTN"}</span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen3 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isUnivOpen3 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={univSearch3}
-                                onChange={(e) => setUnivSearch3(e.target.value)}
-                                placeholder="Cari PTN..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredUnivs.slice(0, 50).map((univName) => (
-                                <button
-                                  key={univName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUniv3(univName);
-                                    setIsUnivOpen3(false);
-                                    setUnivSearch3("");
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                    selectedUniv3 === univName
-                                      ? "bg-blue-700 text-white"
-                                      : "text-slate-800 hover:bg-blue-50"
-                                  }`}
-                                >
-                                  {univName}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Jurusan Selection 3 */}
-                      <div ref={majorContainerRef3} style={{ position: "relative", zIndex: isMajorOpen3 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          disabled={!selectedUniv3 || majors3.length === 0}
-                          onClick={() => { 
-                            setIsMajorOpen3(!isMajorOpen3); 
-                            setIsUnivOpen3(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen4(false);
-                            setIsMajorOpen4(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="truncate text-left flex-1">
-                            {selectedProdiObj3
-                              ? (predictionType === "snbp" ? selectedProdiObj3.nama_prodi : selectedProdiObj3.prodi)
-                              : (!selectedUniv3 ? "Pilih PTN dulu" : "Pilih Jurusan")}
-                          </span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen3 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isMajorOpen3 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={majorSearch3}
-                                onChange={(e) => setMajorSearch3(e.target.value)}
-                                placeholder="Cari jurusan..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredMajors3.slice(0, 50).map((m) => {
-                                const isSelected = String(m.id) === String(selectedProdiId3);
-                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedProdiId3(String(m.id));
-                                      setIsMajorOpen3(false);
-                                      setMajorSearch3("");
-                                    }}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    
-                      {selectedProdiObj3 && (
-                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
-                          <Check className="h-3.5 w-3.5" />
-                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* PILIHAN 4 - Fully Functional */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="text-[10px] px-2 py-0.5">4</Badge>
-                      <Label className="text-xs font-bold text-slate-700">Pilih Jurusan</Label>
-                    </div>
-                    
-                    <div className="space-y-2" style={{ position: "relative" }}>
-                      {/* PTN Selection 4 */}
-                      <div ref={univContainerRef4} style={{ position: "relative", zIndex: isUnivOpen4 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          onClick={() => { 
-                            setIsUnivOpen4(!isUnivOpen4); 
-                            setIsMajorOpen4(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="truncate text-left flex-1">{selectedUniv4 || "Pilih PTN"}</span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isUnivOpen4 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isUnivOpen4 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={univSearch4}
-                                onChange={(e) => setUnivSearch4(e.target.value)}
-                                placeholder="Cari PTN..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredUnivs.slice(0, 50).map((univName) => (
-                                <button
-                                  key={univName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedUniv4(univName);
-                                    setIsUnivOpen4(false);
-                                    setUnivSearch4("");
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                    selectedUniv4 === univName
-                                      ? "bg-blue-700 text-white"
-                                      : "text-slate-800 hover:bg-blue-50"
-                                  }`}
-                                >
-                                  {univName}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Jurusan Selection 4 */}
-                      <div ref={majorContainerRef4} style={{ position: "relative", zIndex: isMajorOpen4 ? 50 : 1 }}>
-                        <button
-                          type="button"
-                          disabled={!selectedUniv4 || majors4.length === 0}
-                          onClick={() => { 
-                            setIsMajorOpen4(!isMajorOpen4); 
-                            setIsUnivOpen4(false);
-                            setIsUnivOpen(false);
-                            setIsMajorOpen(false);
-                            setIsUnivOpen2(false);
-                            setIsMajorOpen2(false);
-                            setIsUnivOpen3(false);
-                            setIsMajorOpen3(false);
-                          }}
-                          className="w-full h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="truncate text-left flex-1">
-                            {selectedProdiObj4
-                              ? (predictionType === "snbp" ? selectedProdiObj4.nama_prodi : selectedProdiObj4.prodi)
-                              : (!selectedUniv4 ? "Pilih PTN dulu" : "Pilih Jurusan")}
-                          </span>
-                          <ChevronDown className={`h-3.5 w-3.5 text-slate-400 shrink-0 transition-transform ${isMajorOpen4 ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {isMajorOpen4 && (
-                          <div 
-                            className="absolute left-0 right-0 mt-1 bg-white border border-blue-100 shadow-2xl rounded-xl p-2 flex flex-col gap-2 animate-in fade-in zoom-in-95" 
-                            style={{ top: "100%", zIndex: 9999, maxHeight: "300px" }}
-                          >
-                            <div className="relative">
-                              <Search className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
-                              <input
-                                type="text"
-                                value={majorSearch4}
-                                onChange={(e) => setMajorSearch4(e.target.value)}
-                                placeholder="Cari jurusan..."
-                                style={{ fontSize: '16px' }}
-                                className="w-full h-8 pl-9 pr-3 text-xs bg-blue-50 border border-blue-100 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-slate-800"
-                                autoFocus
-                              />
-                            </div>
-
-                            <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: "240px" }}>
-                              {filteredMajors4.slice(0, 50).map((m) => {
-                                const isSelected = String(m.id) === String(selectedProdiId4);
-                                const label = predictionType === "snbp" ? m.nama_prodi : m.prodi;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedProdiId4(String(m.id));
-                                      setIsMajorOpen4(false);
-                                      setMajorSearch4("");
-                                    }}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-colors ${
-                                      isSelected ? "bg-blue-700 text-white" : "text-slate-800 hover:bg-blue-50"
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    
-                      {selectedProdiObj4 && (
-                        <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
-                          <Check className="h-3.5 w-3.5" />
-                          <span className="text-[10px] font-bold">Jurusan terpilih</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                  </Card>
+                );
+              })}
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={isPending || !selectedProdiId}
-              className="w-full h-12 text-sm font-black bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-2 shadow-md hover:shadow-lg transition-all"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Menganalisis...</span>
-                </>
-              ) : (
-                <>
-                  <Target className="h-5 w-5" />
-                  <span>Lihat Hasil Analisis</span>
-                </>
-              )}
-            </Button>
-          </form>
+            {/* Compact Footer Info */}
+            <Card className="p-3 bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-slate-900 mb-0.5">Estimasi Biaya Kuliah</p>
+                  <p className="text-[10px] text-slate-600">
+                    UKT: Rp 500K-5jt/semester (gol. 1-4) • IPI: Rp 10-50jt (jika ada) • Cek website PTN untuk info detail
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
         )}
       </div>
-
-      {/* PREDICTION RESULT DISPLAY CARD - Mobile Optimized */}
-      {result && (
-        <Card className="border-2 border-blue-200 shadow-lg rounded-xl overflow-hidden bg-white p-4 sm:p-6 space-y-4 animate-in fade-in zoom-in-95">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div>
-              <span className="text-[10px] text-blue-500 font-bold uppercase tracking-wide">Hasil Analisis</span>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                {result.majorName}
-              </h3>
-              <p className="text-xs text-slate-600 font-semibold">{result.universityName}</p>
-            </div>
-
-            {result.status === "AMAN" && (
-              <Badge className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-lg">
-                🎉 AMAN
-              </Badge>
-            )}
-            {result.status === "BERSAING" && (
-              <Badge className="bg-blue-600 text-white font-bold text-xs px-3 py-1 rounded-lg">
-                ⚡ BERSAING
-              </Badge>
-            )}
-            {result.status === "RENTAN" && (
-              <Badge className="bg-amber-500 text-white font-bold text-xs px-3 py-1 rounded-lg">
-                ⚠️ RENTAN
-              </Badge>
-            )}
-          </div>
-
-          {/* Probability Percentage Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs font-bold text-slate-700">Estimasi Peluang Lulus</span>
-              <span className="text-3xl font-black text-blue-600">{result.percentage}%</span>
-            </div>
-            <Progress value={result.percentage} className="h-3 bg-slate-100 rounded-full" />
-          </div>
-
-          {/* Score Comparison Grid - More Compact */}
-          <div className="grid grid-cols-3 gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-center">
-            <div>
-              <span className="text-[10px] text-slate-500 block font-semibold mb-1">
-                {predictionType === "snbp" ? "Nilai Raport" : "Skor Kamu"}
-              </span>
-              <span className="text-lg sm:text-xl font-black text-slate-900">{result.score}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 block font-semibold mb-1">
-                {predictionType === "snbp" ? "Estimasi Min" : "Passing Grade"}
-              </span>
-              <span className="text-lg sm:text-xl font-black text-slate-900">{result.passingGrade}</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-500 block font-semibold mb-1">Selisih</span>
-              <span className={`text-lg sm:text-xl font-black ${result.diff >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                {result.diff >= 0 ? `+${result.diff.toFixed(1)}` : result.diff.toFixed(1)}
-              </span>
-            </div>
-          </div>
-
-          {/* Recommendation Box - Compact */}
-          <div className="p-3 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 flex items-start gap-2">
-            <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              {result.recommendation}
-            </p>
-          </div>
-        </Card>
-      )}
-        </>
-      )}
     </div>
   );
 }

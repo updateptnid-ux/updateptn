@@ -71,20 +71,38 @@
 @layer base {
   * {
     @apply border-border;
-    /* Prevent iOS double-tap zoom delay */
-    touch-action: manipulation;
+  }
+  
+  html {
+    /* Ensure scrolling works */
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: 100%;
   }
   
   body {
     @apply bg-background text-foreground font-sans;
-    /* Prevent horizontal scroll */
+    /* Prevent horizontal scroll only */
     overflow-x: hidden;
+    /* Allow vertical scroll */
+    overflow-y: auto;
     /* Smooth scrolling */
     scroll-behavior: smooth;
     /* iOS smooth momentum scrolling */
     -webkit-overflow-scrolling: touch;
+    /* Allow all touch actions for scrolling */
+    touch-action: pan-y pinch-zoom;
     /* Bigger base font for better readability */
     font-size: 16px;
+    /* Full height */
+    min-height: 100vh;
+  }
+  
+  /* Ensure main container allows scrolling */
+  main {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
   
   /* Bigger headings for mobile readability */
@@ -166,12 +184,28 @@
     font-size: 16px; /* Critical for iOS - prevents auto-zoom */
   }
   
-  /* Touch-friendly buttons */
-  button,
-  [role="button"],
-  a {
+  /* Touch-friendly buttons - Only prevent double-tap zoom on buttons */
+  button:not([type="range"]),
+  [role="button"]:not(input) {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+  }
+  
+  /* Links allow normal behavior */
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Allow pan/scroll for inputs and interactive elements */
+  input,
+  textarea,
+  select {
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  /* Range sliders need pan-x for horizontal sliding */
+  input[type="range"] {
+    touch-action: pan-x;
   }
   
   /* Remove default iOS button styling */

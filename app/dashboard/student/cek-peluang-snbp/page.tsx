@@ -462,22 +462,22 @@ export default function CekPeluangSNBPPage() {
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6 pb-24">
         
         {/* ===== SECTION: HEADER ===== */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           <Link href="/dashboard/student">
-            <Button variant="ghost" size="sm" className="h-9">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+            <Button variant="ghost" size="sm" className="h-9 text-xs md:text-sm">
+              <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-2" />
               Kembali ke Dashboard
             </Button>
           </Link>
           
-          <Card className="p-4 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
-            <Badge className="bg-white/20 text-white border-white/30 mb-3">
+          <Card className="p-3 md:p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
+            <Badge className="bg-white/20 text-white border-white/30 mb-2 text-[10px] md:text-xs">
               Kalkulator SNBP 2026
             </Badge>
-            <h1 className="text-2xl md:text-3xl font-black">
+            <h1 className="text-lg md:text-3xl font-black">
               Cek Peluang SNBP
             </h1>
-            <p className="text-sm md:text-base text-blue-50 mt-2">
+            <p className="text-xs md:text-base text-blue-50 mt-1.5 md:mt-2">
               Hitung peluang kelulusan SNBP berdasarkan nilai raport, booster score, dan prestasi kamu
             </p>
           </Card>
@@ -493,7 +493,7 @@ export default function CekPeluangSNBPPage() {
 
         {/* ===== SECTION: PILIH JURUSAN (Only show after form filled) ===== */}
         {snbpData && (
-          <Card className="p-4 md:p-6 bg-white">
+          <Card className="p-4 md:p-6 bg-white overflow-visible">
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <Building2 className="h-5 w-5 text-blue-600" />
@@ -506,9 +506,9 @@ export default function CekPeluangSNBPPage() {
               </p>
             </div>
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-6 mb-6">
               {/* Pilihan 1 */}
-              <div className="space-y-2" ref={prodi1ContainerRef} style={{ position: "relative", zIndex: isProdi1Open ? 100 : 1 }}>
+              <div className="space-y-2 relative" ref={prodi1ContainerRef}>
                 <Label className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">1</Badge>
                   Pilihan Pertama <span className="text-rose-600">*</span>
@@ -517,11 +517,12 @@ export default function CekPeluangSNBPPage() {
                 <button
                   type="button"
                   onClick={() => { setIsProdi1Open(!isProdi1Open); setIsProdi2Open(false); }}
-                  className="w-full h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="w-full h-12 md:h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-xs md:text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors touch-manipulation"
+                  style={{ fontSize: '16px' }}
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
-                    <span className="truncate">
+                    <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-500 shrink-0" />
+                    <span className="truncate text-left">
                       {selectedProdi1Id ? 
                         (() => {
                           const p = allProdi.find(pr => String(pr.id) === selectedProdi1Id);
@@ -535,21 +536,21 @@ export default function CekPeluangSNBPPage() {
                 </button>
 
                 {isProdi1Open && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "400px" }}>
+                  <div className="absolute left-0 right-0 mt-2 bg-white border-2 border-blue-300 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 z-[100]" style={{ maxHeight: "420px" }}>
                     <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3" />
                       <input
                         type="text"
                         value={prodiSearch1}
                         onChange={(e) => setProdiSearch1(e.target.value)}
                         placeholder="Ketik PTN atau Jurusan (cth: UI Teknik, ITB Informatika)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                        className="w-full h-10 pl-10 pr-3 text-base bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800 touch-manipulation"
                         style={{ fontSize: '16px' }}
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
+                    <div className="flex items-center justify-between px-1 text-[10px] md:text-[11px] font-semibold text-blue-400 flex-shrink-0">
                       <span>Daftar Jurusan PTN</span>
                       <span>{allProdi.filter(p => {
                         if (!prodiSearch1) return true;
@@ -559,7 +560,7 @@ export default function CekPeluangSNBPPage() {
                       }).length} ditemukan</span>
                     </div>
 
-                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "300px" }}>
+                    <div className="overflow-y-auto space-y-1 pr-1 overscroll-contain" style={{ maxHeight: "300px", WebkitOverflowScrolling: "touch" }}>
                       {allProdi
                         .filter(p => {
                           if (!prodiSearch1) return true;
@@ -576,15 +577,15 @@ export default function CekPeluangSNBPPage() {
                               setIsProdi1Open(false);
                               setProdiSearch1("");
                             }}
-                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                            className={`w-full text-left px-3 md:px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between transition-colors touch-manipulation ${
                               String(selectedProdi1Id) === String(p.id)
                                 ? "bg-blue-700 text-white"
-                                : "text-slate-800 hover:bg-blue-50"
+                                : "text-slate-800 hover:bg-blue-50 active:bg-blue-100"
                             }`}
                           >
-                            <div className="truncate">
-                              <div className="font-black text-[13px]">{p.ptn_name.replace('UNIVERSITAS ', 'U. ').replace('INSTITUT TEKNOLOGI ', 'IT ')}</div>
-                              <div className="text-[11px] opacity-80 mt-0.5">{p.nama_prodi}</div>
+                            <div className="flex-1 min-w-0 pr-3">
+                              <div className="font-black text-xs md:text-sm leading-tight">{p.ptn_name}</div>
+                              <div className="text-[10px] md:text-xs opacity-80 mt-1 leading-tight">{p.nama_prodi}</div>
                             </div>
                             {String(selectedProdi1Id) === String(p.id) && <Check className="h-4 w-4 shrink-0" />}
                           </button>
@@ -617,7 +618,7 @@ export default function CekPeluangSNBPPage() {
               </div>
 
               {/* Pilihan 2 */}
-              <div className="space-y-2" ref={prodi2ContainerRef} style={{ position: "relative", zIndex: isProdi2Open ? 100 : 1 }}>
+              <div className="space-y-2 relative" ref={prodi2ContainerRef}>
                 <Label className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">2</Badge>
                   Pilihan Kedua <span className="text-rose-600">*</span>
@@ -626,11 +627,12 @@ export default function CekPeluangSNBPPage() {
                 <button
                   type="button"
                   onClick={() => { setIsProdi2Open(!isProdi2Open); setIsProdi1Open(false); }}
-                  className="w-full h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="w-full h-12 md:h-13 px-4 bg-white border-2 border-slate-300 rounded-xl text-xs md:text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 hover:bg-blue-50 transition-colors touch-manipulation"
+                  style={{ fontSize: '16px' }}
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <Building2 className="h-5 w-5 text-blue-500 shrink-0" />
-                    <span className="truncate">
+                    <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-500 shrink-0" />
+                    <span className="truncate text-left">
                       {selectedProdi2Id ? 
                         (() => {
                           const p = allProdi.find(pr => String(pr.id) === selectedProdi2Id);
@@ -644,21 +646,21 @@ export default function CekPeluangSNBPPage() {
                 </button>
 
                 {isProdi2Open && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white border border-blue-100 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95" style={{ top: "100%", zIndex: 9999, maxHeight: "400px" }}>
+                  <div className="absolute left-0 right-0 mt-2 bg-white border-2 border-blue-300 shadow-2xl rounded-2xl p-3 flex flex-col gap-2 z-[100]" style={{ maxHeight: "420px" }}>
                     <div className="relative flex-shrink-0">
-                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3.5" />
+                      <Search className="h-4 w-4 text-blue-400 absolute left-3.5 top-3" />
                       <input
                         type="text"
                         value={prodiSearch2}
                         onChange={(e) => setProdiSearch2(e.target.value)}
                         placeholder="Ketik PTN atau Jurusan (cth: UGM Hukum, UNAIR Kedokteran)..."
-                        className="w-full h-10 pl-10 pr-3 text-sm bg-blue-50 border border-blue-100 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800"
+                        className="w-full h-10 pl-10 pr-3 text-base bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 font-medium text-slate-800 touch-manipulation"
                         style={{ fontSize: '16px' }}
                         autoFocus
                       />
                     </div>
 
-                    <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-blue-400 flex-shrink-0">
+                    <div className="flex items-center justify-between px-1 text-[10px] md:text-[11px] font-semibold text-blue-400 flex-shrink-0">
                       <span>Daftar Jurusan PTN</span>
                       <span>{allProdi.filter(p => {
                         if (!prodiSearch2) return true;
@@ -668,7 +670,7 @@ export default function CekPeluangSNBPPage() {
                       }).length} ditemukan</span>
                     </div>
 
-                    <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "300px" }}>
+                    <div className="overflow-y-auto space-y-1 pr-1 overscroll-contain" style={{ maxHeight: "300px", WebkitOverflowScrolling: "touch" }}>
                       {allProdi
                         .filter(p => {
                           if (!prodiSearch2) return true;
@@ -685,15 +687,15 @@ export default function CekPeluangSNBPPage() {
                               setIsProdi2Open(false);
                               setProdiSearch2("");
                             }}
-                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                            className={`w-full text-left px-3 md:px-4 py-3 rounded-xl text-xs font-bold flex items-center justify-between transition-colors touch-manipulation ${
                               String(selectedProdi2Id) === String(p.id)
                                 ? "bg-blue-700 text-white"
-                                : "text-slate-800 hover:bg-blue-50"
+                                : "text-slate-800 hover:bg-blue-50 active:bg-blue-100"
                             }`}
                           >
-                            <div className="truncate">
-                              <div className="font-black text-[13px]">{p.ptn_name.replace('UNIVERSITAS ', 'U. ').replace('INSTITUT TEKNOLOGI ', 'IT ')}</div>
-                              <div className="text-[11px] opacity-80 mt-0.5">{p.nama_prodi}</div>
+                            <div className="flex-1 min-w-0 pr-3">
+                              <div className="font-black text-xs md:text-sm leading-tight">{p.ptn_name}</div>
+                              <div className="text-[10px] md:text-xs opacity-80 mt-1 leading-tight">{p.nama_prodi}</div>
                             </div>
                             {String(selectedProdi2Id) === String(p.id) && <Check className="h-4 w-4 shrink-0" />}
                           </button>
