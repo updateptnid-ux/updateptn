@@ -456,7 +456,7 @@ export default function CekPeluangSNBPPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 overflow-y-auto">
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6 pb-24">
+      <div className="w-full p-4 md:p-6 space-y-6 pb-24">
         
         <div className="space-y-3 md:space-y-4 w-full">
           <Link href="/dashboard/student">
@@ -479,17 +479,17 @@ export default function CekPeluangSNBPPage() {
           </Card>
         </div>
 
-        {/* Both Form and PTN Selection are visible together */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          <div className="space-y-6 w-full">
+        {/* Both Form and PTN Selection are visible stacked full-width */}
+        <div className="space-y-6 w-full">
+          <div className="w-full">
             <SNBPCalculatorForm
               onCalculate={handleCalculate}
               initialScore={85}
             />
           </div>
 
-          <div className="space-y-6 w-full">
-            <Card className="p-4 md:p-6 bg-white overflow-visible sticky top-6 w-full">
+          <div className="w-full">
+            <Card className="p-4 md:p-6 bg-white overflow-visible w-full shadow-sm">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="h-5 w-5 text-blue-600" />
