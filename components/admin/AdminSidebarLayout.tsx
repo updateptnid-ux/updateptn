@@ -167,7 +167,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Header */}
-      <header className="md:hidden bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between sticky top-0 z-40">
+      <header className="md:hidden bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shrink-0">
         <Link href="/hq-core-updateptn" className="flex items-center gap-2">
           <Image
             src="/logo.svg"
@@ -187,7 +187,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-75 p-4 bg-white flex flex-col justify-between overflow-y-auto custom-scrollbar-thin smooth-scroll">
+          <SheetContent side="left" className="w-[85vw] max-w-xs sm:w-80 p-4 bg-white flex flex-col justify-between overflow-y-auto custom-scrollbar-thin smooth-scroll">
             <div className="space-y-6">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2 text-left">
@@ -387,10 +387,10 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full min-h-screen">
         {/* Header Bar */}
-        <header className="hidden md:flex bg-white border-b border-slate-200 h-16 px-8 items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3 w-80">
+        <header className="hidden md:flex bg-white border-b border-slate-200 h-16 px-6 lg:px-8 items-center justify-between sticky top-0 z-30 shrink-0">
+          <div className="flex items-center gap-3 w-72 lg:w-80">
             <div className="relative w-full">
               <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
               <input
@@ -418,7 +418,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar smooth-scroll">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto max-w-full min-w-0 custom-scrollbar smooth-scroll">
           {children}
         </main>
       </div>

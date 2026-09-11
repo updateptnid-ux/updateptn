@@ -134,7 +134,7 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
   return (
     <div className="min-h-screen bg-slate-50/70 flex flex-col md:flex-row font-sans">
       {/* Mobile Header */}
-      <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+      <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs shrink-0">
         <Link href="/mentor" className="flex items-center gap-2">
           <Image src="/logo.svg" alt="UpdatePTN" width={32} height={32} className="h-8 w-auto object-contain" />
           <span className="font-extrabold text-lg text-slate-900">
@@ -147,7 +147,7 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-72 p-6 bg-white/95 backdrop-blur-xl flex flex-col justify-between border-r border-slate-200/80">
+          <SheetContent side="left" className="w-[85vw] max-w-xs sm:w-80 p-6 bg-white/95 backdrop-blur-xl flex flex-col justify-between border-r border-slate-200/80">
             <div className="space-y-6">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2 text-left">
@@ -294,7 +294,9 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
       </aside>
 
       {/* Content */}
-      <main className="flex-1 p-4 sm:p-8 overflow-visible">{children}</main>
+      <main className="flex-1 min-w-0 max-w-full min-h-screen p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto custom-scrollbar smooth-scroll">
+        {children}
+      </main>
     </div>
   );
 }

@@ -60,7 +60,7 @@ export default function CrudLayout({
       {/* Filter & Data Container */}
       <Card className="bg-white border border-slate-200 shadow-sm rounded-xl md:rounded-2xl overflow-hidden p-3 md:p-6 space-y-4 md:space-y-6">
         {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 md:gap-4">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3.5 top-3.5 md:top-3 h-4 w-4 text-slate-400" />
             <Input
@@ -74,8 +74,10 @@ export default function CrudLayout({
             />
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto justify-end">
-            {filterComponent}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {filterComponent}
+            </div>
             <Button
               variant="outline"
               size="icon"
@@ -88,7 +90,7 @@ export default function CrudLayout({
         </div>
 
         {/* Data Table / Content Slot */}
-        <div className="overflow-x-auto min-h-75">
+        <div className="w-full max-w-full overflow-x-auto min-h-75 -mx-1 px-1 sm:mx-0 sm:px-0 custom-scrollbar-thin">
           {children}
         </div>
 

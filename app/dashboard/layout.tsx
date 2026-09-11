@@ -206,7 +206,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-slate-50/70 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Header (Glassmorphic Layer) */}
-      <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+      <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs shrink-0">
         <Link href="/dashboard/student" className="flex items-center gap-2">
           <Image
             src="/logo.svg"
@@ -226,7 +226,7 @@ export default function DashboardLayout({
               <Menu className="h-5 w-5 text-slate-700" />
             </Button>
           } />
-          <SheetContent side="left" className="w-72 p-0 bg-white/95 backdrop-blur-xl flex flex-col border-r border-slate-200/80">
+          <SheetContent side="left" className="w-[85vw] max-w-xs sm:w-80 p-0 bg-white/95 backdrop-blur-xl flex flex-col border-r border-slate-200/80">
             {/* Fixed Header */}
             <div className="shrink-0 p-6 pb-4 border-b border-slate-200/80">
               <SheetHeader>
@@ -465,9 +465,9 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main Content Viewport - Fixed Scrolling */}
-      <main className="flex-1 overflow-y-auto overscroll-contain h-screen md:h-screen custom-scrollbar smooth-scroll">
-        <div className="p-0">
+      {/* Main Content Viewport */}
+      <main className="flex-1 min-w-0 max-w-full min-h-screen overflow-y-auto overscroll-contain custom-scrollbar smooth-scroll">
+        <div className="p-0 pb-20 md:pb-12 w-full max-w-full">
           {children}
         </div>
       </main>
