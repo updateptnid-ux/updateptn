@@ -423,7 +423,7 @@ export default function PracticeQuestionsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <p className="text-sm line-clamp-2">{q.question_text}</p>
+                    <p className="text-sm line-clamp-2">{(q.question_text || "").replace(/<[^>]*>/g, "")}</p>
                   </TableCell>
                   <TableCell>
                     <Badge className="bg-emerald-100 text-emerald-700 font-bold">

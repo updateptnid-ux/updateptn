@@ -146,6 +146,11 @@ export default function LoginPage() {
         <MotionCard className="rounded-2xl">
           <Card className="border border-slate-200/80 shadow-xl rounded-2xl bg-white/95 backdrop-blur-md overflow-hidden p-2 sm:p-4">
             <CardHeader className="space-y-1.5 text-center pb-4">
+              <div className="flex justify-center mb-1">
+                <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[11px] font-semibold px-3 py-1 rounded-full">
+                  Status: Belum login ke SIAPPTN
+                </Badge>
+              </div>
               <CardTitle className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Selamat Datang Kembali
               </CardTitle>

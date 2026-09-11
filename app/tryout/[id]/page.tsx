@@ -74,6 +74,7 @@ export default function TryoutEnginePage({
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
+  const [isPaidTryout, setIsPaidTryout] = useState<boolean>(false);
 
   // Per-subtest state
   const [activeSubtestIndex, setActiveSubtestIndex] = useState<number>(0);
@@ -173,8 +174,11 @@ export default function TryoutEnginePage({
         setIsPremiumUser(isPremium);
 
         if (!tryoutId.startsWith("latihan-")) {
-          const { data: tInfo } = await supabase.from("tryouts").select("tryout_type, mandiri_category").eq("id", tryoutId).maybeSingle();
+          const { data: tInfo } = await supabase.from("tryouts").select("tryout_type, mandiri_category, is_free").eq("id", tryoutId).maybeSingle();
           tryoutInfo = tInfo;
+          if (tInfo && tInfo.is_free === false) {
+            setIsPaidTryout(true);
+          }
         }
 
         // Limit Check (hanya untuk try out asli, bukan latihan subtes)
@@ -1159,15 +1163,24 @@ export default function TryoutEnginePage({
         </div>
 
         {/* Timer per subtes */}
-        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
-          timeLeftSeconds < 300 
-            ? "bg-red-50 border-red-200" 
-            : "bg-blue-50 border-blue-200/80"
-        }`}>
-          <Clock className={`h-4 w-4 animate-pulse ${timeLeftSeconds < 300 ? "text-red-500" : "text-blue-600"}`} />
-          <span className={`font-mono text-sm sm:text-base font-extrabold ${timeLeftSeconds < 300 ? "text-red-600" : "text-blue-700"}`}>
-            {formatTimer(timeLeftSeconds)}
-          </span>
+        <div className="flex items-center gap-2">
+          {isPaidTryout && (
+            <Badge variant="outline" className="hidden sm:flex bg-amber-50 text-amber-800 border-amber-300 font-bold text-[10px] sm:text-xs py-1 px-3 rounded-full items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span>Sesi Berbayar: Pause Dinonaktifkan</span>
+            </Badge>
+          )}
+
+          <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
+            timeLeftSeconds < 300 
+              ? "bg-red-50 border-red-200" 
+              : "bg-blue-50 border-blue-200/80"
+          }`}>
+            <Clock className={`h-4 w-4 animate-pulse ${timeLeftSeconds < 300 ? "text-red-500" : "text-blue-600"}`} />
+            <span className={`font-mono text-sm sm:text-base font-extrabold ${timeLeftSeconds < 300 ? "text-red-600" : "text-blue-700"}`}>
+              {formatTimer(timeLeftSeconds)}
+            </span>
+          </div>
         </div>
 
         {/* Selesai Subtes / Kumpulkan Button */}

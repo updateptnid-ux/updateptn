@@ -390,7 +390,7 @@ export default function AdminQuestionsMandiriPage() {
                       <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                         <FileQuestion className="h-4 w-4 text-blue-600" />
                       </div>
-                      <span className="truncate">{quest.text}</span>
+                      <span className="truncate">{(quest.text || "").replace(/<[^>]*>/g, "")}</span>
                     </div>
                   </TableCell>
                   <TableCell className="py-3">
@@ -405,7 +405,7 @@ export default function AdminQuestionsMandiriPage() {
                   </TableCell>
                   <TableCell className="py-3">
                     {quest.explanation ? (
-                      <span className="text-xs text-slate-500 line-clamp-1 max-w-[200px]">{quest.explanation}</span>
+                      <span className="text-xs text-slate-500 line-clamp-1 max-w-[200px]">{(quest.explanation || "").replace(/<[^>]*>/g, "")}</span>
                     ) : (
                       <span className="text-xs text-slate-400 italic">Kosong</span>
                     )}

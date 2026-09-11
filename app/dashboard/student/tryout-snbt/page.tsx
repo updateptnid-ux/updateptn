@@ -5,6 +5,9 @@ import { MotionCard } from "@/components/ui/fade-in";
 import StudentTryoutList from "@/components/StudentTryoutList";
 import { FileText, Sparkles } from "lucide-react";
 
+import { AkbarCountdownTimer } from "@/components/student/AkbarCountdownTimer";
+import { TryoutSnbtTools } from "@/components/student/TryoutSnbtTools";
+
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -95,7 +98,11 @@ export default async function TryoutSnbtPage() {
           </div>
         </MotionCard>
 
-        {/* Try Outs List */}
+        {/* Akbar Countdown Timer */}
+        <AkbarCountdownTimer targetDate="2026-10-15T08:00:00+07:00" title="Try Out Akbar UTBK-SNBT 2027 Nasional" />
+
+        {/* Tools Try Out SNBT Breakdown */}
+        <TryoutSnbtTools />
         {activeTryouts.length === 0 ? (
           <MotionCard className="rounded-lg md:rounded-xl">
             <div className="bg-white border border-slate-200 rounded-lg md:rounded-xl p-8 md:p-12 text-center space-y-3">

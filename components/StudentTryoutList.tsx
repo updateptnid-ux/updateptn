@@ -151,12 +151,12 @@ export default function StudentTryoutList({
                       <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                         {to.is_free ? (
                           <Badge className="bg-emerald-600 text-white font-bold text-[10px] md:text-[10px] tracking-wide uppercase px-2 md:px-2 py-0.5 rounded-lg">
-                            Gratis
+                            Try Out Reguler
                           </Badge>
                         ) : (
-                          <Badge className="bg-blue-400 text-white font-bold text-[10px] md:text-[10px] tracking-wide uppercase px-2 md:px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <Badge className="bg-blue-600 text-white font-bold text-[10px] md:text-[10px] tracking-wide uppercase px-2 md:px-2 py-0.5 rounded-lg flex items-center gap-1">
                             <Sparkles className="h-3 w-3 md:h-3 md:w-3" />
-                            <span>Premium</span>
+                            <span>Try Out Intensif</span>
                           </Badge>
                         )}
 
@@ -274,8 +274,8 @@ export default function StudentTryoutList({
                           className="w-full h-10 md:h-11 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-lg md:rounded-xl gap-1 md:gap-2 shadow-sm transition-all touch-manipulation text-[10px] sm:text-xs md:text-sm px-2"
                         >
                           <Lock className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                          <span className="hidden sm:inline">Langganan Paket Premium</span>
-                          <span className="sm:hidden">Premium</span>
+                          <span className="hidden sm:inline">🔒 Lihat Paket &amp; Akses</span>
+                          <span className="sm:hidden">🔒 Lihat</span>
                         </Button>
                       </Link>
                     ) : (
@@ -284,8 +284,8 @@ export default function StudentTryoutList({
                         className="w-full h-10 md:h-11 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-bold rounded-lg md:rounded-xl gap-1 md:gap-2 shadow-sm transition-all touch-manipulation text-[10px] sm:text-xs md:text-sm px-2"
                       >
                         <Lock className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                        <span className="hidden sm:inline">Buka Akses Gratis Bersyarat</span>
-                        <span className="sm:hidden">Unlock</span>
+                        <span className="hidden sm:inline">🔒 Lihat Pembahasan &amp; Akses</span>
+                        <span className="sm:hidden">🔒 Lihat</span>
                       </Button>
                     )}
                   </div>

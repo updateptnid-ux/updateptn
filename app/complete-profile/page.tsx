@@ -57,7 +57,7 @@ export default function CompleteProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [avatarError, setAvatarError] = useState<string>("");
 
-  // Prodi selection
+  // Target PTN #1
   const [universities, setUniversities] = useState<string[]>([]);
   const [selectedUniv, setSelectedUniv] = useState<string>("");
   const [univSearch, setUnivSearch] = useState<string>("");
@@ -76,6 +76,23 @@ export default function CompleteProfilePage() {
   
   const univContainerRef = useRef<HTMLDivElement>(null);
   const majorContainerRef = useRef<HTMLDivElement>(null);
+
+  // Target PTN #2 (Cadangan)
+  const [selectedUniv2, setSelectedUniv2] = useState<string>("");
+  const [univSearch2, setUnivSearch2] = useState<string>("");
+  const [isUnivOpen2, setIsUnivOpen2] = useState<boolean>(false);
+  
+  const [majors2, setMajors2] = useState<ProdiSuggestion[]>([]);
+  const [selectedProdiId2, setSelectedProdiId2] = useState<string>("");
+  const [majorSearch2, setMajorSearch2] = useState<string>("");
+  const [isMajorOpen2, setIsMajorOpen2] = useState<boolean>(false);
+  const [loadingMajors2, setLoadingMajors2] = useState(false);
+  
+  const [targetUnivValue2, setTargetUnivValue2] = useState("");
+  const [targetProdiValue2, setTargetProdiValue2] = useState("");
+  
+  const univContainerRef2 = useRef<HTMLDivElement>(null);
+  const majorContainerRef2 = useRef<HTMLDivElement>(null);
 
   // Feedback
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -210,15 +227,72 @@ export default function CompleteProfilePage() {
     }
   }, [selectedProdiId, majors]);
 
+  // Load majors for second target university
+  async function loadMajorsForUniv2(univName: string) {
+    try {
+      setLoadingMajors2(true);
+      const { data, error } = await supabase
+        .from("prodi_reference")
+        .select("id, univ, prodi, jenjang, kelompok")
+        .eq("univ", univName)
+        .limit(1000)
+        .order("prodi", { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        setMajors2(data as ProdiSuggestion[]);
+        if (data[0]) {
+          setSelectedProdiId2(String(data[0].id));
+        }
+      }
+    } catch (err) {
+      console.error("Error loading majors 2:", err);
+    } finally {
+      setLoadingMajors2(false);
+    }
+  }
+
+  // When univ 2 changes
+  useEffect(() => {
+    if (selectedUniv2) {
+      loadMajorsForUniv2(selectedUniv2);
+      setTargetUnivValue2(selectedUniv2);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUniv2]);
+
+  // When prodi 2 changes
+  useEffect(() => {
+    if (selectedProdiId2 && majors2.length > 0) {
+      const selected = majors2.find(m => String(m.id) === String(selectedProdiId2));
+      if (selected) {
+        setTargetProdiValue2(selected.prodi);
+      }
+    }
+  }, [selectedProdiId2, majors2]);
+
   // Dropdown outside click
   useEffect(() => {
     function onOutside(e: MouseEvent) {
       if (univContainerRef.current && !univContainerRef.current.contains(e.target as Node)) setIsUnivOpen(false);
       if (majorContainerRef.current && !majorContainerRef.current.contains(e.target as Node)) setIsMajorOpen(false);
+      if (univContainerRef2.current && !univContainerRef2.current.contains(e.target as Node)) setIsUnivOpen2(false);
+      if (majorContainerRef2.current && !majorContainerRef2.current.contains(e.target as Node)) setIsMajorOpen2(false);
     }
     document.addEventListener("mousedown", onOutside);
     return () => document.removeEventListener("mousedown", onOutside);
   }, []);
+
+  const filteredUnivs2 = universities.filter((u) =>
+    u.toLowerCase().includes(univSearch2.trim().toLowerCase())
+  );
+
+  const filteredMajors2 = majors2.filter((m) =>
+    `${m.prodi} ${m.jenjang || ""} ${m.kelompok || ""}`
+      .toLowerCase()
+      .includes(majorSearch2.trim().toLowerCase())
+  );
+
+  const selectedProdiObj2 = majors2.find((m) => String(m.id) === String(selectedProdiId2));
 
   const filteredUnivs = universities.filter((u) =>
     u.toLowerCase().includes(univSearch.trim().toLowerCase())
@@ -306,6 +380,8 @@ export default function CompleteProfilePage() {
     const fd = new FormData(e.currentTarget);
     fd.set("targetUniv", targetUnivValue);
     fd.set("targetProdi", targetProdiValue);
+    fd.set("targetUniv2", targetUnivValue2);
+    fd.set("targetProdi2", targetProdiValue2);
     fd.set("avatarUrl", avatarUrl);
     
     startProfileTransition(async () => {
@@ -492,144 +568,289 @@ export default function CompleteProfilePage() {
               />
             </div>
 
-            {/* Target PTN & Prodi (Optional) */}
-            <div className="space-y-3">
-              <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                <Target className="h-3 w-3 text-blue-600" /> Target PTN & Prodi (Opsional)
-              </Label>
+            {/* Target PTN & Prodi (Pilihan 1 & Pilihan 2) */}
+            <div className="space-y-4 pt-2">
+              {/* Pilihan 1 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5 text-blue-600" /> Target PTN &amp; Prodi (Pilihan 1)
+                </Label>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* PTN Selection */}
-                <div ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 200 : 1 }}>
-                  <button
-                    type="button"
-                    onClick={() => { setIsUnivOpen(!isUnivOpen); setIsMajorOpen(false); }}
-                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 truncate">
-                      <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
-                      <span className="truncate">{selectedUniv || "Pilih PTN"}</span>
-                    </div>
-                    <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
-
-                  {isUnivOpen && (
-                    <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
-                      <div className="relative">
-                        <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
-                        <input
-                          type="text"
-                          value={univSearch}
-                          onChange={(e) => setUnivSearch(e.target.value)}
-                          placeholder="Cari PTN..."
-                          className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
-                          autoFocus
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* PTN 1 Selection */}
+                  <div ref={univContainerRef} style={{ position: "relative", zIndex: isUnivOpen ? 200 : 1 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setIsUnivOpen(!isUnivOpen); setIsMajorOpen(false); setIsUnivOpen2(false); setIsMajorOpen2(false); }}
+                      className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span className="truncate">{selectedUniv || "Pilih PTN Target 1"}</span>
                       </div>
+                      <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
 
-                      {loadingUnivs ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    {isUnivOpen && (
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                        <div className="relative">
+                          <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                          <input
+                            type="text"
+                            value={univSearch}
+                            onChange={(e) => setUnivSearch(e.target.value)}
+                            placeholder="Cari PTN..."
+                            className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
+                            autoFocus
+                          />
                         </div>
-                      ) : (
-                        <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
-                          {filteredUnivs.length > 0 ? (
-                            filteredUnivs.map((univName) => (
-                              <button
-                                key={univName}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedUniv(univName);
-                                  setIsUnivOpen(false);
-                                  setUnivSearch("");
-                                }}
-                                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                                  selectedUniv === univName
-                                    ? "bg-blue-600 text-white"
-                                    : "text-slate-800 hover:bg-slate-100"
-                                }`}
-                              >
-                                <span className="truncate">{univName}</span>
-                                {selectedUniv === univName && <Check className="h-4 w-4 text-white shrink-0" />}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="p-4 text-center text-xs text-slate-400 font-medium">
-                              PTN tidak ditemukan
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                {/* Prodi Selection */}
-                <div ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 100 : 1 }}>
-                  <button
-                    type="button"
-                    disabled={loadingMajors || majors.length === 0 || !selectedUniv}
-                    onClick={() => { setIsMajorOpen(!isMajorOpen); setIsUnivOpen(false); }}
-                    className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-3 truncate">
-                      <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />
-                      <span className="truncate">
-                        {selectedProdiObj
-                          ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}`
-                          : (loadingMajors ? "Memuat..." : !selectedUniv ? "Pilih PTN dulu" : "Pilih Prodi")}
-                      </span>
-                    </div>
-                    <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
-
-                  {isMajorOpen && (
-                    <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
-                      <div className="relative">
-                        <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
-                        <input
-                          type="text"
-                          value={majorSearch}
-                          onChange={(e) => setMajorSearch(e.target.value)}
-                          placeholder="Cari prodi..."
-                          className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
-                          autoFocus
-                        />
-                      </div>
-
-                      <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
-                        {filteredMajors.length > 0 ? (
-                          filteredMajors.map((m) => {
-                            const isSelected = String(m.id) === String(selectedProdiId);
-                            const label = `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}`;
-                            return (
-                              <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedProdiId(String(m.id));
-                                  setIsMajorOpen(false);
-                                  setMajorSearch("");
-                                }}
-                                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
-                                  isSelected
-                                    ? "bg-blue-600 text-white"
-                                    : "text-slate-800 hover:bg-slate-100"
-                                }`}
-                              >
-                                <span className="truncate">{label}</span>
-                                {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
-                              </button>
-                            );
-                          })
+                        {loadingUnivs ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                          </div>
                         ) : (
-                          <div className="p-4 text-center text-xs text-slate-400 font-medium">
-                            Prodi tidak ditemukan
+                          <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                            {filteredUnivs.length > 0 ? (
+                              filteredUnivs.map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv(univName);
+                                    setIsUnivOpen(false);
+                                    setUnivSearch("");
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                    selectedUniv === univName
+                                      ? "bg-blue-600 text-white"
+                                      : "text-slate-800 hover:bg-slate-100"
+                                  }`}
+                                >
+                                  <span className="truncate">{univName}</span>
+                                  {selectedUniv === univName && <Check className="h-4 w-4 text-white shrink-0" />}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                                PTN tidak ditemukan
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Prodi 1 Selection */}
+                  <div ref={majorContainerRef} style={{ position: "relative", zIndex: isMajorOpen ? 100 : 1 }}>
+                    <button
+                      type="button"
+                      disabled={loadingMajors || majors.length === 0 || !selectedUniv}
+                      onClick={() => { setIsMajorOpen(!isMajorOpen); setIsUnivOpen(false); setIsUnivOpen2(false); setIsMajorOpen2(false); }}
+                      className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-blue-500 transition-colors disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span className="truncate">
+                          {selectedProdiObj
+                            ? `${selectedProdiObj.prodi}${selectedProdiObj.jenjang ? ` (${selectedProdiObj.jenjang})` : ""}`
+                            : (loadingMajors ? "Memuat..." : !selectedUniv ? "Pilih PTN dulu" : "Pilih Prodi Target 1")}
+                        </span>
+                      </div>
+                      <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+
+                    {isMajorOpen && (
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                        <div className="relative">
+                          <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                          <input
+                            type="text"
+                            value={majorSearch}
+                            onChange={(e) => setMajorSearch(e.target.value)}
+                            placeholder="Cari prodi..."
+                            className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-medium"
+                            autoFocus
+                          />
+                        </div>
+
+                        <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                          {filteredMajors.length > 0 ? (
+                            filteredMajors.map((m) => {
+                              const isSelected = String(m.id) === String(selectedProdiId);
+                              const label = `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}`;
+                              return (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedProdiId(String(m.id));
+                                    setIsMajorOpen(false);
+                                    setMajorSearch("");
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? "bg-blue-600 text-white"
+                                      : "text-slate-800 hover:bg-slate-100"
+                                  }`}
+                                >
+                                  <span className="truncate">{label}</span>
+                                  {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                              Prodi tidak ditemukan
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pilihan 2 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5 text-amber-600" /> Target PTN &amp; Prodi (Pilihan 2 - Cadangan)
+                </Label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* PTN 2 Selection */}
+                  <div ref={univContainerRef2} style={{ position: "relative", zIndex: isUnivOpen2 ? 200 : 1 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setIsUnivOpen2(!isUnivOpen2); setIsMajorOpen2(false); setIsUnivOpen(false); setIsMajorOpen(false); }}
+                      className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-amber-500 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <Building2 className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span className="truncate">{selectedUniv2 || "Pilih PTN Target 2"}</span>
+                      </div>
+                      <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isUnivOpen2 ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+
+                    {isUnivOpen2 && (
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                        <div className="relative">
+                          <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                          <input
+                            type="text"
+                            value={univSearch2}
+                            onChange={(e) => setUnivSearch2(e.target.value)}
+                            placeholder="Cari PTN..."
+                            className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-600 font-medium"
+                            autoFocus
+                          />
+                        </div>
+
+                        {loadingUnivs ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                          </div>
+                        ) : (
+                          <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                            {filteredUnivs2.length > 0 ? (
+                              filteredUnivs2.map((univName) => (
+                                <button
+                                  key={univName}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUniv2(univName);
+                                    setIsUnivOpen2(false);
+                                    setUnivSearch2("");
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                    selectedUniv2 === univName
+                                      ? "bg-amber-600 text-white"
+                                      : "text-slate-800 hover:bg-slate-100"
+                                  }`}
+                                >
+                                  <span className="truncate">{univName}</span>
+                                  {selectedUniv2 === univName && <Check className="h-4 w-4 text-white shrink-0" />}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                                PTN tidak ditemukan
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Prodi 2 Selection */}
+                  <div ref={majorContainerRef2} style={{ position: "relative", zIndex: isMajorOpen2 ? 100 : 1 }}>
+                    <button
+                      type="button"
+                      disabled={loadingMajors2 || majors2.length === 0 || !selectedUniv2}
+                      onClick={() => { setIsMajorOpen2(!isMajorOpen2); setIsUnivOpen2(false); setIsUnivOpen(false); setIsMajorOpen(false); }}
+                      className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 flex items-center justify-between hover:border-amber-500 transition-colors disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <BookOpen className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span className="truncate">
+                          {selectedProdiObj2
+                            ? `${selectedProdiObj2.prodi}${selectedProdiObj2.jenjang ? ` (${selectedProdiObj2.jenjang})` : ""}`
+                            : (loadingMajors2 ? "Memuat..." : !selectedUniv2 ? "Pilih PTN dulu" : "Pilih Prodi Target 2")}
+                        </span>
+                      </div>
+                      <svg className={`h-4 w-4 text-slate-500 shrink-0 transition-transform duration-200 ${isMajorOpen2 ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+
+                    {isMajorOpen2 && (
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-3 flex flex-col gap-2" style={{ top: "100%", zIndex: 10000, maxHeight: "320px" }}>
+                        <div className="relative">
+                          <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3.5" />
+                          <input
+                            type="text"
+                            value={majorSearch2}
+                            onChange={(e) => setMajorSearch2(e.target.value)}
+                            placeholder="Cari prodi..."
+                            className="w-full h-10 pl-10 pr-3 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-600 font-medium"
+                            autoFocus
+                          />
+                        </div>
+
+                        <div className="overflow-y-auto space-y-1 pr-1" style={{ maxHeight: "220px" }}>
+                          {filteredMajors2.length > 0 ? (
+                            filteredMajors2.map((m) => {
+                              const isSelected = String(m.id) === String(selectedProdiId2);
+                              const label = `${m.prodi}${m.jenjang ? ` (${m.jenjang})` : ""}`;
+                              return (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedProdiId2(String(m.id));
+                                    setIsMajorOpen2(false);
+                                    setMajorSearch2("");
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                                    isSelected
+                                      ? "bg-amber-600 text-white"
+                                      : "text-slate-800 hover:bg-slate-100"
+                                  }`}
+                                >
+                                  <span className="truncate">{label}</span>
+                                  {isSelected && <Check className="h-4 w-4 text-white shrink-0" />}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                              Prodi tidak ditemukan
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

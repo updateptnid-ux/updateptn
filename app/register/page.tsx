@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   ArrowRight,
@@ -202,6 +203,11 @@ export default function RegisterPage() {
         {/* Register Card */}
         <Card className="border border-slate-200 shadow-lg rounded-2xl bg-white overflow-visible p-2 sm:p-4">
           <CardHeader className="space-y-1.5 text-center pb-4">
+            <div className="flex justify-center mb-1">
+              <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[11px] font-semibold px-3 py-1 rounded-full">
+                Status: Belum login ke SIAPPTN
+              </Badge>
+            </div>
             <CardTitle className="text-2xl font-bold text-slate-900">Mulai Belajar Sekarang</CardTitle>
             <CardDescription className="text-sm text-slate-500">
               Buat akun gratis untuk akses Try Out &amp; Cek Peluang PTN
