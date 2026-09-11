@@ -399,7 +399,7 @@ export default function DashboardLayout({
 
             {/* Fixed Footer */}
             <div className="shrink-0 space-y-3 p-4 border-t border-slate-200/80 bg-white/95">
-              {(userRole.isMentor || isActiveAffiliate) && (
+              {(userRole.isAdmin || userRole.isMentor || isActiveAffiliate) && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
                     Pindah Menu
@@ -422,6 +422,16 @@ export default function DashboardLayout({
                     >
                       <UserCog className="h-4 w-4 text-slate-400" />
                       <span>Menu Tentor</span>
+                    </Link>
+                  )}
+                  {userRole.isAdmin && (
+                    <Link
+                      href="/hq-core-updateptn"
+                      onClick={() => setIsMobileOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                    >
+                      <ShieldCheck className="h-4 w-4 text-slate-400" />
+                      <span>Menu Admin</span>
                     </Link>
                   )}
                 </div>
@@ -507,7 +517,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-50/60 border border-slate-200/60">
             <Avatar className="h-8 w-8 border border-slate-200">
               <AvatarFallback className="bg-blue-600/10 text-blue-600 font-bold text-[10px]">
-                {userRole.isKol ? "KOL" : userRole.isBa ? "BA" : "AZ"}
+                {userRole.isKol ? "KOL" : userRole.isBa ? "BA" : userRole.isAdmin ? "HQ" : "AZ"}
               </AvatarFallback>
             </Avatar>
             <div className="overflow-hidden">
@@ -516,6 +526,8 @@ export default function DashboardLayout({
                   ? "Partner KOL"
                   : userRole.isBa
                   ? "Brand Ambassador"
+                  : userRole.isAdmin
+                  ? "Admin UpdatePTN"
                   : "Siswa Pejuang PTN"}
               </p>
               <p className="text-[10px] text-slate-500 truncate">
@@ -529,7 +541,7 @@ export default function DashboardLayout({
           </div>
 
           {/* Role Switcher */}
-          {(userRole.isMentor || isActiveAffiliate) && (
+          {(userRole.isAdmin || userRole.isMentor || isActiveAffiliate) && (
             <div className="space-y-0.5">
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">
                 Pindah Menu
@@ -550,6 +562,15 @@ export default function DashboardLayout({
                 >
                   <UserCog className="h-3 w-3 text-slate-400" />
                   <span>Menu Tentor</span>
+                </Link>
+              )}
+              {userRole.isAdmin && (
+                <Link
+                  href="/hq-core-updateptn"
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <ShieldCheck className="h-3 w-3 text-slate-400" />
+                  <span>Menu Admin</span>
                 </Link>
               )}
             </div>
