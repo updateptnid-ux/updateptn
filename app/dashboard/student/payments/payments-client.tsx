@@ -89,23 +89,31 @@ export default function PaymentsClient() {
     };
   };
 
-  const loadPayments = async () => {
-    setLoading(true);
+  const loadPayments = async (isSilent = false) => {
+    if (!isSilent) {
+      setLoading(true);
+    }
     
-    const [pendingResult, historyResult] = await Promise.all([
-      getPendingPayments(),
-      getPaymentHistory()
-    ]);
+    try {
+      const [pendingResult, historyResult] = await Promise.all([
+        getPendingPayments(),
+        getPaymentHistory()
+      ]);
 
-    if (pendingResult.success) {
-      setPendingPayments(pendingResult.data as Payment[]);
+      if (pendingResult.success) {
+        setPendingPayments(pendingResult.data as Payment[]);
+      }
+
+      if (historyResult.success) {
+        setAllPayments(historyResult.data as Payment[]);
+      }
+    } catch (err) {
+      console.error('Error reloading payments:', err);
+    } finally {
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
-
-    if (historyResult.success) {
-      setAllPayments(historyResult.data as Payment[]);
-    }
-
-    setLoading(false);
   };
 
   const handleResumePayment = async (payment: Payment) => {
@@ -212,8 +220,8 @@ export default function PaymentsClient() {
       if (result.success) {
         toast.success('✅ Pembayaran berhasil dibatalkan');
         router.refresh();
-        // Background silent refresh
-        await loadPayments();
+        // Background silent refresh (no full screen reload!)
+        await loadPayments(true);
       } else {
         // Rollback state on error
         setPendingPayments(prevPending);

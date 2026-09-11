@@ -100,7 +100,7 @@ export async function getPaymentHistory() {
 /**
  * Cancel or Delete a pending payment (Student-side)
  * Action:
- * - 'cancel': Updates status to 'cancelled' and cancels Midtrans order
+ * - 'cancel': Updates status to 'cancelled' (fallback to delete if update blocked)
  * - 'delete': Removes transaction permanently from the database
  */
 export async function cancelPendingPayment(
@@ -126,11 +126,11 @@ export async function cancelPendingPayment(
       .select('*')
       .eq('order_id', orderId)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !payment) {
       console.error('Payment not found:', fetchError);
-      return { success: false, error: 'Pembayaran tidak ditemukan' };
+      return { success: false, error: 'Pembayaran tidak ditemukan di akun Anda' };
     }
 
     // Only allow canceling if still pending
@@ -173,26 +173,6 @@ export async function cancelPendingPayment(
       }
     }
 
-    // 4. Action: DELETE
-    if (action === 'delete') {
-      const { error: deleteError } = await db
-        .from('payments')
-        .delete()
-        .eq('order_id', orderId)
-        .eq('user_id', user.id);
-
-      if (deleteError) {
-        console.error('❌ Error deleting payment:', deleteError);
-        return { success: false, error: 'Gagal menghapus pembayaran: ' + deleteError.message };
-      }
-
-      console.log('✅ Payment deleted from database:', orderId);
-      revalidatePath('/dashboard/student/payments');
-      revalidatePath('/hq-core-updateptn/payments');
-      return { success: true, action: 'delete', error: null };
-    }
-
-    // 5. Action: CANCEL (Adaptive update to satisfy check constraint)
     const nowIso = new Date().toISOString();
     const updatedMetadata = {
       ...(payment.metadata || {}),
@@ -202,47 +182,90 @@ export async function cancelPendingPayment(
       midtrans_result: midtransResult,
     };
 
-    const statusCandidates = ['cancelled', 'cancel', 'failed'];
-    let updateError: any = null;
+    let operationSuccess = false;
+    let lastErrorMsg = '';
 
-    for (const statusVal of statusCandidates) {
-      const { error } = await db
+    // 4. If action === 'delete', perform direct deletion
+    if (action === 'delete') {
+      const { data: deletedRows, error: deleteError } = await db
         .from('payments')
-        .update({
-          status: statusVal,
-          transaction_status: 'cancel',
-          metadata: updatedMetadata,
-          updated_at: nowIso,
-        })
+        .delete()
         .eq('order_id', orderId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
-      if (!error) {
-        updateError = null;
-        break;
+      if (!deleteError && deletedRows && deletedRows.length > 0) {
+        operationSuccess = true;
+      } else if (deleteError) {
+        lastErrorMsg = deleteError.message;
+      }
+    } else {
+      // 5. Action === 'cancel': Try updating status to 'cancelled', 'cancel', or 'failed'
+      const statusCandidates = ['cancelled', 'cancel', 'failed'];
+
+      for (const statusVal of statusCandidates) {
+        const { data: updatedRows, error: updateError } = await db
+          .from('payments')
+          .update({
+            status: statusVal,
+            transaction_status: 'cancel',
+            metadata: updatedMetadata,
+            updated_at: nowIso,
+          })
+          .eq('order_id', orderId)
+          .eq('user_id', user.id)
+          .select();
+
+        // Check if row was actually updated
+        if (!updateError && updatedRows && updatedRows.length > 0) {
+          console.log(`✅ Payment ${orderId} updated to status '${statusVal}'`);
+          operationSuccess = true;
+          break;
+        }
+
+        if (updateError) {
+          lastErrorMsg = updateError.message;
+          console.warn(`Update status '${statusVal}' error:`, updateError.message);
+        }
       }
 
-      if (error.message?.includes('payments_status_check') || error.code === '23514') {
-        updateError = error;
-        continue;
-      } else {
-        updateError = error;
-        break;
+      // 6. If UPDATE affected 0 rows (e.g., restricted by RLS or constraint), attempt DELETE fallback
+      if (!operationSuccess) {
+        console.log(`⚠️ Status update affected 0 rows, attempting .delete() fallback for ${orderId}...`);
+        const { data: deletedRows, error: deleteError } = await db
+          .from('payments')
+          .delete()
+          .eq('order_id', orderId)
+          .eq('user_id', user.id)
+          .select();
+
+        if (!deleteError && deletedRows && deletedRows.length > 0) {
+          console.log(`✅ Payment ${orderId} deleted via fallback`);
+          operationSuccess = true;
+        } else if (deleteError) {
+          lastErrorMsg = deleteError.message;
+        }
       }
     }
 
-    if (updateError) {
-      console.error('❌ Error updating payment to cancelled:', updateError);
-      return { success: false, error: 'Gagal memperbarui status transaksi: ' + updateError.message };
+    // 7. If still not successful, return an informative error pointing to RLS
+    if (!operationSuccess) {
+      console.error(`❌ Both update and delete failed/affected 0 rows for order: ${orderId}`);
+      return {
+        success: false,
+        error:
+          'Gagal mengubah data transaksi di database. Pastikan RLS Policy di Supabase mengizinkan user mengupdate/menghapus transaksi miliknya sendiri: ' +
+          (lastErrorMsg || '0 baris terupdate'),
+      };
     }
 
-    console.log('✅ Payment marked as cancelled:', orderId);
+    console.log('✅ Payment cancellation completed for order:', orderId);
 
     // Invalidate caches
     revalidatePath('/dashboard/student/payments');
     revalidatePath('/hq-core-updateptn/payments');
 
-    return { success: true, action: 'cancel', error: null };
+    return { success: true, action, error: null };
   } catch (err: any) {
     console.error('❌ Cancel payment exception:', err);
     return { success: false, error: 'Terjadi kesalahan sistem: ' + err.message };
