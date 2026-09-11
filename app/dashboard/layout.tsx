@@ -204,7 +204,7 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/70 flex flex-col md:flex-row font-sans">
+    <div className="h-screen overflow-hidden bg-slate-50/70 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Header (Glassmorphic Layer) */}
       <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs shrink-0">
         <Link href="/dashboard/student" className="flex items-center gap-2">
@@ -344,7 +344,7 @@ export default function DashboardLayout({
       </header>
 
       {/* Desktop Sidebar (Glassmorphic Layering & Pseudo-3D Depth) */}
-      <aside className="hidden md:flex flex-col w-64 bg-white/80 backdrop-blur-md border-r border-slate-200/80 shrink-0 sticky top-0 h-screen shadow-xs">
+      <aside className="hidden md:flex flex-col w-64 bg-white/80 backdrop-blur-md border-r border-slate-200/80 shrink-0 h-screen shadow-xs">
         {/* Fixed Header with Logo */}
         <div className="p-4 border-b border-slate-200/80 shrink-0">
           <Link href="/dashboard/student" className="flex items-center gap-2 group">
@@ -465,9 +465,9 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 min-w-0 max-w-full min-h-screen overflow-y-auto overscroll-contain custom-scrollbar smooth-scroll">
-        <div className="p-0 pb-20 md:pb-12 w-full max-w-full">
+      {/* Main Content Viewport - Fixed Sidebar Layout with Touchpad & Mouse Scroll */}
+      <main className="flex-1 min-w-0 max-w-full h-full md:h-screen overflow-y-auto custom-scrollbar overscroll-auto [&_*]:overscroll-auto">
+        <div className="p-0 pb-20 md:pb-12 w-full max-w-full min-h-full">
           {children}
         </div>
       </main>

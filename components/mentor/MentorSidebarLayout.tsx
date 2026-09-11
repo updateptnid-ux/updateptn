@@ -132,7 +132,7 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50/70 flex flex-col md:flex-row font-sans">
+    <div className="h-screen overflow-hidden bg-slate-50/70 flex flex-col md:flex-row font-sans">
       {/* Mobile Header */}
       <header className="md:hidden bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shadow-xs shrink-0">
         <Link href="/mentor" className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 justify-between shrink-0 sticky top-0 h-screen">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-6 justify-between shrink-0 h-screen">
         <div className="space-y-8">
           {/* Brand */}
           <Link href="/mentor" className="flex items-center gap-2.5 group">
@@ -294,7 +294,7 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
       </aside>
 
       {/* Content */}
-      <main className="flex-1 min-w-0 max-w-full min-h-screen p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto custom-scrollbar smooth-scroll">
+      <main className="flex-1 min-w-0 max-w-full h-full md:h-screen p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto custom-scrollbar overscroll-auto [&_*]:overscroll-auto">
         {children}
       </main>
     </div>

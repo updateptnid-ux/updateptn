@@ -165,7 +165,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
+    <div className="h-screen overflow-hidden bg-slate-50 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Header */}
       <header className="md:hidden bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between sticky top-0 z-40 shrink-0">
         <Link href="/hq-core-updateptn" className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 justify-between shrink-0 sticky top-0 h-screen overflow-y-auto p-4 space-y-6 custom-scrollbar-thin smooth-scroll">
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 justify-between shrink-0 h-screen overflow-y-auto p-4 space-y-6 custom-scrollbar-thin">
         <div className="space-y-6">
           {/* Admin Brand */}
           <Link href="/hq-core-updateptn" className="flex items-center gap-2.5 px-2 pt-2">
@@ -387,7 +387,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 max-w-full min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full h-full md:h-screen overflow-hidden">
         {/* Header Bar */}
         <header className="hidden md:flex bg-white border-b border-slate-200 h-16 px-6 lg:px-8 items-center justify-between sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-3 w-72 lg:w-80">
@@ -418,7 +418,7 @@ export default function AdminSidebarLayout({ children, user }: AdminSidebarLayou
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto max-w-full min-w-0 custom-scrollbar smooth-scroll">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 md:pb-12 overflow-y-auto max-w-full min-w-0 custom-scrollbar overscroll-auto [&_*]:overscroll-auto">
           {children}
         </main>
       </div>
