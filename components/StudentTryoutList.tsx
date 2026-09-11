@@ -42,6 +42,11 @@ export default function StudentTryoutList({
   const [subTier] = useState<string | null>(initialSubscription?.tier || null);
   const [subExpiresAt] = useState<string | null>(initialSubscription?.expires_at || null);
   
+  const [isMarketing, setIsMarketing] = useState(
+    Boolean(initialSubscription?.id?.includes("marketing") || initialSubscription?.price_paid?.includes("Marketing"))
+  );
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // Mapping tryout_id -> status request ('pending', 'approved', 'rejected', 'used')
   const [requestStatuses, setRequestStatuses] = useState<Record<string, string>>({});
   // Mapping tryout_id -> result_id terbaru
@@ -50,9 +55,11 @@ export default function StudentTryoutList({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isGlobalPremium =
-    subStatus === "active" &&
-    (subTier === "Premium" || subTier === "Platinum" || subTier === "FreePromo") &&
-    (subExpiresAt ? new Date(subExpiresAt) > new Date() : true);
+    isMarketing ||
+    isAdmin ||
+    (subStatus === "active" &&
+      (subTier === "Premium" || subTier === "Platinum" || subTier === "FreePromo") &&
+      (subExpiresAt ? new Date(subExpiresAt) > new Date() : true));
 
   const fetchAccessRequests = async () => {
     try {
@@ -96,6 +103,31 @@ export default function StudentTryoutList({
   useEffect(() => {
     fetchAccessRequests();
     fetchCompletedResults();
+
+    const checkUserProfile = async () => {
+      try {
+        if (!userId) return;
+        const supabase = createClient();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, is_marketing, free_access")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (profile) {
+          if (profile.is_marketing || profile.free_access) {
+            setIsMarketing(true);
+          }
+          if (profile.role === "admin") {
+            setIsAdmin(true);
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memeriksa profil tryout list:", err);
+      }
+    };
+
+    checkUserProfile();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -136,7 +168,7 @@ export default function StudentTryoutList({
           const resultId = completedResults[to.id];
           const hasResult = !!resultId;
 
-          const isPlayable = !isUsed && (to.is_free || isGlobalPremium || isApproved);
+          const isPlayable = isGlobalPremium ? true : (!isUsed && (to.is_free || isApproved));
 
           return (
             <StaggerItem key={to.id}>
@@ -241,7 +273,7 @@ export default function StudentTryoutList({
                           </Button>
                         )}
                       </div>
-                    ) : isUsed ? (
+                    ) : (isUsed && !isGlobalPremium) ? (
                       <Button
                         disabled
                         className="w-full h-10 md:h-11 bg-slate-100 text-slate-400 border border-slate-200 font-bold rounded-lg md:rounded-xl gap-1.5 md:gap-2 cursor-not-allowed text-xs md:text-base"

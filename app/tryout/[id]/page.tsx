@@ -170,7 +170,8 @@ export default function TryoutEnginePage({
           supabase.from("profiles").select("role, is_marketing, free_access").eq("id", user.id).maybeSingle()
         ]);
         const isMarketing = Boolean(profileData?.is_marketing || profileData?.free_access);
-        const isPremium = isMarketing || subsData?.tier === "Premium" || subsData?.tier === "Platinum";
+        const isAdmin = profileData?.role === "admin";
+        const isPremium = isMarketing || isAdmin || subsData?.tier === "Premium" || subsData?.tier === "Platinum";
         setIsPremiumUser(isPremium);
 
         if (!tryoutId.startsWith("latihan-")) {
@@ -182,7 +183,7 @@ export default function TryoutEnginePage({
         }
 
         // Limit Check (hanya untuk try out asli, bukan latihan subtes)
-        if (!tryoutId.startsWith("latihan-") && !isMarketing) {
+        if (!tryoutId.startsWith("latihan-") && !isMarketing && !isAdmin) {
           const { data: resultsData } = await supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId);
 
           const attempts = resultsData?.length || 0;

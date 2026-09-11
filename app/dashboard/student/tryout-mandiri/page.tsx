@@ -59,7 +59,9 @@ export default async function TryoutMandiriPage() {
   ]);
 
   const isMarketing = Boolean(profileData?.is_marketing || profileData?.free_access);
-  const activeSubscription = isMarketing
+  const isAdmin = profileData?.role === "admin";
+  const isPrivileged = isMarketing || isAdmin;
+  const activeSubscription = isPrivileged
     ? { id: "marketing-vip", status: "active", tier: "Platinum", expires_at: "2099-12-31T23:59:59.000Z" }
     : (subData?.[0] || null);
 

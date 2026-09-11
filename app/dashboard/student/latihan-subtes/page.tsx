@@ -123,8 +123,22 @@ export default function LatihanSubtesPage() {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user) {
-          const tier = await getUserTier(user.id);
-          setUserTier(tier);
+          // Check profile directly for marketing / free access or admin
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role, is_marketing, free_access")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const isMarketing = Boolean(profile?.is_marketing || profile?.free_access);
+          const isAdmin = profile?.role === "admin";
+
+          if (isMarketing || isAdmin) {
+            setUserTier("Platinum");
+          } else {
+            const tier = await getUserTier(user.id);
+            setUserTier(tier);
+          }
         }
       } catch (error) {
         console.error("Error loading user tier:", error);

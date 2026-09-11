@@ -21,17 +21,17 @@ export async function getUserActiveSubscription() {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.is_marketing || profile?.free_access) {
+  if (profile?.is_marketing || profile?.free_access || profile?.role === 'admin') {
     return {
       success: true,
       data: {
         id: 'marketing-vip-bypass',
-        user_name: user.user_metadata?.full_name || 'Marketing Team',
+        user_name: user.user_metadata?.full_name || (profile?.role === 'admin' ? 'Admin UpdatePTN' : 'Marketing Team'),
         user_email: user.email,
         tier: 'Platinum',
         status: 'active',
         expires_at: '2099-12-31T23:59:59.000Z',
-        price_paid: 'Rp 0 (Marketing Pass)',
+        price_paid: 'Rp 0 (VIP Pass)',
       },
       error: null,
     };
@@ -74,17 +74,17 @@ export async function getUserSubscription(userId: string) {
     .eq('id', user.id)
     .maybeSingle();
 
-  if (profile?.is_marketing || profile?.free_access) {
+  if (profile?.is_marketing || profile?.free_access || profile?.role === 'admin') {
     return {
       success: true,
       data: {
         id: 'marketing-vip-bypass',
-        user_name: user.user_metadata?.full_name || 'Marketing Team',
+        user_name: user.user_metadata?.full_name || (profile?.role === 'admin' ? 'Admin UpdatePTN' : 'Marketing Team'),
         user_email: user.email,
         tier: 'Platinum',
         status: 'active',
         expires_at: '2099-12-31T23:59:59.000Z',
-        price_paid: 'Rp 0 (Marketing Pass)',
+        price_paid: 'Rp 0 (VIP Pass)',
       },
       error: null,
     };
@@ -225,7 +225,7 @@ export async function getUserTier(userId: string): Promise<"Basic" | "Premium" |
       .eq('id', user.id)
       .maybeSingle();
 
-    if (profile?.is_marketing || profile?.free_access) {
+    if (profile?.is_marketing || profile?.free_access || profile?.role === 'admin') {
       return "Platinum"; // Gives access to ALL bimbel & premium features
     }
     
@@ -306,11 +306,11 @@ export async function hasFeatureAccess(
       .eq('id', user.id)
       .maybeSingle();
 
-    if (profile?.is_marketing || profile?.free_access) {
+    if (profile?.is_marketing || profile?.free_access || profile?.role === 'admin') {
       return {
         hasAccess: true,
-        tier: "Platinum (Marketing Pass)",
-        message: "Akses Penuh Tim Marketing (Bimbel & Fasilitas Gratis)"
+        tier: "Platinum (VIP Pass)",
+        message: profile?.role === 'admin' ? "Akses Penuh Akun Admin" : "Akses Penuh Tim Marketing (Bimbel & Fasilitas Gratis)"
       };
     }
     

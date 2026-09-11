@@ -79,15 +79,21 @@ export default async function StudentDashboardPage() {
     
     supabase
       .from("profiles")
-      .select("asal_sekolah, target_ptn, target_prodi, target_ptn_2, target_prodi_2")
+      .select("asal_sekolah, target_ptn, target_prodi, target_ptn_2, target_prodi_2, role, is_marketing, free_access")
       .eq("id", user.id)
       .single()
   ]);
 
   // 3. Process results
+  const isMarketing = Boolean(profileData?.is_marketing || profileData?.free_access);
+  const isAdmin = profileData?.role === "admin";
+  const isPrivileged = isMarketing || isAdmin;
+
   const userResultsCount = resultsData?.length || 0;
   const lastResult = resultsData?.[0] || null;
-  const activeSubscription = subData?.[0] || null;
+  const activeSubscription = isPrivileged
+    ? { id: "marketing-vip", status: "active", tier: "Platinum", expires_at: "2099-12-31T23:59:59.000Z" }
+    : (subData?.[0] || null);
   const hasPendingPayments = (pendingPayments?.length || 0) > 0;
   const pendingPaymentCount = pendingPayments?.length || 0;
 
@@ -133,8 +139,8 @@ export default async function StudentDashboardPage() {
               )}
             </div>
 
-            {/* Cek Peluang Buttons - Show based on subscription */}
-            {activeSubscription && isPremiumTier(activeSubscription.tier) ? (
+            {/* Cek Peluang Buttons - Show based on subscription / marketing status */}
+            {isPrivileged || (activeSubscription && isPremiumTier(activeSubscription.tier)) ? (
               <div className="grid grid-cols-2 gap-2">
                 <Link href="/dashboard/student/cek-peluang" className="w-full">
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg h-9 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
@@ -142,7 +148,7 @@ export default async function StudentDashboardPage() {
                     <span>Cek Peluang SNBT</span>
                   </Button>
                 </Link>
-                <Link href="/dashboard/student/cek-peluang?type=snbp" className="w-full">
+                <Link href="/dashboard/student/cek-peluang-snbp" className="w-full">
                   <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg h-9 md:h-10 gap-2 text-xs md:text-sm touch-manipulation">
                     <Target className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span>Cek Peluang SNBP</span>
@@ -299,14 +305,22 @@ export default async function StudentDashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs md:text-sm font-bold text-green-900 capitalize">
-                      Paket {activeSubscription.tier}
+                      {isMarketing
+                        ? "Paket Marketing VIP Pass"
+                        : isAdmin
+                        ? "Paket Akses Admin"
+                        : `Paket ${activeSubscription.tier}`}
                     </p>
                     <p className="text-[10px] md:text-xs text-green-700">
-                      Aktif hingga {new Date(activeSubscription.expires_at).toLocaleDateString('id-ID', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
-                      })}
+                      {isMarketing
+                        ? "Akses penuh gratis fitur latihan, try out, dan cek peluang"
+                        : isAdmin
+                        ? "Akses penuh sistem admin dan pengujian"
+                        : `Aktif hingga ${new Date(activeSubscription.expires_at).toLocaleDateString('id-ID', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric' 
+                          })}`}
                     </p>
                   </div>
                 </div>
