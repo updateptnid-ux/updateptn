@@ -1,8 +1,10 @@
 import { MetadataRoute } from 'next';
-import { getPublishedArticles } from '@/actions/articles';
+import { createPublicClient } from '@/lib/supabase/public';
 
+// Force dynamic agar tidak di-render statis saat build,
+// sekaligus menghindari error "Dynamic server usage: cookies()"
 export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // Revalidate every hour
+export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://updateptn.com';
@@ -47,12 +49,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic article pages
+  // Dynamic article pages — query langsung tanpa melalui 'use server' actions
+  // agar tidak ada cookies() yang ikut ter-import saat build.
   let articlePages: MetadataRoute.Sitemap = [];
   try {
-    const result = await getPublishedArticles({ limit: 100 });
-    if (result.success && result.data) {
-      articlePages = result.data.articles.map((article) => ({
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from('articles')
+      .select('slug, updated_at, is_featured')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(100);
+
+    if (data && data.length > 0) {
+      articlePages = data.map((article) => ({
         url: `${baseUrl}/articles/${article.slug}`,
         lastModified: new Date(article.updated_at),
         changeFrequency: 'weekly' as const,
