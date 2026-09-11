@@ -41,6 +41,16 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // Helper for cookie-preserving redirect
+  const redirectWithCookies = (url: URL | string) => {
+    const targetUrl = typeof url === "string" ? new URL(url, request.url) : url;
+    const res = NextResponse.redirect(targetUrl);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      res.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return res;
+  };
+
   // Refresh session
   const {
     data: { user },
@@ -51,26 +61,99 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Admin route protection - Only check if user is logged in
-  // Role verification is done in layout.tsx with service role client
+  // Redirect if already logged in
+  if (pathname === "/login" || pathname === "/register") {
+    if (user) {
+      return redirectWithCookies("/dashboard/student");
+    }
+    return supabaseResponse;
+  }
+
+  // If user is logged in, query role & marketing status
+  let userRole = "student";
+  let isMarketing = false;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_marketing, free_access")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role) {
+      userRole = profile.role.toLowerCase();
+    }
+    isMarketing = Boolean(profile?.is_marketing || profile?.free_access);
+  }
+
+  const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+  const isSuperAdmin = Boolean(user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase()));
+  const isAdmin = isSuperAdmin || userRole === "admin";
+  const isKolOrBa = userRole === "kol" || userRole === "ba";
+
+  // 1. Admin route protection (/hq-core-updateptn)
   if (pathname.startsWith("/hq-core-updateptn")) {
     if (pathname === "/hq-core-updateptn/login") {
-      if (user) {
-        return NextResponse.redirect(new URL("/hq-core-updateptn", request.url));
+      if (isAdmin) {
+        return redirectWithCookies("/hq-core-updateptn");
       }
       return supabaseResponse;
     }
 
-    // Just check if user is logged in
-    // Layout will verify admin role from database
+    // Must be logged in
     if (!user) {
-      return NextResponse.redirect(new URL("/hq-core-updateptn/login", request.url));
+      return redirectWithCookies("/hq-core-updateptn/login");
     }
 
-    // Let layout.tsx handle role verification
+    // Must have admin role
+    if (!isAdmin) {
+      return redirectWithCookies("/dashboard/student?error=unauthorized");
+    }
+
+    // Let layout.tsx handle deeper admin layout verification
   }
 
-  // Student & Protected Route Protection
+  // 2. Mentor route protection (/mentor)
+  if (pathname.startsWith("/mentor")) {
+    if (!user) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("redirect", pathname);
+      return redirectWithCookies(url);
+    }
+
+    // KOL & BA blocked from internal mentor portal
+    if (isKolOrBa) {
+      return redirectWithCookies("/dashboard/student?error=restricted_role");
+    }
+  }
+
+  // 3. Strict Restrictions for KOL & BA:
+  // Akun role KOL atau BA HANYA bisa mengakses halaman fasilitas/tools platform.
+  // DIBLOKIR KETAT dari transaksi / pembayaran serta admin & internal.
+  if (isKolOrBa) {
+    const isTransactionRoute =
+      pathname.startsWith("/pricing") ||
+      pathname.startsWith("/payment") ||
+      pathname.startsWith("/dashboard/student/beli-paket") ||
+      pathname.startsWith("/dashboard/student/payments");
+
+    const isInternalRoute =
+      pathname.startsWith("/dashboard/affiliate") ||
+      pathname.startsWith("/hq-core-updateptn") ||
+      pathname.startsWith("/mentor");
+
+    if (isTransactionRoute || isInternalRoute) {
+      const redirectUrl = new URL("/dashboard/student", request.url);
+      redirectUrl.searchParams.set("error", "restricted_role");
+      redirectUrl.searchParams.set(
+        "msg",
+        "Akun KOL/BA memiliki akses langsung ke fasilitas tools dan dibatasi dari transaksi pembayaran."
+      );
+      return redirectWithCookies(redirectUrl);
+    }
+  }
+
+  // 4. Student & Protected Route Protection
   if (
     pathname.startsWith("/direktori-prodi") ||
     pathname.startsWith("/dashboard") ||
@@ -79,14 +162,7 @@ export async function updateSession(request: NextRequest) {
     if (!user) {
       const url = new URL("/login", request.url);
       url.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Redirect if already logged in
-  if (pathname === "/login" || pathname === "/register") {
-    if (user) {
-      return NextResponse.redirect(new URL("/dashboard/student", request.url));
+      return redirectWithCookies(url);
     }
   }
 

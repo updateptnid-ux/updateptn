@@ -42,6 +42,7 @@ import {
   Plus,
   Loader2,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -51,6 +52,8 @@ export interface UserRecord {
   email?: string | null;
   target_ptn?: string | null;
   role?: string | null;
+  is_marketing?: boolean | null;
+  free_access?: boolean | null;
   created_at: string;
 }
 
@@ -65,7 +68,7 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
   const [total, setTotal] = useState(totalCount);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "student" | "admin">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "student" | "admin" | "kol" | "ba" | "marketing">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -130,7 +133,11 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
         (u.target_ptn?.toLowerCase() || "").includes(searchQuery.toLowerCase());
 
       const matchesRole =
-        roleFilter === "all" ? true : u.role === roleFilter;
+        roleFilter === "all"
+          ? true
+          : roleFilter === "marketing"
+          ? Boolean(u.is_marketing || u.free_access)
+          : u.role === roleFilter;
 
       return matchesSearch && matchesRole;
     });
@@ -164,8 +171,54 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
       .toUpperCase();
   };
 
-  const totalStudents = users.filter((u) => u.role !== "admin").length;
+  const totalStudents = users.filter((u) => u.role === "student" && !u.is_marketing).length;
+  const totalMarketing = users.filter((u) => u.is_marketing || u.free_access).length;
+  const totalKols = users.filter((u) => u.role === "kol").length;
+  const totalBas = users.filter((u) => u.role === "ba").length;
   const totalAdmins = users.filter((u) => u.role === "admin").length;
+
+  // Handle role or marketing toggle
+  const handleChangeUserRole = async (targetUser: UserRecord, newRole: string, newIsMarketing?: boolean) => {
+    const isMarketingToggle = typeof newIsMarketing === "boolean";
+    const promptText = isMarketingToggle
+      ? `Ubah status tim marketing untuk ${targetUser.full_name || targetUser.email} menjadi ${newIsMarketing ? "AKTIF (Free Bimbel Pass)" : "NONAKTIF"}?`
+      : `Ubah role ${targetUser.full_name || targetUser.email} menjadi ${newRole.toUpperCase()}?`;
+
+    if (!confirm(promptText)) return;
+
+    try {
+      const payload: any = {
+        userId: targetUser.id,
+        newRole,
+      };
+      if (isMarketingToggle) {
+        payload.isMarketing = newIsMarketing;
+      }
+
+      const response = await fetch('/hq-core-updateptn/api/change-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change role');
+      }
+
+      setUsers(users.map((u) => u.id === targetUser.id ? {
+        ...u,
+        role: newRole,
+        ...(isMarketingToggle ? { is_marketing: newIsMarketing } : {})
+      } : u));
+
+      alert(`✅ Berhasil diupdate!`);
+      router.refresh();
+    } catch (error: any) {
+      alert(`❌ Error: ${error.message}`);
+      console.error('Change role error:', error);
+    }
+  };
 
   // Handle delete user
   const handleDeleteUser = async () => {
@@ -296,7 +349,7 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
 
           {/* Filter Tabs & Refresh */}
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            <div className="flex flex-wrap items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 gap-0.5">
               <button
                 onClick={() => { setRoleFilter("all"); setCurrentPage(1); }}
                 className={`px-3 py-1 rounded-lg transition-colors ${roleFilter === "all" ? "bg-white text-blue-600 font-bold shadow-2xs" : "hover:text-slate-900"}`}
@@ -308,6 +361,24 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
                 className={`px-3 py-1 rounded-lg transition-colors ${roleFilter === "student" ? "bg-white text-blue-600 font-bold shadow-2xs" : "hover:text-slate-900"}`}
               >
                 Siswa ({totalStudents})
+              </button>
+              <button
+                onClick={() => { setRoleFilter("marketing"); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-lg transition-colors ${roleFilter === "marketing" ? "bg-white text-amber-600 font-bold shadow-2xs" : "hover:text-slate-900"}`}
+              >
+                Marketing ({totalMarketing})
+              </button>
+              <button
+                onClick={() => { setRoleFilter("kol"); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-lg transition-colors ${roleFilter === "kol" ? "bg-white text-purple-600 font-bold shadow-2xs" : "hover:text-slate-900"}`}
+              >
+                KOL ({totalKols})
+              </button>
+              <button
+                onClick={() => { setRoleFilter("ba"); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-lg transition-colors ${roleFilter === "ba" ? "bg-white text-indigo-600 font-bold shadow-2xs" : "hover:text-slate-900"}`}
+              >
+                BA ({totalBas})
               </button>
               <button
                 onClick={() => { setRoleFilter("admin"); setCurrentPage(1); }}
@@ -389,16 +460,32 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
 
                     {/* Role Badge */}
                     <TableCell>
-                      {user.role === "admin" ? (
-                        <Badge className="bg-blue-600 text-white font-bold text-[11px] px-2.5 py-0.5 gap-1">
-                          <ShieldCheck className="h-3 w-3" />
-                          <span>ADMIN HQ</span>
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px] px-2.5 py-0.5">
-                          STUDENT
-                        </Badge>
-                      )}
+                      <div className="flex flex-col gap-1 items-start">
+                        {user.role === "admin" ? (
+                          <Badge className="bg-blue-600 text-white font-bold text-[11px] px-2.5 py-0.5 gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            <span>ADMIN HQ</span>
+                          </Badge>
+                        ) : user.role === "kol" ? (
+                          <Badge className="bg-purple-600 text-white font-bold text-[11px] px-2.5 py-0.5 gap-1">
+                            <span>KOL</span>
+                          </Badge>
+                        ) : user.role === "ba" ? (
+                          <Badge className="bg-indigo-600 text-white font-bold text-[11px] px-2.5 py-0.5 gap-1">
+                            <span>BA</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px] px-2.5 py-0.5">
+                            STUDENT
+                          </Badge>
+                        )}
+                        {(user.is_marketing || user.free_access) && (
+                          <Badge className="bg-amber-500 text-white font-bold text-[10px] px-2 py-0.5 gap-1">
+                            <Sparkles className="h-2.5 w-2.5" />
+                            <span>MARKETING FREE</span>
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
 
                     {/* Tanggal Daftar */}
@@ -414,53 +501,71 @@ export default function UsersDataTable({ initialUsers, totalCount }: UsersDataTa
                             <MoreHorizontal className="h-4 w-4 text-slate-600" />
                           </Button>
                         } />
-                        <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
+                        <DropdownMenuContent align="end" className="w-56 bg-white border border-slate-200 rounded-xl p-1 shadow-md">
                           <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                             Opsi Pengguna
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => alert(`Detail Pengguna: ${user.full_name || user.email}`)}
+                            onClick={() => alert(`Detail Pengguna: ${user.full_name || user.email}\nRole: ${user.role || 'student'}\nMarketing: ${user.is_marketing ? 'Ya (Bypass Bimbel)' : 'Tidak'}`)}
                             className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
                           >
                             <Eye className="h-3.5 w-3.5 text-blue-600" />
                             <span>Lihat Detail Profile</span>
                           </DropdownMenuItem>
+
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Ubah Hak Akses
+                          </DropdownMenuLabel>
+
+                          {user.role !== "student" && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeUserRole(user, "student")}
+                              className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>Set Role: Student (Siswa)</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {user.role !== "kol" && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeUserRole(user, "kol")}
+                              className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-purple-600" />
+                              <span>Set Role: KOL (Akses Tools)</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {user.role !== "ba" && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeUserRole(user, "ba")}
+                              className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-indigo-600" />
+                              <span>Set Role: BA (Akses Tools)</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {user.role !== "admin" && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeUserRole(user, "admin")}
+                              className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Set Role: Admin HQ</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={async () => {
-                              if (!confirm(`Ubah role ${user.full_name || user.email} menjadi ${user.role === "admin" ? "STUDENT" : "ADMIN"}?`)) return;
-                              
-                              try {
-                                const response = await fetch('/hq-core-updateptn/api/change-role', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ 
-                                    userId: user.id,
-                                    newRole: user.role === "admin" ? "student" : "admin"
-                                  })
-                                });
-
-                                const data = await response.json();
-
-                                if (!response.ok) {
-                                  throw new Error(data.error || 'Failed to change role');
-                                }
-
-                                // Update local state
-                                const newRole = user.role === "admin" ? "student" : "admin";
-                                setUsers(users.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
-                                
-                                alert(`✅ Role berhasil diubah menjadi ${newRole.toUpperCase()}`);
-                                router.refresh();
-                              } catch (error: any) {
-                                alert(`❌ Error: ${error.message}`);
-                                console.error('Change role error:', error);
-                              }
-                            }}
-                            className="text-xs font-semibold text-slate-700 cursor-pointer rounded-lg gap-2"
+                            onClick={() => handleChangeUserRole(user, user.role || "student", !user.is_marketing)}
+                            className="text-xs font-semibold text-amber-700 cursor-pointer rounded-lg gap-2 focus:bg-amber-50"
                           >
-                            <Edit className="h-3.5 w-3.5 text-indigo-600" />
-                            <span>Ubah Role ({user.role === "admin" ? "Ke Student" : "Ke Admin"})</span>
+                            <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                            <span>{user.is_marketing ? "Hapus Flag Marketing" : "Aktifkan Tim Marketing (Bimbel Gratis)"}</span>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

@@ -29,19 +29,22 @@ export async function POST(request: NextRequest) {
 
     // Get request body
     const body = await request.json();
-    const { userId, newRole } = body;
+    const { userId, newRole, isMarketing, freeAccess } = body;
 
     if (!userId || !newRole) {
       return NextResponse.json({ error: "userId and newRole are required" }, { status: 400 });
     }
 
-    if (!["student", "admin"].includes(newRole)) {
-      return NextResponse.json({ error: "Invalid role. Must be 'student' or 'admin'" }, { status: 400 });
+    const ALLOWED_ROLES = ["student", "admin", "kol", "ba"];
+    if (!ALLOWED_ROLES.includes(newRole)) {
+      return NextResponse.json({
+        error: `Invalid role. Must be one of: ${ALLOWED_ROLES.join(", ")}`,
+      }, { status: 400 });
     }
 
     // Prevent self-demotion
-    if (user.id === userId && newRole === "student") {
-      return NextResponse.json({ error: "Tidak dapat menurunkan role admin sendiri" }, { status: 400 });
+    if (user.id === userId && newRole !== "admin") {
+      return NextResponse.json({ error: "Tidak dapat mengubah role admin sendiri" }, { status: 400 });
     }
 
     // Use service role to update
@@ -56,13 +59,24 @@ export async function POST(request: NextRequest) {
       { auth: { persistSession: false } }
     );
 
+    // Build update object
+    const updateData: Record<string, any> = {
+      role: newRole,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (typeof isMarketing === "boolean") {
+      updateData.is_marketing = isMarketing;
+    }
+
+    if (typeof freeAccess === "boolean") {
+      updateData.free_access = freeAccess;
+    }
+
     // Update role in profiles table
     const { error: updateError } = await serviceClient
       .from("profiles")
-      .update({ 
-        role: newRole, 
-        updated_at: new Date().toISOString() 
-      })
+      .update(updateData)
       .eq("id", userId);
 
     if (updateError) {
@@ -71,7 +85,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Role berhasil diubah menjadi ${newRole}` 
+      message: `Role berhasil diubah menjadi ${newRole}`,
+      data: updateData,
     });
 
   } catch (error: any) {

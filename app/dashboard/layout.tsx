@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +33,10 @@ import {
 interface UserRole {
   isAdmin: boolean;
   isMentor: boolean;
+  isKol: boolean;
+  isBa: boolean;
+  isMarketing: boolean;
+  rawRole: string;
 }
 
 export default function DashboardLayout({
@@ -40,7 +44,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isMentor: false });
+  const [userRole, setUserRole] = useState<UserRole>({
+    isAdmin: false,
+    isMentor: false,
+    isKol: false,
+    isBa: false,
+    isMarketing: false,
+    rawRole: "student",
+  });
   const [isActiveAffiliate, setIsActiveAffiliate] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -85,44 +96,55 @@ export default function DashboardLayout({
         const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
         const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
 
-        // Check if user has admin role in profiles (prioritize this check)
+        // Check user role & flags in profiles
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, is_marketing, free_access")
           .eq("id", user.id)
           .maybeSingle();
         
-        const isAdminRole = profile?.role === "admin";
+        const roleStr = (profile?.role || "student").toLowerCase();
+        const isAdminRole = roleStr === "admin";
+        const isKolRole = roleStr === "kol";
+        const isBaRole = roleStr === "ba";
+        const isMarketingRole = Boolean(profile?.is_marketing || profile?.free_access);
 
-        console.log("🔍 User role check:", {
-          email: user.email,
-          profileRole: profile?.role,
-          isAdminEmail,
-          isAdminRole,
-          finalIsAdmin: isAdminEmail || isAdminRole
-        });
+        // KOL and BA cannot be admin or mentor
+        const finalIsAdmin = (isAdminEmail || isAdminRole) && !isKolRole && !isBaRole;
 
-        // Check if user is in mentors table
-        const { data: mentorRecord } = await supabase
-          .from("mentors")
-          .select("id")
-          .eq("email", user.email!)
-          .eq("status", "active")
-          .maybeSingle();
+        // Check if user is in mentors table (KOL/BA cannot access mentor)
+        let isMentorUser = false;
+        if (!isKolRole && !isBaRole) {
+          const { data: mentorRecord } = await supabase
+            .from("mentors")
+            .select("id")
+            .eq("email", user.email!)
+            .eq("status", "active")
+            .maybeSingle();
+          isMentorUser = !!mentorRecord;
+        }
 
         setUserRole({
-          isAdmin: isAdminEmail || isAdminRole,
-          isMentor: !!mentorRecord,
+          isAdmin: finalIsAdmin,
+          isMentor: isMentorUser,
+          isKol: isKolRole,
+          isBa: isBaRole,
+          isMarketing: isMarketingRole,
+          rawRole: roleStr,
         });
 
-        // Check if user is active affiliate
-        const { data: affiliate } = await supabase
-          .from("affiliates")
-          .select("status")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Check if user is active affiliate (hidden for KOL / BA)
+        if (isKolRole || isBaRole) {
+          setIsActiveAffiliate(false);
+        } else {
+          const { data: affiliate } = await supabase
+            .from("affiliates")
+            .select("status")
+            .eq("user_id", user.id)
+            .maybeSingle();
 
-        setIsActiveAffiliate(affiliate?.status === "active");
+          setIsActiveAffiliate(affiliate?.status === "active");
+        }
       } catch (err) {
         console.error("Error checking user role:", err);
       }
@@ -203,6 +225,14 @@ export default function DashboardLayout({
     },
   ];
 
+  // Filter out transaction/pricing navigation for KOL and BA roles
+  const displayedNavItems = useMemo(() => {
+    if (userRole.isKol || userRole.isBa) {
+      return navItems.filter((item) => !('href' in item && item.href === '/pricing'));
+    }
+    return navItems;
+  }, [userRole.isKol, userRole.isBa]);
+
   return (
     <div className="h-screen overflow-hidden bg-slate-50/70 flex flex-col md:flex-row font-sans">
       {/* Mobile Top Header (Glassmorphic Layer) */}
@@ -248,7 +278,7 @@ export default function DashboardLayout({
             {/* Scrollable Menu */}
             <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <nav className="space-y-1 pb-4">
-                {navItems.map((item) => {
+                {displayedNavItems.map((item) => {
                   // Render divider
                   if ('divider' in item) {
                     return (
@@ -364,7 +394,7 @@ export default function DashboardLayout({
         {/* Scrollable Navigation Links */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
           <nav className="space-y-0.5 pb-4">
-            {navItems.map((item) => {
+            {displayedNavItems.map((item) => {
               // Render divider
               if ('divider' in item) {
                 return (
@@ -408,11 +438,27 @@ export default function DashboardLayout({
         <div className="p-4 space-y-3 border-t border-slate-200/80 shrink-0">
           <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-50/60 border border-slate-200/60">
             <Avatar className="h-8 w-8 border border-slate-200">
-              <AvatarFallback className="bg-blue-600/10 text-blue-600 font-bold text-[10px]">AZ</AvatarFallback>
+              <AvatarFallback className="bg-blue-600/10 text-blue-600 font-bold text-[10px]">
+                {userRole.isKol ? "KOL" : userRole.isBa ? "BA" : userRole.isAdmin ? "HQ" : "AZ"}
+              </AvatarFallback>
             </Avatar>
             <div className="overflow-hidden">
-              <p className="text-[11px] font-bold text-slate-900 truncate">Siswa Pejuang PTN</p>
-              <p className="text-[10px] text-slate-500 truncate">Paket Starter</p>
+              <p className="text-[11px] font-bold text-slate-900 truncate">
+                {userRole.isKol
+                  ? "Partner KOL"
+                  : userRole.isBa
+                  ? "Brand Ambassador"
+                  : userRole.isAdmin
+                  ? "Admin UpdatePTN"
+                  : "Siswa Pejuang PTN"}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {userRole.isKol || userRole.isBa
+                  ? "Akses Khusus Tools"
+                  : userRole.isMarketing
+                  ? "Marketing VIP Pass"
+                  : "Paket Starter"}
+              </p>
             </div>
           </div>
 

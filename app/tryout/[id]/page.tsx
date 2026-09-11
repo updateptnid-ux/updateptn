@@ -110,6 +110,7 @@ export default function TryoutEnginePage({
   // Fetch Questions from Supabase or Fallback JSON
   useEffect(() => {
     async function loadQuestions() {
+      let tryoutInfo: any = null;
       try {
         setLoading(true);
         const supabase = createClient();
@@ -162,18 +163,21 @@ export default function TryoutEnginePage({
           });
         }
 
-        const { data: subsData } = await supabase.from("subscriptions").select("tier").eq("user_id", user.id).single();
-        const isPremium = subsData?.tier === "Premium" || subsData?.tier === "Platinum";
+        const [{ data: subsData }, { data: profileData }] = await Promise.all([
+          supabase.from("subscriptions").select("tier").eq("user_id", user.id).maybeSingle(),
+          supabase.from("profiles").select("role, is_marketing, free_access").eq("id", user.id).maybeSingle()
+        ]);
+        const isMarketing = Boolean(profileData?.is_marketing || profileData?.free_access);
+        const isPremium = isMarketing || subsData?.tier === "Premium" || subsData?.tier === "Platinum";
         setIsPremiumUser(isPremium);
 
-        let tryoutInfo: any = null;
         if (!tryoutId.startsWith("latihan-")) {
           const { data: tInfo } = await supabase.from("tryouts").select("tryout_type, mandiri_category").eq("id", tryoutId).maybeSingle();
           tryoutInfo = tInfo;
         }
 
         // Limit Check (hanya untuk try out asli, bukan latihan subtes)
-        if (!tryoutId.startsWith("latihan-")) {
+        if (!tryoutId.startsWith("latihan-") && !isMarketing) {
           const { data: resultsData } = await supabase.from("results").select("id").eq("user_id", user.id).eq("tryout_id", tryoutId);
 
           const attempts = resultsData?.length || 0;

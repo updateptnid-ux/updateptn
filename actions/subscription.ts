@@ -13,6 +13,29 @@ export async function getUserActiveSubscription() {
   if (!user) {
     return { success: false, error: 'Unauthorized', data: null };
   }
+
+  // 1. Check if user is marketing team or has free_access
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_marketing, free_access')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.is_marketing || profile?.free_access) {
+    return {
+      success: true,
+      data: {
+        id: 'marketing-vip-bypass',
+        user_name: user.user_metadata?.full_name || 'Marketing Team',
+        user_email: user.email,
+        tier: 'Platinum',
+        status: 'active',
+        expires_at: '2099-12-31T23:59:59.000Z',
+        price_paid: 'Rp 0 (Marketing Pass)',
+      },
+      error: null,
+    };
+  }
   
   const { data, error } = await supabase
     .from('subscriptions')
@@ -42,6 +65,29 @@ export async function getUserSubscription(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== userId) {
     return { success: false, error: 'Unauthorized', data: null };
+  }
+
+  // 1. Check if user is marketing team or has free_access
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_marketing, free_access')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.is_marketing || profile?.free_access) {
+    return {
+      success: true,
+      data: {
+        id: 'marketing-vip-bypass',
+        user_name: user.user_metadata?.full_name || 'Marketing Team',
+        user_email: user.email,
+        tier: 'Platinum',
+        status: 'active',
+        expires_at: '2099-12-31T23:59:59.000Z',
+        price_paid: 'Rp 0 (Marketing Pass)',
+      },
+      error: null,
+    };
   }
   
   const { data, error } = await supabase
@@ -171,6 +217,17 @@ export async function getUserTier(userId: string): Promise<"Basic" | "Premium" |
     if (!user || user.id !== userId) {
       return "Basic";
     }
+
+    // Check if user is marketing team or has free_access
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_marketing, free_access')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.is_marketing || profile?.free_access) {
+      return "Platinum"; // Gives access to ALL bimbel & premium features
+    }
     
     // Get user's active subscription
     const { data: subscription, error } = await supabase
@@ -239,6 +296,21 @@ export async function hasFeatureAccess(
         hasAccess: false, 
         tier: null, 
         message: "User tidak terautentikasi" 
+      };
+    }
+
+    // Check if user is marketing team or has free_access
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_marketing, free_access')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.is_marketing || profile?.free_access) {
+      return {
+        hasAccess: true,
+        tier: "Platinum (Marketing Pass)",
+        message: "Akses Penuh Tim Marketing (Bimbel & Fasilitas Gratis)"
       };
     }
     

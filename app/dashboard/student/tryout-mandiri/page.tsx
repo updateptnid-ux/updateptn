@@ -31,10 +31,11 @@ export default async function TryoutMandiriPage() {
     );
   }
 
-  // 2. Fetch Mandiri tryouts + subscription
+  // 2. Fetch Mandiri tryouts + subscription + marketing flag
   const [
     { data: tryoutsData },
-    { data: subData }
+    { data: subData },
+    { data: profileData }
   ] = await Promise.all([
     supabase
       .from("tryouts")
@@ -48,11 +49,21 @@ export default async function TryoutMandiriPage() {
       .eq("user_id", user.id)
       .gt("expires_at", new Date().toISOString())
       .order("expires_at", { ascending: false })
-      .limit(1)
+      .limit(1),
+
+    supabase
+      .from("profiles")
+      .select("role, is_marketing, free_access")
+      .eq("id", user.id)
+      .maybeSingle()
   ]);
 
+  const isMarketing = Boolean(profileData?.is_marketing || profileData?.free_access);
+  const activeSubscription = isMarketing
+    ? { id: "marketing-vip", status: "active", tier: "Platinum", expires_at: "2099-12-31T23:59:59.000Z" }
+    : (subData?.[0] || null);
+
   const activeTryouts = tryoutsData && tryoutsData.length > 0 ? tryoutsData : [];
-  const activeSubscription = subData?.[0] || null;
 
   return (
     <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">

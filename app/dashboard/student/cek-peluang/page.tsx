@@ -140,11 +140,15 @@ export default function CekPeluangPage() {
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("role, subscription_tier, subscription_status, is_premium")
+          .select("role, subscription_tier, subscription_status, is_premium, is_marketing, free_access")
           .eq("id", user.id)
           .maybeSingle();
 
-        const isAdminUser = profileData?.role === "admin";
+        const role = profileData?.role?.toLowerCase() || "student";
+        const isAdminUser = role === "admin";
+        const isKolOrBa = role === "kol" || role === "ba";
+        const isMarketingUser = Boolean(profileData?.is_marketing || profileData?.free_access);
+
         const effectiveTier = subscription?.tier || (profileData?.subscription_status === 'active' || profileData?.is_premium ? profileData?.subscription_tier : null);
         const featureType = predictionType === "snbp" ? "snbp" : "snbt";
         const accessCheck = hasFeatureAccess(subscription || { tier: effectiveTier, status: 'active', expires_at: new Date(Date.now() + 86400000).toISOString() }, featureType);
@@ -154,11 +158,11 @@ export default function CekPeluangPage() {
         const planParam = searchParams.get("plan") || searchParams.get("package");
         const detectedQuota = getCekPeluangQuota(effectiveTier) ?? getCekPeluangQuota(planParam);
         
-        if (isAdminUser || accessCheck.hasAccess || (detectedQuota !== null)) {
+        if (isAdminUser || isKolOrBa || isMarketingUser || accessCheck.hasAccess || (detectedQuota !== null)) {
           setHasAccess(true);
-          setUserTier(isAdminUser ? "Admin" : tier);
+          setUserTier(isAdminUser ? "Admin" : isKolOrBa ? "Partner" : isMarketingUser ? "Marketing VIP" : tier);
 
-          if (!isAdminUser && detectedQuota !== null) {
+          if (!isAdminUser && !isKolOrBa && !isMarketingUser && detectedQuota !== null) {
             setTotalQuota(detectedQuota);
             const baseKey = `cek_peluang_quota_${user.email || user.id}_${detectedQuota}x`;
             const activeSubId = subscription?.id || profileData?.subscription_tier || "default";

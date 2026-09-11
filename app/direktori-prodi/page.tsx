@@ -169,18 +169,21 @@ export default function DirektoriProdiPage() {
 
       const tier = subscription?.tier || "Basic";
 
-      // Check if admin
+      // Check if admin, KOL, BA, or Marketing
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, directory_search_count")
+        .select("role, directory_search_count, is_marketing, free_access")
         .eq("id", user.id)
         .maybeSingle();
 
-      const isAdminUser = profile?.role === "admin";
+      const role = profile?.role?.toLowerCase() || "student";
+      const isAdminUser = role === "admin";
+      const isKolOrBa = role === "kol" || role === "ba";
+      const isMarketing = Boolean(profile?.is_marketing || profile?.free_access);
       const count = profile?.directory_search_count ?? 0;
 
-      setIsSubscribed(subscribed || isAdminUser);
-      setUserTier(tier);
+      setIsSubscribed(subscribed || isAdminUser || isKolOrBa || isMarketing);
+      setUserTier(isAdminUser ? "Admin" : isKolOrBa ? "Partner" : isMarketing ? "Marketing VIP" : tier);
       setSearchCount(count);
     }
     

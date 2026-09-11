@@ -145,11 +145,15 @@ export default function CekPeluangSNBPPage() {
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("role, subscription_tier, subscription_status, is_premium")
+          .select("role, subscription_tier, subscription_status, is_premium, is_marketing, free_access")
           .eq("id", user.id)
           .maybeSingle();
 
-        const isAdmin = profileData?.role === "admin";
+        const role = profileData?.role?.toLowerCase() || "student";
+        const isAdmin = role === "admin";
+        const isKolOrBa = role === "kol" || role === "ba";
+        const isMarketingUser = Boolean(profileData?.is_marketing || profileData?.free_access);
+
         const effectiveTier = subscription?.tier || (profileData?.subscription_status === 'active' || profileData?.is_premium ? profileData?.subscription_tier : null);
         const accessCheck = hasFeatureAccess(subscription || { tier: effectiveTier, status: 'active', expires_at: new Date(Date.now() + 86400000).toISOString() }, "snbp");
         
@@ -158,10 +162,10 @@ export default function CekPeluangSNBPPage() {
         const planParam = searchParams.get("plan") || searchParams.get("package");
         const detectedQuota = getCekPeluangQuota(effectiveTier) ?? getCekPeluangQuota(planParam);
 
-        if (isAdmin || accessCheck.hasAccess || (detectedQuota !== null)) {
+        if (isAdmin || isKolOrBa || isMarketingUser || accessCheck.hasAccess || (detectedQuota !== null)) {
           setHasAccess(true);
 
-          if (!isAdmin && detectedQuota !== null) {
+          if (!isAdmin && !isKolOrBa && !isMarketingUser && detectedQuota !== null) {
             setTotalQuota(detectedQuota);
             const baseKey = `cek_peluang_quota_${user.email || user.id}_${detectedQuota}x`;
             const activeSubId = subscription?.id || profileData?.subscription_tier || "default";
