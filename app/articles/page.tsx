@@ -226,7 +226,7 @@ export default async function ArticlesPage() {
                       <Badge variant="outline" className="text-[10px] md:text-xs">
                         {article.category}
                       </Badge>
-                      {article.tags && article.tags.slice(0, 2).map((tag) => (
+                      {Array.isArray(article.tags) && article.tags.slice(0, 2).map((tag) => (
                         <Badge key={tag} variant="secondary" className="text-[10px] md:text-xs">
                           {tag}
                         </Badge>

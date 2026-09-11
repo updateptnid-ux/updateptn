@@ -51,6 +51,12 @@ export async function getPublishedArticles(params?: {
 }): Promise<ActionResult<{ articles: Article[]; total: number }>> {
   try {
     const supabase = getPublicSupabaseClient();
+    if (!supabase) {
+      return {
+        success: true,
+        data: { articles: [], total: 0 },
+      };
+    }
     
     let query = supabase
       .from('articles')
@@ -85,31 +91,44 @@ export async function getPublishedArticles(params?: {
 
     if (error) {
       console.error('Error fetching articles:', error);
-      
-      // If table doesn't exist, return empty array instead of error
-      if (error.code === '42P01' || error.message.includes('relation') || error.message.includes('does not exist')) {
-        return {
-          success: true,
-          data: {
-            articles: [],
-            total: 0,
-          },
-        };
-      }
-      
-      return { success: false, error: 'Failed to fetch articles' };
+      return {
+        success: true,
+        data: {
+          articles: [],
+          total: 0,
+        },
+      };
     }
+
+    const normalizedArticles = (data || []).map((art: any) => {
+      let normalizedTags: string[] = [];
+      if (Array.isArray(art.tags)) {
+        normalizedTags = art.tags;
+      } else if (typeof art.tags === 'string' && art.tags.trim()) {
+        normalizedTags = art.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
+      return {
+        ...art,
+        tags: normalizedTags,
+        views_count: art.views_count || 0,
+        content: art.content || '',
+        excerpt: art.excerpt || '',
+        title: art.title || 'Untitled',
+        category: art.category || 'Umum',
+        read_time: art.read_time || 5,
+        is_featured: Boolean(art.is_featured),
+      };
+    });
 
     return {
       success: true,
       data: {
-        articles: data as Article[],
-        total: count || 0,
+        articles: normalizedArticles as Article[],
+        total: count || normalizedArticles.length,
       },
     };
   } catch (error) {
     console.error('Error in getPublishedArticles:', error);
-    // Return empty instead of crash
     return {
       success: true,
       data: {
@@ -134,19 +153,42 @@ export async function getArticleBySlug(slug: string): Promise<ActionResult<Artic
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
     const supabase = getPublicSupabaseClient();
+    if (!supabase) {
+      return { success: false, error: 'Database client unavailable' };
+    }
     
     const { data, error } = await supabase
       .from('articles')
       .select('*')
       .eq('slug', cleanSlug)
       .eq('status', 'published')
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return { success: false, error: 'Article not found' };
     }
 
-    return { success: true, data: data as Article };
+    let normalizedTags: string[] = [];
+    if (Array.isArray(data.tags)) {
+      normalizedTags = data.tags;
+    } else if (typeof data.tags === 'string' && data.tags.trim()) {
+      normalizedTags = data.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+
+    return {
+      success: true,
+      data: {
+        ...data,
+        tags: normalizedTags,
+        views_count: data.views_count || 0,
+        content: data.content || '',
+        excerpt: data.excerpt || '',
+        title: data.title || 'Untitled',
+        category: data.category || 'Umum',
+        read_time: data.read_time || 5,
+        is_featured: Boolean(data.is_featured),
+      } as Article,
+    };
   } catch (error) {
     console.error('Error in getArticleBySlug:', error);
     return { success: false, error: 'Internal server error' };

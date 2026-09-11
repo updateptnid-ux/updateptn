@@ -70,6 +70,9 @@ export default function LandingPage() {
             <Link href="#paket" className="hover:text-blue-600 transition-colors">
               Paket Belajar
             </Link>
+            <Link href="/articles" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+              <span>Tips Jago &amp; Artikel</span>
+            </Link>
             <Link href="#faq" className="hover:text-blue-600 transition-colors">
               FAQ
             </Link>
@@ -136,6 +139,14 @@ export default function LandingPage() {
                     Paket Belajar
                   </Link>
                   <Link
+                    href="/articles"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-base font-semibold text-blue-600 hover:text-blue-700 py-1 flex items-center gap-1.5"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span>Tips Jago &amp; Artikel</span>
+                  </Link>
+                  <Link
                     href="#faq"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="text-base font-semibold text-slate-800 hover:text-blue-600 py-1"
@@ -192,9 +203,14 @@ export default function LandingPage() {
                       </Button>
                     </MotionButton>
                   </Link>
+                  <Link href="/articles">
+                    <Button size="lg" variant="outline" className="h-11 px-7 text-sm font-bold border border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100/80 rounded-lg w-full sm:w-auto gap-2">
+                      <BookOpen className="h-4 w-4 text-blue-600" />
+                      <span>Tips Jago &amp; Artikel</span>
+                    </Button>
+                  </Link>
                   <Link href="#faq">
-                    <Button size="lg" variant="outline" className="h-11 px-7 text-sm font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg w-full sm:w-auto">
-                      <Search className="h-4 w-4 mr-2" />
+                    <Button size="lg" variant="ghost" className="h-11 px-5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg w-full sm:w-auto">
                       <span>FAQ</span>
                     </Button>
                   </Link>
@@ -1010,6 +1026,9 @@ export default function LandingPage() {
             <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
               <Link href="/" className="text-slate-400 hover:text-blue-400 transition-colors">
                 Beranda
+              </Link>
+              <Link href="/articles" className="text-slate-400 hover:text-blue-400 transition-colors">
+                Tips Jago &amp; Artikel
               </Link>
               <Link href="#faq" className="text-slate-400 hover:text-blue-400 transition-colors">
                 FAQ

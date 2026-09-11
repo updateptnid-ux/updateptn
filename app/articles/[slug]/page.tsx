@@ -21,8 +21,18 @@ export const viewport: Viewport = {
 /**
  * Generate dynamic metadata for SEO
  */
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const result = await getArticleBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> | { slug: string } }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug;
+
+  if (!slug) {
+    return {
+      title: 'Artikel Tidak Ditemukan | UpdatePTN',
+      description: 'Artikel yang Anda cari tidak tersedia atau telah dihapus.',
+    };
+  }
+
+  const result = await getArticleBySlug(slug);
 
   if (!result.success || !result.data) {
     return {
@@ -40,7 +50,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${title} | UpdatePTN`,
     description,
-    keywords: article.tags?.join(', ') || article.category,
+    keywords: Array.isArray(article.tags) ? article.tags.join(', ') : article.category,
     authors: article.author ? [{ name: article.author }] : undefined,
     
     openGraph: {
@@ -78,11 +88,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> | { slug: string } }) {
+  const resolvedParams = await params;
+  const slug = resolvedParams?.slug;
+
+  if (!slug) {
+    notFound();
+  }
+
   let result;
   
   try {
-    result = await getArticleBySlug(params.slug);
+    result = await getArticleBySlug(slug);
   } catch (error) {
     console.error('Error fetching article:', error);
     notFound();
@@ -192,7 +209,7 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-[10px] md:text-xs">
             {article.category}
           </Badge>
-          {article.tags?.slice(0, 3).map((tag) => (
+          {Array.isArray(article.tags) && article.tags.slice(0, 3).map((tag) => (
             <Badge key={tag} variant="outline" className="text-[10px] md:text-xs">
               {tag}
             </Badge>
@@ -233,11 +250,11 @@ export default async function ArticlePage({ params }: { params: { slug: string }
           )}
           <div className="flex items-center gap-1.5">
             <Clock className="w-4 h-4" />
-            <span>{article.read_time} menit baca</span>
+            <span>{article.read_time || 5} menit baca</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Eye className="w-4 h-4" />
-            <span>{article.views_count.toLocaleString()} views</span>
+            <span>{(article.views_count || 0).toLocaleString()} views</span>
           </div>
         </div>
 
