@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { signOutAction } from "@/actions/auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   Video,
@@ -88,48 +89,109 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
 
   // Check if user is actually admin
   useEffect(() => {
+    let isMounted = true;
+    const supabase = createClient();
+    let channel: any = null;
+
     async function checkAdminAccess() {
       try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        
         const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (!currentUser) {
-          console.log("[Mentor Panel] No user found");
+        if (!currentUser || !isMounted) {
           return;
         }
 
         const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
         const isAdminEmail = ADMIN_EMAILS.includes(currentUser.email?.toLowerCase() || "");
 
-        console.log("[Mentor Panel] Email:", currentUser.email);
-        console.log("[Mentor Panel] Is admin email:", isAdminEmail);
-
-        if (isAdminEmail) {
-          setIsAdmin(true);
-          console.log("[Mentor Panel] Admin access: TRUE (email match)");
-          return;
-        }
-
-        // Check if user has admin role in profiles
+        // 1. Direct query to profiles table
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", currentUser.id)
           .maybeSingle();
 
-        const hasAdminRole = profile?.role === "admin";
-        console.log("[Mentor Panel] Profile role:", profile?.role);
-        console.log("[Mentor Panel] Admin access: ", hasAdminRole);
-        
-        setIsAdmin(hasAdminRole);
+        // 2. Query /api/auth/sync-role for authoritative server check
+        let serverRoleData: any = null;
+        try {
+          const syncRes = await fetch("/api/auth/sync-role", {
+            method: "POST",
+            headers: { "Cache-Control": "no-cache" },
+          });
+          if (syncRes.ok) {
+            serverRoleData = await syncRes.json();
+          }
+        } catch (syncErr) {
+          console.warn("[Mentor Panel] Background sync check warning:", syncErr);
+        }
+
+        const effectiveRole = (
+          serverRoleData?.role ||
+          profile?.role ||
+          currentUser.app_metadata?.role ||
+          currentUser.user_metadata?.role ||
+          "mentor"
+        ).toLowerCase();
+
+        const hasAdminRole =
+          isAdminEmail ||
+          effectiveRole === "admin" ||
+          Boolean(serverRoleData?.isAdmin);
+
+        // Auto-refresh session token if admin
+        if (hasAdminRole && currentUser.app_metadata?.role !== "admin") {
+          try {
+            await supabase.auth.refreshSession();
+          } catch (refErr) {
+            console.warn("[Mentor Panel] Session refresh warning:", refErr);
+          }
+        }
+
+        if (isMounted) {
+          setIsAdmin(hasAdminRole);
+        }
+
+        // Setup real-time listener on profiles
+        if (!channel && currentUser.id) {
+          channel = supabase
+            .channel(`mentor-profile-sync-${currentUser.id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "profiles",
+                filter: `id=eq.${currentUser.id}`,
+              },
+              () => {
+                checkAdminAccess();
+              }
+            )
+            .subscribe();
+        }
       } catch (err) {
-        console.error("Error checking admin access:", err);
+        console.error("Error checking admin access in mentor panel:", err);
       }
     }
 
     checkAdminAccess();
-  }, []);
+
+    const handleFocus = () => checkAdminAccess();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") checkAdminAccess();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [pathname]);
 
   return (
     <div className="h-screen overflow-hidden bg-slate-50/70 flex flex-col md:flex-row font-sans">
@@ -182,10 +244,15 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
                 {isAdmin && (
                   <Link
                     href="/hq-core-updateptn"
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                    className="flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 transition-colors touch-manipulation"
                   >
-                    <ShieldCheck className="h-4 w-4 text-slate-400" />
-                    <span>Menu Admin</span>
+                    <div className="flex items-center gap-2.5">
+                      <ShieldCheck className="h-4 w-4 text-blue-600" />
+                      <span>Menu Admin</span>
+                    </div>
+                    <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                      ADMIN HQ
+                    </span>
                   </Link>
                 )}
               </div>
@@ -272,10 +339,15 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
             {isAdmin && (
               <Link
                 href="/hq-core-updateptn"
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/60 transition-colors"
               >
-                <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
-                <span>Menu Admin</span>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Menu Admin</span>
+                </div>
+                <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                  ADMIN HQ
+                </span>
               </Link>
             )}
           </div>

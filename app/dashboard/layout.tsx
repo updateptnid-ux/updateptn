@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { signOutAction } from "@/actions/auth";
+import { createClient } from "@/lib/supabase/client";
 import { PREMIUM_EASE } from "@/components/ui/fade-in";
 import {
   GraduationCap,
@@ -83,34 +84,71 @@ export default function DashboardLayout({
     return false;
   };
 
-  // Check user role on mount
+  // Check user role real-time and synchronize session
   useEffect(() => {
+    let isMounted = true;
+    const supabase = createClient();
+    let channel: any = null;
+
     async function checkUserRole() {
       try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user || !isMounted) return;
 
         const ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
         const isAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || "");
 
-        // Check user role & flags in profiles
+        // 1. Direct query to profiles table in real-time
         const { data: profile } = await supabase
           .from("profiles")
           .select("role, is_marketing, free_access")
           .eq("id", user.id)
           .maybeSingle();
-        
-        const roleStr = (profile?.role || "student").toLowerCase();
-        const isAdminRole = roleStr === "admin";
+
+        // 2. Also query /api/auth/sync-role for authoritative server check & session sync
+        let serverRoleData: any = null;
+        try {
+          const syncRes = await fetch("/api/auth/sync-role", {
+            method: "POST",
+            headers: { "Cache-Control": "no-cache" },
+          });
+          if (syncRes.ok) {
+            serverRoleData = await syncRes.json();
+          }
+        } catch (syncErr) {
+          console.warn("[Dashboard] Background sync-role warning:", syncErr);
+        }
+
+        // Determine effective role
+        const roleStr = (
+          serverRoleData?.role ||
+          profile?.role ||
+          user.app_metadata?.role ||
+          user.user_metadata?.role ||
+          "student"
+        ).toLowerCase();
+
+        const isAdminRole = roleStr === "admin" || Boolean(serverRoleData?.isAdmin);
         const isKolRole = roleStr === "kol";
         const isBaRole = roleStr === "ba";
-        const isMarketingRole = Boolean(profile?.is_marketing || profile?.free_access);
+        const isMarketingRole = Boolean(
+          serverRoleData?.isMarketing ||
+          serverRoleData?.freeAccess ||
+          profile?.is_marketing ||
+          profile?.free_access
+        );
 
         // KOL and BA cannot be admin or mentor
         const finalIsAdmin = (isAdminEmail || isAdminRole) && !isKolRole && !isBaRole;
+
+        // Auto-refresh session token if role is admin but user app_metadata didn't have it
+        if (finalIsAdmin && user.app_metadata?.role !== "admin") {
+          try {
+            await supabase.auth.refreshSession();
+          } catch (refErr) {
+            console.warn("[Dashboard] Session refresh warning:", refErr);
+          }
+        }
 
         // Check if user is in mentors table (KOL/BA cannot access mentor)
         let isMentorUser = false;
@@ -124,18 +162,20 @@ export default function DashboardLayout({
           isMentorUser = !!mentorRecord;
         }
 
-        setUserRole({
-          isAdmin: finalIsAdmin,
-          isMentor: isMentorUser,
-          isKol: isKolRole,
-          isBa: isBaRole,
-          isMarketing: isMarketingRole,
-          rawRole: roleStr,
-        });
+        if (isMounted) {
+          setUserRole({
+            isAdmin: finalIsAdmin,
+            isMentor: isMentorUser,
+            isKol: isKolRole,
+            isBa: isBaRole,
+            isMarketing: isMarketingRole,
+            rawRole: roleStr,
+          });
+        }
 
         // Check if user is active affiliate (hidden for KOL / BA)
         if (isKolRole || isBaRole) {
-          setIsActiveAffiliate(false);
+          if (isMounted) setIsActiveAffiliate(false);
         } else {
           const { data: affiliate } = await supabase
             .from("affiliates")
@@ -143,15 +183,53 @@ export default function DashboardLayout({
             .eq("user_id", user.id)
             .maybeSingle();
 
-          setIsActiveAffiliate(affiliate?.status === "active");
+          if (isMounted) {
+            setIsActiveAffiliate(affiliate?.status === "active");
+          }
+        }
+
+        // Setup real-time listener on public:profiles for this user
+        if (!channel && user.id) {
+          channel = supabase
+            .channel(`dashboard-profile-sync-${user.id}`)
+            .on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "profiles",
+                filter: `id=eq.${user.id}`,
+              },
+              () => {
+                checkUserRole();
+              }
+            )
+            .subscribe();
         }
       } catch (err) {
-        console.error("Error checking user role:", err);
+        console.error("Error checking user role in DashboardLayout:", err);
       }
     }
 
     checkUserRole();
-  }, []);
+
+    const handleFocus = () => checkUserRole();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") checkUserRole();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [pathname]);
 
   const navItems = [
     {
@@ -350,10 +428,15 @@ export default function DashboardLayout({
                     <Link
                       href="/hq-core-updateptn"
                       onClick={() => setIsMobileOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors touch-manipulation"
+                      className="flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 transition-colors touch-manipulation"
                     >
-                      <ShieldCheck className="h-4 w-4 text-slate-400" />
-                      <span>Menu Admin</span>
+                      <div className="flex items-center gap-2.5">
+                        <ShieldCheck className="h-4 w-4 text-blue-600" />
+                        <span>Menu Admin</span>
+                      </div>
+                      <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                        ADMIN HQ
+                      </span>
                     </Link>
                   )}
                 </div>
@@ -489,10 +572,15 @@ export default function DashboardLayout({
               {userRole.isAdmin && (
                 <Link
                   href="/hq-core-updateptn"
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/60 transition-colors"
                 >
-                  <ShieldCheck className="h-3 w-3 text-slate-400" />
-                  <span>Menu Admin</span>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Menu Admin</span>
+                  </div>
+                  <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider">
+                    ADMIN HQ
+                  </span>
                 </Link>
               )}
             </div>
