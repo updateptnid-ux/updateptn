@@ -218,18 +218,34 @@ export default function ProfilePage() {
       setTargetUnivValue2(univValue2);
       setTargetProdiValue2(prodiValue2);
 
-      // Load subscription status
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status, tier, expires_at")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .gt("expires_at", new Date().toISOString())
-        .single();
-      if (sub) {
+      // Load subscription status (with marketing bypass)
+      const { data: profileCheck } = await supabase
+        .from("profiles")
+        .select("is_marketing, free_access, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const isMarketingOrAdmin = Boolean(
+        profileCheck?.is_marketing || profileCheck?.free_access || profileCheck?.role === "admin"
+      );
+
+      if (isMarketingOrAdmin) {
         setIsPremium(true);
-        setSubTier(sub.tier || "Premium");
-        setSubExpiry(sub.expires_at ? new Date(sub.expires_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "");
+        setSubTier(profileCheck?.role === "admin" ? "Admin VIP" : "Marketing VIP");
+        setSubExpiry("Akses Seumur Hidup");
+      } else {
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("status, tier, expires_at")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .gt("expires_at", new Date().toISOString())
+          .single();
+        if (sub) {
+          setIsPremium(true);
+          setSubTier(sub.tier || "Premium");
+          setSubExpiry(sub.expires_at ? new Date(sub.expires_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "");
+        }
       }
       
       // Load universities list

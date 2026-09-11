@@ -78,15 +78,30 @@ export default function TryoutResultPage() {
         setLoading(true);
         const supabase = createClient();
 
-        // Fetch user tier
+        // Fetch user tier + marketing bypass
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: subsData } = await supabase
-            .from("subscriptions")
-            .select("tier")
-            .eq("user_id", user.id)
-            .single();
-          setIsPremium(subsData?.tier === "Premium" || subsData?.tier === "Platinum");
+          // Check profile for marketing / free_access / admin bypass
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role, is_marketing, free_access")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const isMarketingOrAdmin = Boolean(
+            profile?.is_marketing || profile?.free_access || profile?.role === "admin"
+          );
+
+          if (isMarketingOrAdmin) {
+            setIsPremium(true);
+          } else {
+            const { data: subsData } = await supabase
+              .from("subscriptions")
+              .select("tier")
+              .eq("user_id", user.id)
+              .single();
+            setIsPremium(subsData?.tier === "Premium" || subsData?.tier === "Platinum");
+          }
         }
 
         // 1. Try DB fetch first
