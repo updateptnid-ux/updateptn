@@ -83,6 +83,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    // Also sync directly to auth.users metadata via Supabase Admin API
+    try {
+      await serviceClient.auth.admin.updateUserById(userId, {
+        app_metadata: {
+          role: newRole,
+          ...(typeof isMarketing === "boolean" ? { is_marketing: isMarketing } : {}),
+          ...(typeof freeAccess === "boolean" ? { free_access: freeAccess } : {}),
+        },
+        user_metadata: {
+          role: newRole,
+        },
+      });
+    } catch (authError) {
+      console.warn("Warning: Could not update auth.users metadata directly:", authError);
+    }
+
     return NextResponse.json({ 
       success: true, 
       message: `Role berhasil diubah menjadi ${newRole}`,

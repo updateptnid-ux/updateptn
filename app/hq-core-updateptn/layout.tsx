@@ -46,59 +46,72 @@ export default async function AdminLayout({
     console.log("✅ Super Admin access granted via hardcoded email:", user.email);
   }
 
-  // 2. If not super admin, check database role
+  // 2. Check JWT metadata role
+  if (!isAdmin && (user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin")) {
+    isAdmin = true;
+    console.log("✅ Admin access granted via token metadata role");
+  }
+
+  // 3. Query real-time database role
   if (!isAdmin) {
     try {
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      console.log("\n=== ADMIN CHECK DEBUG ===");
-      console.log("🔍 Checking admin role for:", user.email);
-      console.log("👤 User ID:", user.id);
-      console.log("📧 Service role key exists:", !!serviceRoleKey);
-      console.log("🌍 Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-      
-      if (!serviceRoleKey) {
-        console.error("❌ SUPABASE_SERVICE_ROLE_KEY not found in environment variables!");
-        console.error("⚠️  Add it to .env.local to enable database-driven admin access");
-      } else {
-        const serviceClient = createSupabaseClient(
+      let profile: { role?: string; full_name?: string } | null = null;
+      let serviceClient: any = null;
+
+      if (serviceRoleKey) {
+        serviceClient = createSupabaseClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           serviceRoleKey,
           { auth: { persistSession: false } }
         );
 
-        console.log("🔄 Querying profiles table...");
-
-        const { data: profile, error } = await serviceClient
+        const { data, error } = await serviceClient
           .from("profiles")
           .select("role, full_name")
           .eq("id", user.id)
           .maybeSingle();
 
-        console.log("📊 Query result:");
-        console.log("   - Profile found:", !!profile);
-        console.log("   - Role:", profile?.role || "null");
-        console.log("   - Full name:", profile?.full_name || "null");
-        console.log("   - Error:", error?.message || "none");
-
-        if (!error && profile) {
-          if (profile.full_name) {
-            adminName = profile.full_name;
-          }
-          
-          if (profile.role === "admin") {
-            isAdmin = true;
-            console.log("✅ Admin access granted via database role");
-          } else {
-            console.log("❌ Role is not admin, got:", profile.role);
-          }
-        } else if (error) {
-          console.error("❌ Database error:", error);
-        } else if (!profile) {
-          console.log("⚠️  Profile not found for user:", user.email);
+        if (!error && data) {
+          profile = data;
         }
       }
-      console.log("=== END DEBUG ===\n");
+
+      // Fallback to server supabase client if service client was not available or didn't return data
+      if (!profile) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role, full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (data) {
+          profile = data;
+        }
+      }
+
+      if (profile) {
+        if (profile.full_name) {
+          adminName = profile.full_name;
+        }
+
+        if (profile.role === "admin") {
+          isAdmin = true;
+          console.log("✅ Admin access granted via database role");
+
+          // Proactively sync to auth user metadata if service client is available
+          if (serviceClient && user.app_metadata?.role !== "admin") {
+            serviceClient.auth.admin
+              .updateUserById(user.id, {
+                app_metadata: { role: "admin" },
+                user_metadata: { role: "admin" },
+              })
+              .catch((e: any) => console.error("AdminLayout background sync error:", e));
+          }
+        } else {
+          console.log("❌ Role is not admin in database, got:", profile.role);
+        }
+      }
     } catch (err) {
       console.error("❌ AdminLayout profile check error:", err);
     }

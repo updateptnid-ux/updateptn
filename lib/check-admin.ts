@@ -24,31 +24,56 @@ export async function checkAdminAccess() {
     return user;
   }
 
-  // Check database role using service role client
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    console.error("❌ SUPABASE_SERVICE_ROLE_KEY not configured");
-    redirect("/dashboard/student");
+  // Check JWT metadata role
+  if (user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin") {
+    return user;
   }
 
-  const serviceClient = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { persistSession: false } }
-  );
+  // Check database role
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let profile: { role?: string } | null = null;
 
-  const { data: profile } = await serviceClient
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
+  if (serviceRoleKey) {
+    try {
+      const serviceClient = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        serviceRoleKey,
+        { auth: { persistSession: false } }
+      );
+
+      const { data } = await serviceClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (data) profile = data;
+    } catch (e) {
+      console.error("Service client check error:", e);
+    }
+  }
+
+  // Fallback to authenticated server client
+  if (!profile) {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (data) profile = data;
+    } catch (e) {
+      console.error("Server supabase client check error:", e);
+    }
+  }
 
   if (profile?.role === "admin") {
     return user;
   }
 
-  // Not admin, redirect to student dashboard
-  redirect("/dashboard/student");
+  // Not admin, redirect to admin login with unauthorized notice
+  redirect("/hq-core-updateptn/login?error=unauthorized");
 }
 
 /**
@@ -71,8 +96,12 @@ export async function isAdmin(): Promise<boolean> {
       return true;
     }
 
-    // Check database role (client-side can't use service role, so use regular client)
-    // This will work if RLS policy allows users to read their own role
+    // Check JWT metadata
+    if (user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin") {
+      return true;
+    }
+
+    // Check database role
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")

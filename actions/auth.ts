@@ -42,28 +42,49 @@ export async function loginAction(prevState: any, formData: FormData) {
       // Admin → HQ Core
       redirectUrl = "/hq-core-updateptn";
     } else {
-      // Cek apakah user ada di tabel mentors
-      // Pakai service_role (bypass RLS) atau anon key langsung — bukan SSR cookie client
-      try {
-        const { createClient: createDirectClient } = await import("@supabase/supabase-js");
-        const bypassClient = createDirectClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          { auth: { persistSession: false } }
-        );
+      // Cek role user dari database profiles atau auth metadata
+      let userRole = data.user?.app_metadata?.role || data.user?.user_metadata?.role;
 
-        const { data: mentorRecord } = await bypassClient
-          .from("mentors")
-          .select("id, status")
-          .eq("email", email.toLowerCase())
-          .eq("status", "active")
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
           .maybeSingle();
 
-        if (mentorRecord) {
-          redirectUrl = "/mentor";
+        if (profile?.role) {
+          userRole = profile.role;
         }
-      } catch {
-        // Gagal query mentors — tetap ke student dashboard
+      } catch (errRole) {
+        console.error("Failed to check profile role in loginAction:", errRole);
+      }
+
+      if (userRole === "admin") {
+        redirectUrl = "/hq-core-updateptn";
+      } else {
+        // Cek apakah user ada di tabel mentors
+        // Pakai service_role (bypass RLS) atau anon key langsung — bukan SSR cookie client
+        try {
+          const { createClient: createDirectClient } = await import("@supabase/supabase-js");
+          const bypassClient = createDirectClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            { auth: { persistSession: false } }
+          );
+
+          const { data: mentorRecord } = await bypassClient
+            .from("mentors")
+            .select("id, status")
+            .eq("email", email.toLowerCase())
+            .eq("status", "active")
+            .maybeSingle();
+
+          if (mentorRecord) {
+            redirectUrl = "/mentor";
+          }
+        } catch {
+          // Gagal query mentors — tetap ke student dashboard
+        }
       }
     }
 

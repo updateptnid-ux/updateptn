@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -12,12 +12,20 @@ import { Mail, Lock, ArrowRight, AlertCircle, Loader2, ArrowLeft } from "lucide-
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "unauthorized") {
+      setErrorMsg("Akses ditolak: Anda harus memiliki hak akses admin untuk membuka halaman HQ Admin.");
+    }
+  }, [searchParams]);
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,29 +53,54 @@ export default function AdminLoginPage() {
 
       const user = data.user;
 
-      // 2. Fetch role from profiles table
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const isAdmin =
-        profile?.role === "admin" ||
-        user.user_metadata?.role === "admin" ||
-        user.app_metadata?.role === "admin" ||
+      // 2. Synchronize real-time role to session via server endpoint
+      let isConfirmedAdmin =
         user.email === "admin@updateptn.id" ||
-        user.email === "updateptnid@gmail.com";
+        user.email === "updateptnid@gmail.com" ||
+        user.user_metadata?.role === "admin" ||
+        user.app_metadata?.role === "admin";
 
-      // 3. Authorization Check
-      if (!isAdmin) {
+      try {
+        const syncRes = await fetch("/api/auth/sync-role", { method: "POST" });
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          if (syncData.isAdmin) {
+            isConfirmedAdmin = true;
+          }
+        }
+      } catch (syncErr) {
+        console.warn("Role sync request warning:", syncErr);
+      }
+
+      // 3. Fallback: Query profiles table directly
+      if (!isConfirmedAdmin) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile?.role === "admin") {
+          isConfirmedAdmin = true;
+        }
+      }
+
+      // 4. Refresh session to update JWT claims in cookies
+      try {
+        await supabase.auth.refreshSession();
+      } catch (refErr) {
+        console.warn("Session refresh warning:", refErr);
+      }
+
+      // 5. Authorization Check
+      if (!isConfirmedAdmin) {
         await supabase.auth.signOut();
         setErrorMsg("Akses ditolak: Akun Anda tidak memiliki hak akses admin.");
         setIsLoading(false);
         return;
       }
 
-      // 4. Redirect to Admin Dashboard
+      // 6. Redirect to Admin Dashboard
       router.push("/hq-core-updateptn");
       router.refresh();
     } catch (err: any) {

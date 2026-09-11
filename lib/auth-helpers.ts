@@ -23,18 +23,23 @@ export async function checkAdminAccess(): Promise<{
       return { isAdmin: false, user: null, error: "Not authenticated" };
     }
 
+    const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
+    if (SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
+      return { isAdmin: true, user };
+    }
+
+    if (user.app_metadata?.role === "admin" || user.user_metadata?.role === "admin") {
+      return { isAdmin: true, user };
+    }
+
     // Check role dari database
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      return { isAdmin: false, user, error: "Profile not found" };
-    }
-
-    const isAdmin = profile.role === "admin";
+    const isAdmin = profile?.role === "admin";
     
     return { isAdmin, user };
   } catch (error) {

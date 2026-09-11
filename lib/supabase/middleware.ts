@@ -74,16 +74,27 @@ export async function updateSession(request: NextRequest) {
   let isMarketing = false;
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, is_marketing, free_access")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.role) {
-      userRole = profile.role.toLowerCase();
+    // 1. Read role from auth metadata first (fast path / fallback)
+    const metaRole = (user.app_metadata?.role || user.user_metadata?.role || "") as string;
+    if (metaRole) {
+      userRole = metaRole.toLowerCase();
     }
-    isMarketing = Boolean(profile?.is_marketing || profile?.free_access);
+
+    // 2. Fetch fresh real-time role from database
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, is_marketing, free_access")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.role) {
+        userRole = profile.role.toLowerCase();
+      }
+      isMarketing = Boolean(profile?.is_marketing || profile?.free_access);
+    } catch (profileErr) {
+      console.error("Middleware profiles query error:", profileErr);
+    }
   }
 
   const SUPER_ADMIN_EMAILS = ["updateptnid@gmail.com", "admin@updateptn.id"];
@@ -107,7 +118,7 @@ export async function updateSession(request: NextRequest) {
 
     // Must have admin role
     if (!isAdmin) {
-      return redirectWithCookies("/dashboard/student?error=unauthorized");
+      return redirectWithCookies("/hq-core-updateptn/login?error=unauthorized");
     }
 
     // Let layout.tsx handle deeper admin layout verification
