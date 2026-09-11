@@ -133,28 +133,53 @@ export async function POST(request: NextRequest) {
 
     // 7. Update payment status in database using privileged client (bypasses RLS issues)
     const nowIso = new Date().toISOString();
-    const { data: updatedPayment, error: updateError } = await privilegedDb
-      .from("payments")
-      .update({
-        status: "cancel",
-        transaction_status: "cancel",
-        metadata: {
-          ...(payment.metadata || {}),
-          cancelled_at: nowIso,
-          cancelled_by: user.id,
-          cancelled_by_email: user.email,
-          midtrans_cancel_response: midtransCancelResult,
-        },
-        updated_at: nowIso,
-      })
-      .eq("order_id", order_id)
-      .select()
-      .single();
+    const updatedMetadata = {
+      ...(payment.metadata || {}),
+      cancelled_at: nowIso,
+      cancelled_by: user.id,
+      cancelled_by_email: user.email,
+      midtrans_cancel_response: midtransCancelResult,
+    };
 
-    if (updateError) {
+    const statusCandidates = ["cancelled", "cancel", "failed"];
+    let updatedPayment: any = null;
+    let updateError: any = null;
+
+    for (const statusVal of statusCandidates) {
+      const { data, error } = await privilegedDb
+        .from("payments")
+        .update({
+          status: statusVal,
+          transaction_status: "cancel",
+          metadata: updatedMetadata,
+          updated_at: nowIso,
+        })
+        .eq("order_id", order_id)
+        .select()
+        .single();
+
+      if (!error) {
+        updatedPayment = data;
+        updateError = null;
+        break;
+      }
+
+      if (
+        error.message?.includes("payments_status_check") ||
+        error.code === "23514"
+      ) {
+        updateError = error;
+        continue;
+      } else {
+        updateError = error;
+        break;
+      }
+    }
+
+    if (updateError || !updatedPayment) {
       console.error("Failed to update payment status in Supabase:", updateError);
       return NextResponse.json(
-        { error: "Gagal memperbarui status transaksi di database: " + updateError.message },
+        { error: "Gagal memperbarui status transaksi di database: " + (updateError?.message || "Check constraint violation") },
         { status: 500 }
       );
     }

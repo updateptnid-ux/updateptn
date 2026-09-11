@@ -261,22 +261,50 @@ export async function POST(request: NextRequest) {
       midtrans_cancel_result: midtransStatusInfo,
     };
 
-    const { data: updatedPayment, error: updateError } = await adminDb
-      .from("payments")
-      .update({
-        status: "cancel",
-        transaction_status: "cancel",
-        metadata: updatedMetadata,
-        updated_at: nowIso,
-      })
-      .eq("order_id", order_id)
-      .select()
-      .single();
+    // Adaptive status candidate list:
+    // 1. 'cancelled' (Application standard & common constraint)
+    // 2. 'cancel' (Midtrans standard)
+    // 3. 'failed' (Fallback if DB only allows pending, success, failed)
+    const statusCandidates = ["cancelled", "cancel", "failed"];
+    let updatedPayment: any = null;
+    let updateError: any = null;
 
-    if (updateError) {
+    for (const statusVal of statusCandidates) {
+      const { data, error } = await adminDb
+        .from("payments")
+        .update({
+          status: statusVal,
+          transaction_status: "cancel",
+          metadata: updatedMetadata,
+          updated_at: nowIso,
+        })
+        .eq("order_id", order_id)
+        .select()
+        .single();
+
+      if (!error) {
+        updatedPayment = data;
+        updateError = null;
+        break;
+      }
+
+      // If check constraint violation (code 23514 or message contains payments_status_check), try next candidate
+      if (
+        error.message?.includes("payments_status_check") ||
+        error.code === "23514"
+      ) {
+        updateError = error;
+        continue;
+      } else {
+        updateError = error;
+        break;
+      }
+    }
+
+    if (updateError || !updatedPayment) {
       console.error("Update payment to cancel error:", updateError);
       return NextResponse.json(
-        { error: "Gagal memperbarui status transaksi di database: " + updateError.message },
+        { error: "Gagal memperbarui status transaksi di database: " + (updateError?.message || "Check constraint violation") },
         { status: 500 }
       );
     }

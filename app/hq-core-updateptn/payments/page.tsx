@@ -217,12 +217,12 @@ export default function AdminPaymentsPage() {
     const prevPayments = [...payments];
     const prevStats = { ...stats };
 
-    // 2. Optimistic UI update: Immediately mark status as 'cancel'
+    // 2. Optimistic UI update: Immediately mark status as 'cancelled'
     const updatedPayments = payments.map((p) =>
       p.order_id === orderId
         ? {
             ...p,
-            status: "cancel",
+            status: "cancelled",
             transaction_status: "cancel",
             updated_at: new Date().toISOString(),
           }
@@ -381,10 +381,18 @@ export default function AdminPaymentsPage() {
           PENDING
         </Badge>
       );
-    } else if (s === "cancel" || s === "cancelled" || s === "expire") {
+    } else if (
+      s === "cancel" ||
+      s === "cancelled" ||
+      s === "canceled" ||
+      s === "expire" ||
+      s === "expired" ||
+      s === "failed"
+    ) {
+      const label = s === "failed" ? "FAILED" : s.includes("expire") ? "EXPIRED" : "CANCELLED";
       return (
         <Badge className="bg-rose-100 text-rose-800 border-rose-200 font-bold text-[11px] px-2.5">
-          {s.toUpperCase()}
+          {label}
         </Badge>
       );
     } else if (s === "deny") {
