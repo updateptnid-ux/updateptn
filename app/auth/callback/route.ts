@@ -1,94 +1,101 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextRequest, NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/url-helpers';
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
-  const error = requestUrl.searchParams.get('error');
-  const errorDescription = requestUrl.searchParams.get('error_description');
-  
-  // Get dynamic base URL (works for both localhost and production)
-  const baseUrl = getBaseUrl();
+  const code = requestUrl.searchParams.get("code");
+  const error = requestUrl.searchParams.get("error");
+  const errorDescription = requestUrl.searchParams.get("error_description");
+  const next = requestUrl.searchParams.get("next");
 
-  console.log('🔍 Auth Callback Debug:', {
-    code: code ? 'exists' : 'missing',
-    error,
-    errorDescription,
-    baseUrl,
-    fullUrl: request.url,
-  });
+  // Determine origin safely (considering proxy headers if deployed behind load balancers)
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : requestUrl.origin;
 
-  // Handle OAuth error
+  // Handle OAuth provider error
   if (error) {
-    console.error('❌ OAuth error:', error, errorDescription);
+    console.error("❌ OAuth error in callback:", error, errorDescription);
     return NextResponse.redirect(
-      `${baseUrl}/login?error=${encodeURIComponent(error)}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`
+      `${origin}/login?error=${encodeURIComponent(error)}&message=${encodeURIComponent(
+        errorDescription || "Authentication failed"
+      )}`
     );
   }
 
   // Exchange code for session
   if (code) {
     try {
-      // CRITICAL FIX: Create response first, then supabase client that can set cookies in response
-      let response = NextResponse.redirect(`${baseUrl}/auth/success`);
-      
-      // Create Supabase client with cookie handler that sets cookies in the response
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return request.cookies.getAll();
-            },
-            setAll(cookiesToSet) {
-              // Set cookies in the NextResponse
-              cookiesToSet.forEach(({ name, value, options }) => {
-                response.cookies.set(name, value, options);
-              });
-            },
+      let response = NextResponse.next();
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
           },
-        }
-      );
-      
-      // Exchange code for session - this will call setAll to set cookies in response
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => {
+              request.cookies.set(name, value);
+            });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      });
+
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
-        console.error('❌ Exchange error:', exchangeError);
+        console.error("❌ exchangeCodeForSession error:", exchangeError.message);
         return NextResponse.redirect(
-          `${baseUrl}/login?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`
+          `${origin}/login?error=auth_failed&message=${encodeURIComponent(
+            exchangeError.message
+          )}`
         );
       }
 
       if (!data.session || !data.user) {
-        console.error('❌ No session or user created');
-        return NextResponse.redirect(`${baseUrl}/login?error=no_session`);
+        console.error("❌ Session or user missing after exchange");
+        return NextResponse.redirect(`${origin}/login?error=no_session`);
       }
 
-      console.log('✅ Session created for user:', data.user.email, 'User ID:', data.user.id);
-      console.log('🍪 Cookies set in response, redirecting to success page');
+      console.log("✅ OAuth session created for user:", data.user.email);
 
-      // Update redirect URL with email param (create new response with cookies already set)
-      const finalResponse = NextResponse.redirect(`${baseUrl}/auth/success?email=${encodeURIComponent(data.user.email || '')}`);
-      
-      // Copy all cookies from the previous response to the final response
-      response.cookies.getAll().forEach(cookie => {
+      // Check profile completion (full_name and provinsi)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, provinsi")
+        .eq("id", data.user.id)
+        .single();
+
+      let redirectPath = next || "/dashboard/student";
+      if (!profile?.full_name || !profile?.provinsi) {
+        redirectPath = "/complete-profile";
+      }
+
+      // Create final redirect response and copy all session cookies set by Supabase
+      const finalResponse = NextResponse.redirect(`${origin}${redirectPath}`);
+      response.cookies.getAll().forEach((cookie) => {
         finalResponse.cookies.set(cookie.name, cookie.value);
       });
-      
+
       return finalResponse;
-      
     } catch (err: any) {
-      console.error('❌ Unexpected error in callback:', err);
+      console.error("❌ Unexpected error in auth callback route:", err);
       return NextResponse.redirect(
-        `${baseUrl}/login?error=unexpected&message=${encodeURIComponent(err.message || 'Unknown error')}`
+        `${origin}/login?error=unexpected&message=${encodeURIComponent(
+          err?.message || "Unknown error"
+        )}`
       );
     }
   }
 
-  // No code provided - redirect to login
-  console.error('❌ No code provided in callback');
-  return NextResponse.redirect(`${baseUrl}/login?error=no_code`);
+  // Fallback if no code is present
+  return NextResponse.redirect(`${origin}/login?error=no_code`);
 }

@@ -4,6 +4,17 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Auto-redirect if URL contains ?code= and is not already at /auth/callback
+  if (request.nextUrl.searchParams.has("code") && !pathname.startsWith("/auth/callback")) {
+    const callbackUrl = new URL("/auth/callback", request.url);
+    callbackUrl.searchParams.set("code", request.nextUrl.searchParams.get("code")!);
+    const nextParam = request.nextUrl.searchParams.get("next");
+    if (nextParam) {
+      callbackUrl.searchParams.set("next", nextParam);
+    }
+    return NextResponse.redirect(callbackUrl);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
