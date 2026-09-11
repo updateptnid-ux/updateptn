@@ -8,7 +8,20 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+
+// Helper for cookie-free public queries to prevent dynamic server usage in static pages & sitemap
+function getPublicSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    '';
+  return createSupabaseClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false },
+  });
+}
 import {
   sanitizeHTML,
   validateArticle,
@@ -37,7 +50,7 @@ export async function getPublishedArticles(params?: {
   offset?: number;
 }): Promise<ActionResult<{ articles: Article[]; total: number }>> {
   try {
-    const supabase = await createClient();
+    const supabase = getPublicSupabaseClient();
     
     let query = supabase
       .from('articles')
@@ -120,7 +133,7 @@ export async function getArticleBySlug(slug: string): Promise<ActionResult<Artic
     // Sanitize slug
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
-    const supabase = await createClient();
+    const supabase = getPublicSupabaseClient();
     
     const { data, error } = await supabase
       .from('articles')
@@ -150,7 +163,7 @@ export async function incrementArticleViews(articleId: string): Promise<ActionRe
       return { success: false, error: 'Invalid article ID' };
     }
 
-    const supabase = await createClient();
+    const supabase = getPublicSupabaseClient();
 
     // Use RPC function (prevents direct SQL injection)
     const { error } = await supabase.rpc('increment_article_views', { article_id: articleId });

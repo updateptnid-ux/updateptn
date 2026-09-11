@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
 import { getPublishedArticles } from '@/actions/articles';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://updateptn.com';
 
