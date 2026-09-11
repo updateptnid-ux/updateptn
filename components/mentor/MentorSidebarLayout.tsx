@@ -17,6 +17,8 @@ import {
   BookOpen,
   CalendarDays,
   UserCircle2,
+  Users,
+  Wallet,
   LogOut,
   Menu,
   ChevronRight,
@@ -35,10 +37,11 @@ interface MentorSidebarLayoutProps {
 
 const navItems = [
   { name: "Beranda", href: "/mentor", icon: LayoutDashboard, exact: true },
-  { name: "Live Class", href: "/mentor/live-class", icon: Video, exact: false },
-  { name: "Modul Belajar", href: "/mentor/modul", icon: BookOpen, exact: false },
   { name: "Jadwal Mengajar", href: "/mentor/jadwal", icon: CalendarDays, exact: false },
-  { name: "Profil Saya", href: "/mentor/profil", icon: UserCircle2, exact: false },
+  { name: "Siswa & Kelas", href: "/mentor/siswa-kelas", icon: Users, exact: false },
+  { name: "Keuangan & Income", href: "/mentor/keuangan", icon: Wallet, exact: false },
+  { name: "Live Class & Modul", href: "/mentor/live-class", icon: Video, exact: false },
+  { name: "Pengaturan Profil", href: "/mentor/profil", icon: UserCircle2, exact: false },
 ];
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as [number, number, number, number];
