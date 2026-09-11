@@ -183,35 +183,49 @@ export default function PaymentsClient() {
   const handleCancelPayment = async (orderId: string) => {
     const confirmed = window.confirm(
       '⚠️ Batalkan Pembayaran?\n\n' +
-      'Pembayaran ini akan dihapus secara permanen dari database. ' +
-      'Anda perlu membuat pesanan baru jika ingin berlangganan.\n\n' +
+      'Pesanan pembayaran ini akan dibatalkan. ' +
+      'Anda dapat membuat pesanan baru kapan saja jika ingin berlangganan.\n\n' +
       'Lanjutkan?'
     );
-    
+
     if (!confirmed) {
       return;
     }
 
     setProcessingId(orderId);
 
+    // 1. Snapshot previous state for rollback
+    const prevPending = [...pendingPayments];
+    const prevAll = [...allPayments];
+
+    // 2. Optimistic UI update: Instantly remove from pending list
+    setPendingPayments((prev) => prev.filter((p) => p.order_id !== orderId));
+    setAllPayments((prev) =>
+      prev.map((p) =>
+        p.order_id === orderId ? { ...p, status: 'cancelled' } : p
+      )
+    );
+
     try {
-      const result = await cancelPendingPayment(orderId);
+      const result = await cancelPendingPayment(orderId, 'cancel');
 
       if (result.success) {
-        toast.success('✅ Pembayaran berhasil dihapus');
-        
-        // Force reload payments to ensure clean state
+        toast.success('✅ Pembayaran berhasil dibatalkan');
+        router.refresh();
+        // Background silent refresh
         await loadPayments();
-        
-        // Also optimistically remove from UI immediately
-        setPendingPayments(prev => prev.filter(p => p.order_id !== orderId));
-        setAllPayments(prev => prev.filter(p => p.order_id !== orderId));
       } else {
+        // Rollback state on error
+        setPendingPayments(prevPending);
+        setAllPayments(prevAll);
         toast.error(result.error || 'Gagal membatalkan pembayaran');
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Rollback state on exception
+      setPendingPayments(prevPending);
+      setAllPayments(prevAll);
       console.error('Cancel error:', error);
-      toast.error('Terjadi kesalahan');
+      toast.error('Terjadi kesalahan: ' + (error?.message || 'Gagal membatalkan'));
     } finally {
       setProcessingId(null);
     }
@@ -237,16 +251,22 @@ export default function PaymentsClient() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const s = (status || '').toLowerCase();
+    switch (s) {
       case 'pending':
         return <Badge className="bg-amber-100 text-amber-700 border-amber-200"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       case 'success':
       case 'settlement':
+      case 'capture':
         return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200"><CheckCircle2 className="h-3 w-3 mr-1" />Berhasil</Badge>;
-      case 'failed':
+      case 'cancel':
       case 'cancelled':
+      case 'canceled':
+        return <Badge className="bg-slate-100 text-slate-700 border-slate-200"><XCircle className="h-3 w-3 mr-1" />Dibatalkan</Badge>;
+      case 'failed':
       case 'deny':
       case 'expire':
+      case 'expired':
         return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 mr-1" />Gagal</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;

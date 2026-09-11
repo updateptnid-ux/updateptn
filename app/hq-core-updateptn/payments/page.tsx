@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import CrudLayout from "@/components/admin/CrudLayout";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ interface PaymentRecord {
 }
 
 export default function AdminPaymentsPage() {
+  const router = useRouter();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -115,7 +117,14 @@ export default function AdminPaymentsPage() {
       }
 
       // 1. Try server-side admin API endpoint first (uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS)
-      const res = await fetch("/hq-core-updateptn/api/payments");
+      // Use timestamp query & no-cache headers to prevent browser from returning stale cached response
+      const res = await fetch(`/hq-core-updateptn/api/payments?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
@@ -178,8 +187,23 @@ export default function AdminPaymentsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "payments" },
-        () => {
-          // Trigger silent background update
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as any)?.order_id || (payload.old as any)?.id;
+            if (oldId) {
+              setPayments((prev) => prev.filter((p) => p.order_id !== oldId && p.id !== oldId));
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const newRecord = payload.new as any;
+            if (newRecord?.order_id) {
+              setPayments((prev) =>
+                prev.map((p) =>
+                  p.order_id === newRecord.order_id ? { ...p, ...newRecord } : p
+                )
+              );
+            }
+          }
+          // Silent background sync
           fetchPayments(true);
         }
       )
@@ -259,8 +283,12 @@ export default function AdminPaymentsPage() {
         id: `cancel-${orderId}`,
       });
 
-      // 4. Background re-sync to get server-calculated metadata
-      fetchPayments(true);
+      router.refresh();
+
+      // Background re-sync after brief commit buffer
+      setTimeout(() => {
+        fetchPayments(true);
+      }, 300);
     } catch (err: any) {
       // 5. Rollback on failure
       setPayments(prevPayments);
@@ -318,7 +346,11 @@ export default function AdminPaymentsPage() {
         id: `delete-${orderId}`,
       });
 
-      fetchPayments(true);
+      router.refresh();
+
+      setTimeout(() => {
+        fetchPayments(true);
+      }, 300);
     } catch (err: any) {
       // Rollback
       setPayments(prevPayments);

@@ -1,6 +1,24 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
+
+/**
+ * Helper to get a privileged Supabase client with SUPABASE_SERVICE_ROLE_KEY
+ * or fallback to the authenticated user client.
+ */
+function getPrivilegedDb(userClient: any) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRoleKey) {
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey,
+      { auth: { persistSession: false } }
+    );
+  }
+  return userClient;
+}
 
 /**
  * Get user's pending payments that can be resumed
@@ -9,16 +27,21 @@ export async function getPendingPayments() {
   try {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return { success: false, error: 'Unauthorized', data: [] };
     }
+
+    const db = getPrivilegedDb(supabase);
 
     // Get pending payments from last 24 hours
     const twentyFourHoursAgo = new Date();
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
-    const { data: payments, error } = await supabase
+    const { data: payments, error } = await db
       .from('payments')
       .select('*')
       .eq('user_id', user.id)
@@ -45,12 +68,17 @@ export async function getPaymentHistory() {
   try {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return { success: false, error: 'Unauthorized', data: [] };
     }
 
-    const { data: payments, error } = await supabase
+    const db = getPrivilegedDb(supabase);
+
+    const { data: payments, error } = await db
       .from('payments')
       .select('*')
       .eq('user_id', user.id)
@@ -70,19 +98,30 @@ export async function getPaymentHistory() {
 }
 
 /**
- * Cancel a pending payment
+ * Cancel or Delete a pending payment (Student-side)
+ * Action:
+ * - 'cancel': Updates status to 'cancelled' and cancels Midtrans order
+ * - 'delete': Removes transaction permanently from the database
  */
-export async function cancelPendingPayment(orderId: string) {
+export async function cancelPendingPayment(
+  orderId: string,
+  action: 'cancel' | 'delete' = 'cancel'
+) {
   try {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return { success: false, error: 'Unauthorized' };
+      return { success: false, error: 'Unauthorized: Sesi Anda telah berakhir' };
     }
 
-    // Get payment data first to verify ownership
-    const { data: payment, error: fetchError } = await supabase
+    const db = getPrivilegedDb(supabase);
+
+    // 1. Verify payment exists and belongs to the authenticated student
+    const { data: payment, error: fetchError } = await db
       .from('payments')
       .select('*')
       .eq('order_id', orderId)
@@ -94,96 +133,119 @@ export async function cancelPendingPayment(orderId: string) {
       return { success: false, error: 'Pembayaran tidak ditemukan' };
     }
 
-    // Only cancel if still pending
-    if (payment.status !== 'pending') {
-      return { success: false, error: 'Pembayaran sudah diproses dan tidak bisa dibatalkan' };
+    // Only allow canceling if still pending
+    if (payment.status !== 'pending' && action !== 'delete') {
+      return {
+        success: false,
+        error: `Pembayaran sudah berstatus ${payment.status} dan tidak bisa dibatalkan`,
+      };
     }
 
-    // Try to cancel on Midtrans FIRST
-    let midtransCancelled = false;
-    let midtransError = '';
-    
+    // 2. Call Midtrans Cancel API if configured
+    let midtransResult: any = null;
     try {
       const { cancelTransaction } = await import('@/lib/midtrans');
       await cancelTransaction(orderId);
-      midtransCancelled = true;
-      console.log('✅ Midtrans transaction cancelled:', orderId);
+      midtransResult = { cancelled: true };
+      console.log('✅ Midtrans transaction cancelled for order:', orderId);
     } catch (midtransError: any) {
-      midtransError = midtransError.message?.toLowerCase() || '';
-      console.error('❌ Midtrans cancel failed:', midtransError);
-      
-      // These errors are OK - transaction already inactive/expired
-      // We should still delete from DB
-      if (
-        midtransError.includes('not found') || 
-        midtransError.includes('404') ||
-        midtransError.includes('tidak dapat dibatalkan') ||
-        midtransError.includes('non-aktif') ||
-        midtransError.includes('expire') ||
-        midtransError.includes('cancel') ||
-        midtransError.includes('deny')
-      ) {
-        console.log('⚠️ Transaction already inactive/expired in Midtrans - safe to delete from DB');
-        midtransCancelled = true;
-      } else {
-        // Real API error (network, auth, etc) - don't delete
-        return { 
-          success: false, 
-          error: `Gagal membatalkan di Midtrans: ${midtransError}. Silakan coba lagi.` 
-        };
-      }
+      const msg = (midtransError.message || '').toLowerCase();
+      console.warn('⚠️ Midtrans cancel returned error (proceeding):', msg);
+      midtransResult = { cancelled: false, error: msg };
     }
 
-    // Proceed with DB deletion (transaction is cancelled or already inactive)
-    if (!midtransCancelled) {
-      return { success: false, error: 'Gagal membatalkan transaksi' };
+    // 3. Clean up related commissions and pending subscriptions
+    try {
+      await db.from('commissions').delete().eq('order_id', orderId);
+    } catch (commErr) {
+      console.warn('Commission cleanup warning:', commErr);
     }
 
-    // Delete associated commission first (if exists) - to avoid foreign key constraint
-    const { error: commissionDeleteError } = await supabase
-      .from('commissions')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (commissionDeleteError) {
-      console.log('⚠️ No commission to delete or error:', commissionDeleteError.message);
-    } else {
-      console.log('✅ Commission deleted for order:', orderId);
-    }
-
-    // Cancel associated subscription if exists
-    if (payment.metadata && typeof payment.metadata === 'object') {
-      const metadata = payment.metadata as any;
-      if (metadata.subscription_id) {
-        // Delete subscription instead of updating
-        await supabase
+    if (payment.metadata?.subscription_id) {
+      try {
+        await db
           .from('subscriptions')
           .delete()
-          .eq('id', metadata.subscription_id)
+          .eq('id', payment.metadata.subscription_id)
           .eq('status', 'pending');
-
-        console.log('✅ Subscription deleted:', metadata.subscription_id);
+      } catch (subErr) {
+        console.warn('Subscription cleanup warning:', subErr);
       }
     }
 
-    // Delete payment record completely
-    const { error: deleteError } = await supabase
-      .from('payments')
-      .delete()
-      .eq('order_id', orderId)
-      .eq('user_id', user.id);
+    // 4. Action: DELETE
+    if (action === 'delete') {
+      const { error: deleteError } = await db
+        .from('payments')
+        .delete()
+        .eq('order_id', orderId)
+        .eq('user_id', user.id);
 
-    if (deleteError) {
-      console.error('❌ Error deleting payment:', deleteError);
-      return { success: false, error: 'Gagal menghapus pembayaran' };
+      if (deleteError) {
+        console.error('❌ Error deleting payment:', deleteError);
+        return { success: false, error: 'Gagal menghapus pembayaran: ' + deleteError.message };
+      }
+
+      console.log('✅ Payment deleted from database:', orderId);
+      revalidatePath('/dashboard/student/payments');
+      revalidatePath('/hq-core-updateptn/payments');
+      return { success: true, action: 'delete', error: null };
     }
 
-    console.log('✅ Payment deleted:', orderId);
+    // 5. Action: CANCEL (Adaptive update to satisfy check constraint)
+    const nowIso = new Date().toISOString();
+    const updatedMetadata = {
+      ...(payment.metadata || {}),
+      cancelled_at: nowIso,
+      cancelled_by: user.id,
+      cancelled_by_email: user.email,
+      midtrans_result: midtransResult,
+    };
 
-    return { success: true, error: null };
+    const statusCandidates = ['cancelled', 'cancel', 'failed'];
+    let updateError: any = null;
+
+    for (const statusVal of statusCandidates) {
+      const { error } = await db
+        .from('payments')
+        .update({
+          status: statusVal,
+          transaction_status: 'cancel',
+          metadata: updatedMetadata,
+          updated_at: nowIso,
+        })
+        .eq('order_id', orderId)
+        .eq('user_id', user.id);
+
+      if (!error) {
+        updateError = null;
+        break;
+      }
+
+      if (error.message?.includes('payments_status_check') || error.code === '23514') {
+        updateError = error;
+        continue;
+      } else {
+        updateError = error;
+        break;
+      }
+    }
+
+    if (updateError) {
+      console.error('❌ Error updating payment to cancelled:', updateError);
+      return { success: false, error: 'Gagal memperbarui status transaksi: ' + updateError.message };
+    }
+
+    console.log('✅ Payment marked as cancelled:', orderId);
+
+    // Invalidate caches
+    revalidatePath('/dashboard/student/payments');
+    revalidatePath('/hq-core-updateptn/payments');
+
+    return { success: true, action: 'cancel', error: null };
   } catch (err: any) {
-    console.error('❌ Cancel payment error:', err);
-    return { success: false, error: 'Terjadi kesalahan sistem' };
+    console.error('❌ Cancel payment exception:', err);
+    return { success: false, error: 'Terjadi kesalahan sistem: ' + err.message };
   }
 }
 
@@ -194,13 +256,18 @@ export async function resumePayment(orderId: string) {
   try {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    const db = getPrivilegedDb(supabase);
+
     // Get payment details
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment, error: paymentError } = await db
       .from('payments')
       .select('*')
       .eq('order_id', orderId)
@@ -212,18 +279,14 @@ export async function resumePayment(orderId: string) {
       return { success: false, error: 'Payment not found or already processed' };
     }
 
-    // Payment sudah punya Snap token dari Midtrans
-    // Kita perlu generate token baru karena token lama mungkin sudah expire
-    // Tapi untuk simplicity, kita bisa gunakan order_id yang sama
-    
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         orderId: payment.order_id,
         amount: payment.amount,
-        metadata: payment.metadata
+        metadata: payment.metadata,
       },
-      error: null 
+      error: null,
     };
   } catch (err: any) {
     console.error('Resume payment error:', err);

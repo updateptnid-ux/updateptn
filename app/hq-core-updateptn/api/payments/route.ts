@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -118,11 +119,20 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      data: enrichedPayments,
-      count: enrichedPayments.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: enrichedPayments,
+        count: enrichedPayments.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("Admin Payments GET exception:", err);
     return NextResponse.json(
@@ -205,6 +215,9 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+
+      revalidatePath('/hq-core-updateptn/payments');
+      revalidatePath('/dashboard/student/payments');
 
       return NextResponse.json({
         success: true,
@@ -321,6 +334,9 @@ export async function POST(request: NextRequest) {
         console.warn("Failed updating associated subscription status:", subErr);
       }
     }
+
+    revalidatePath('/hq-core-updateptn/payments');
+    revalidatePath('/dashboard/student/payments');
 
     return NextResponse.json({
       success: true,
