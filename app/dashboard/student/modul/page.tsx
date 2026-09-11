@@ -202,7 +202,8 @@ export default function ModulPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-4 md:space-y-6 pb-20">
       {/* Header Section */}
       <div className="space-y-2 md:space-y-3">
         <Badge variant="outline" className="text-[10px] md:text-xs font-bold bg-blue-50 text-blue-700 border-blue-200 mb-2">
@@ -438,5 +439,6 @@ export default function ModulPage() {
         </Card>
       </MotionCard>
     </div>
-  );
+  </div>
+);
 }

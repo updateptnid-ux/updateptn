@@ -160,7 +160,8 @@ export default function LatihanSubtesPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 md:space-y-8 pb-20 overflow-y-auto overscroll-contain">
+    <div className="w-full min-h-full bg-slate-50 overflow-y-auto overscroll-contain">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-4 md:space-y-6 pb-20">
       {/* Header Section */}
       <div className="space-y-3 md:space-y-4">
         <div>
@@ -339,5 +340,6 @@ export default function LatihanSubtesPage() {
         </MotionCard>
       )}
     </div>
-  );
+  </div>
+);
 }
