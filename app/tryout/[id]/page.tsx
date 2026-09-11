@@ -31,6 +31,7 @@ import {
   ArrowRight,
   BrainCircuit,
 } from "lucide-react";
+import { FormattedContent } from "@/components/ui/formatted-content";
 
 interface ProdiItem {
   id: string | number;
@@ -1311,9 +1312,10 @@ export default function TryoutEnginePage({
 
             {/* Question Reading Body */}
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-slate-900 font-medium leading-relaxed">
-                {currentQ?.question_text || currentQ?.text}
-              </p>
+              <FormattedContent
+                content={currentQ?.question_text || currentQ?.text}
+                className="text-base sm:text-lg text-slate-900 font-medium leading-relaxed"
+              />
             </div>
 
             {/* Options A - E Selector */}
@@ -1343,9 +1345,13 @@ export default function TryoutEnginePage({
                       }`}
                     >
                       <RadioGroupItem value={opt.key} id={`opt-${opt.key}`} className="mt-0.5 border-slate-300 text-blue-600 focus:ring-blue-500" />
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-1">
                         <span className="font-bold text-sm text-blue-600">{opt.key}.</span>
-                        <span className="text-sm font-normal leading-relaxed">{opt.text}</span>
+                        <FormattedContent
+                          content={opt.text}
+                          inline
+                          className="text-sm font-normal leading-relaxed flex-1"
+                        />
                       </div>
                     </Label>
                   );

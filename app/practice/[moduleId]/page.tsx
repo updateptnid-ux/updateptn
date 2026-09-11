@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
+import { FormattedContent } from "@/components/ui/formatted-content";
 
 interface PracticeQuestion {
   id: string;
@@ -228,7 +229,7 @@ export default function PracticePage() {
                       </Badge>
                       <div className="flex-1">
                         <h3 className="font-bold mb-2">Soal {idx + 1}</h3>
-                        <p className="text-slate-700 mb-3">{q.question_text}</p>
+                        <FormattedContent content={q.question_text} className="text-slate-700 mb-3" />
                         
                         <div className="space-y-1 text-sm mb-3">
                           <p>Jawaban kamu: <span className={`font-bold ${!userAnswer ? "text-slate-400" : isCorrect ? "text-emerald-600" : "text-rose-600"}`}>
@@ -240,7 +241,7 @@ export default function PracticePage() {
                         {q.explanation && (
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <p className="text-xs font-bold text-blue-900 mb-1">Pembahasan:</p>
-                            <p className="text-xs text-blue-800">{q.explanation}</p>
+                            <FormattedContent content={q.explanation} className="text-xs text-blue-800" />
                           </div>
                         )}
                       </div>
@@ -303,9 +304,7 @@ export default function PracticePage() {
           <div className="space-y-6">
             <div>
               <Badge className="mb-4">Soal {currentIndex + 1}</Badge>
-              <p className="text-lg text-slate-900 leading-relaxed">
-                {currentQuestion.question_text}
-              </p>
+              <FormattedContent content={currentQuestion.question_text} className="text-lg text-slate-900 leading-relaxed" />
             </div>
 
             <div className="space-y-3">
@@ -329,7 +328,7 @@ export default function PracticePage() {
                       }`}>
                         {option}
                       </div>
-                      <span className="text-sm text-slate-700">{optionText}</span>
+                      <FormattedContent content={optionText} inline className="text-sm text-slate-700 flex-1" />
                     </div>
                   </button>
                 );
