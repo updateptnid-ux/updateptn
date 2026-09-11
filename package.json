@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.111.0",
     "@tiptap/extension-image": "^3.31.2",
     "@tiptap/extension-link": "^3.31.2",
+    "@tiptap/extension-underline": "^3.31.2",
     "@tiptap/react": "^3.31.2",
     "@tiptap/starter-kit": "^3.31.2",
     "@types/dompurify": "^3.0.5",

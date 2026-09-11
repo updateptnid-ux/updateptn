@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { QuestionTextEditor } from "@/components/editor/QuestionTextEditor";
 
 interface QuestionRecord {
   id: string;
@@ -454,10 +455,9 @@ export default function AdminQuestionsMandiriPage() {
             </div>
             <div className="space-y-2">
               <Label>Teks Pertanyaan Soal *</Label>
-              <textarea
+              <QuestionTextEditor
                 value={formData.text}
-                onChange={e => setFormData({ ...formData, text: e.target.value })}
-                className="w-full h-24 p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                onChange={val => setFormData({ ...formData, text: val })}
                 placeholder="Tulis soal di sini..."
               />
             </div>
