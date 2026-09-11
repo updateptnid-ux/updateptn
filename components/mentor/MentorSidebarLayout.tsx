@@ -36,11 +36,10 @@ interface MentorSidebarLayoutProps {
 }
 
 const navItems = [
-  { name: "Beranda", href: "/mentor", icon: LayoutDashboard, exact: true },
+  { name: "Beranda Tentor", href: "/mentor", icon: LayoutDashboard, exact: true },
   { name: "Jadwal Mengajar", href: "/mentor/jadwal", icon: CalendarDays, exact: false },
-  { name: "Siswa & Kelas", href: "/mentor/siswa-kelas", icon: Users, exact: false },
-  { name: "Keuangan & Income", href: "/mentor/keuangan", icon: Wallet, exact: false },
-  { name: "Live Class & Modul", href: "/mentor/live-class", icon: Video, exact: false },
+  { name: "Manajemen Siswa", href: "/mentor/siswa-kelas", icon: Users, exact: false },
+  { name: "Keuangan", href: "/mentor/keuangan", icon: Wallet, exact: false },
   { name: "Pengaturan Profil", href: "/mentor/profil", icon: UserCircle2, exact: false },
 ];
 
