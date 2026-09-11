@@ -241,20 +241,6 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
                   <Home className="h-4 w-4 text-slate-400" />
                   <span>Menu Siswa</span>
                 </Link>
-                {isAdmin && (
-                  <Link
-                    href="/hq-core-updateptn"
-                    className="flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100/80 border border-blue-200/80 transition-colors touch-manipulation"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <ShieldCheck className="h-4 w-4 text-blue-600" />
-                      <span>Menu Admin</span>
-                    </div>
-                    <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-extrabold uppercase tracking-wider">
-                      ADMIN HQ
-                    </span>
-                  </Link>
-                )}
               </div>
               <form action={signOutAction}>
                 <Button 
@@ -336,20 +322,6 @@ export default function MentorSidebarLayout({ children, user }: MentorSidebarLay
               <Home className="h-3.5 w-3.5 text-slate-400" />
               <span>Menu Siswa</span>
             </Link>
-            {isAdmin && (
-              <Link
-                href="/hq-core-updateptn"
-                className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/60 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Menu Admin</span>
-                </div>
-                <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider">
-                  ADMIN HQ
-                </span>
-              </Link>
-            )}
           </div>
 
           <form action={signOutAction}>
